@@ -1,0 +1,86 @@
+\documentclass{article}
+
+\usepackage[pdftex]{graphicx}
+\usepackage[caption=false,font=footnotesize]{subfig}
+
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{IEEEtrantools}
+
+\usepackage{algorithm}
+\usepackage{algorithmic}
+
+\usepackage{harvard}
+
+\usepackage{color}
+
+\graphicspath{{./}}
+
+\newenvironment{meta}[0]{\color{red} \em}{}
+
+\title{Optimal Proposals Using Particle Flow for SMC Samplers}
+\author{Pete Bunch}
+\date{January 2012}
+
+\begin{document}
+
+\maketitle
+
+\section{The Situation}
+
+Consider a particle filter for estimating $p(x_{1:t} | y_{1:t})$. Lets say that the transition density, $p(x_t | x_{t-1})$, is easily sampled and that both the transition density and the likelihood, $p(y_t | x_t)$, can be evaluated and differentiated. The optimal proposal density is $p(x_t | x_{1:t-1}, y_t)$. In our example, This, in general, cannot be sampled from, nor easily approximated, and may well be multimodal.
+
+If we simply use the transition density as the importance density (i.e. a bootstrap filter) then we will need many particles to get a good approximation.
+
+
+
+\section{Particle Flow}
+
+Fred Daum's particle flow filter works on the following principle. First conduct a set of bootstrap proposals to generate particles from $p(x_{1:t} | y_{1:t-1})$. Now define a ``log-homotopy'' from $p(x_{1:t} | y_{1:t-1})$ to $p(x_{1:t} | y_{1:t})$ as follows,
+%
+\begin{IEEEeqnarray}{rCl}
+ \log\left( p(x_t, \lambda) \right) & = & \log\left( \underbrace{p(x_{1:t} | y_{1:t-1})}_{g(x_t)} \right) + \lambda \log\left( \underbrace{p(y_t | x_t)}_{h(x_t)} \right)     .
+\end{IEEEeqnarray}
+
+When $\lambda=0$, $p(x_t, \lambda)$ is equal to the prior density, and when $\lambda=1$, it's equal to the posterior. Now we just use the Fokker-Planck equation ``backwards'' to work out the flow of particles corresponding to this flow of density. This requires the solution to an under-determined PDE, which will often require numerical methods, to discover $f(x_t, \lambda)$ and then the solution to the ODE $f(x_t, \lambda)=\frac{dx_t}{d\lambda}$.
+
+The things I don't like about this are:
+\begin{itemize}
+  \item A lot of numerical approximations are required to solve the PDE. The one I am most suspicious of is that required to evaluate $g(x)$ at arbitrary points. This can be done using a particle approximation, but this yields an $\mathcal{O}(N^2)$ algorithm. Fred avoids this by using only a small subset of ``approximate nearest neighbour'' particles. I am suspicious of this.
+  \item I think there's a problem with multimodal posteriors when one mode is eliminated. How do we remove the particles at this mode. They suddenly have to make a huge jump to the other modes. If they all go to the nearest mode, then this will bias the posterior. We \emph{need} resampling to allow us to ``kill'' particles.
+  \item Fred's derivations all require $p(x_t,\lambda)$ to be nowhere vanishing. This is not the case when the domain of $x_t$ is limited, for example a state variable which is strictly positive (e.g. a variance). If there are zeros in the likelihood, we need to be able to kill particles which fall in that region, or otherwise deal with them. If there are zeros in the prior, then we need the boundary condition that $f(x_t, \lambda)$ be parallel to the boundary, so that particles cannot move into the zero-probability region.
+\end{itemize}
+
+
+
+\section{Optimal Proposals}
+
+Instead of sampling $p(x_t | y_{1:t})$ using the homotopy, we can sample the optimal proposal density, $p(x_t | x_{t-1}, y_t)$. This solves the first problem in the list above, because we now have $g(x_t)=p(x_t|x_{t-1})$ in our homotopy, which can be both evaluated and probably differentiated analytically.
+
+A further corollary of this is that our particles will now have a weight again, so we will need to reintroduce resampling. This solves the second problem, although it does reintroduce a bottleneck.
+
+The weight evaluation is problematic, since the particle weights ought to be $w_t = p(y_t | x_{t-1})$, which cannot be evaluated. We solve this by using an SMC sampler which jointly targets the prior and posterior positions of the particles (i.e. before and after the homotopy is applied). The proposal is thus,
+%
+\begin{IEEEeqnarray}{c}
+ p(x_{1:t-1} | y_{1:t-1}) p(x_t^* | x_{t-1}) \delta_{F(x_t^*)}(x_t)     ,
+\end{IEEEeqnarray}
+%
+where $x_t^*$ is the prior state of the particle and $x_t$ the posterior, and $F(x)$ describes the effect of the homotopy. We use the augmented target distribution,
+%
+\begin{IEEEeqnarray}{rCl}
+ p(x_{1:t} | y_{1:t}) \delta_{F^{-1}(x_t)}(x_t^*)     .
+\end{IEEEeqnarray}
+%
+This leads to an unnormalised weight of,
+%
+\begin{IEEEeqnarray}{rCl}
+ w_t & = & \frac{ p(y_t|x_t)p(x_t|x_{t-1}) }{ p(x_t^* | x_{t-1}) }     .
+\end{IEEEeqnarray}
+
+For the above scheme to be valid, we need the support of the proposal to contain that of the target. This is only the case if $F$ is bijective (I think), necessary conditions for which are that $f(x_t, \lambda)$ be smooth and the boundary condition $f(x_t, \lambda)$ parallel to the boundary of the region $g(x_t)=0$.
+
+
+
+
+
+\end{document}
