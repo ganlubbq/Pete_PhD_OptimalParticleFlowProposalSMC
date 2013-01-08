@@ -1,20 +1,20 @@
-function [ obs, prob ] = nlbenchmark_observation( model, state, obs )
+function [ obs, prob ] = tracking_observation( model, state, obs )
 %NLBENCHMARK_OBSERVATION Sample and/or calculate observation density for
-%nonlinear benchmark.
+%2D tracking.
 
 % prob is a log-probability.
 
 % Calculate observation mean
-mn = nlbenchmark_h(model, state);
+mn = tracking_h(model, state);
 
 % Sample observation if not provided
 if (nargin<3)||isempty(obs)
-    obs = mvnrnd(mn, model.sigy)';
+    obs = mvnrnd(mn', model.R)';
 end
 
 % Calculate probability if required
 if nargout>1
-    prob = loggausspdf(obs, mn, model.sigy);
+    prob = loggausspdf(obs, mn, model.R);
 else
     prob = [];
 end

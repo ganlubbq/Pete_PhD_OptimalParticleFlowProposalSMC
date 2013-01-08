@@ -13,8 +13,15 @@ if ~exist('flags.batch', 'var') || (~flags.batch)
     dbstop if error
     % dbstop if warning
     
+    %%% SETTINGS %%%
+    
     % DEFINE RANDOM SEED
     rand_seed = 0;
+    
+    % Which model?
+    model_flag = 2;     % 1 = nonlinear benchmark, 2 = target tracking
+    
+    %%%%%%%%%%%%%%%%
     
     % Set random seed
     s = RandStream('mt19937ar', 'seed', rand_seed);
@@ -24,16 +31,25 @@ if ~exist('flags.batch', 'var') || (~flags.batch)
     flags.batch = false;
     
     % Set function handles
-    fh.set_model = @nlbenchmark_set_model;
-    fh.set_algo = @nlbenchmark_set_algo;
-    fh.generate_data = @nlbenchmark_generate_data;
-    fh.f = @nlbenchmark_f;
-    fh.h = @nlbenchmark_h;
-    fh.transition = @nlbenchmark_transition;
-    fh.observation = @nlbenchmark_observation;
-    fh.state_prior = @nlbenchmark_stateprior;
-    fh.EKFstateproposal = @nlbenchmark_EKFstateproposal;
-    fh.PFstateproposal = @nlbenchmark_PFstateproposal;
+    if model_flag == 1
+        fh.set_model = @nlbenchmark_set_model;
+        fh.set_algo = @nlbenchmark_set_algo;
+        fh.generate_data = @nlbenchmark_generate_data;
+        fh.transition = @nlbenchmark_transition;
+        fh.observation = @nlbenchmark_observation;
+        fh.stateprior = @nlbenchmark_stateprior;
+        fh.EKFstateproposal = @nlbenchmark_EKFstateproposal;
+        fh.PFstateproposal = @nlbenchmark_PFstateproposal;
+    elseif model_flag == 2
+        fh.set_model = @tracking_set_model;
+        fh.set_algo = @tracking_set_algo;
+        fh.generate_data = @tracking_generate_data;
+        fh.transition = @tracking_transition;
+        fh.observation = @tracking_observation;
+        fh.stateprior = @tracking_stateprior;
+        fh.EKFstateproposal = @tracking_EKFstateproposal;
+        fh.PFstateproposal = @tracking_PFstateproposal;
+    end
     
     % Set model and algorithm parameters
     model = feval(fh.set_model);
@@ -73,29 +89,54 @@ mn_ess_ekf = mean(ess_ekf)
 mn_ess_pfp = mean(ess_pfp)
 
 % RMSE
-mn_rmse_bs =  sqrt( mean( (state - [pf_bs.mn]).^2  ) )
-mn_rmse_ekf = sqrt( mean( (state - [pf_ekf.mn]).^2 ) )
-mn_rmse_pfp = sqrt( mean( (state - [pf_pfp.mn]).^2 ) )
+mn_rmse_bs =  sqrt( mean( (state - [pf_bs.mn]).^2 , 2 ) )
+mn_rmse_ekf = sqrt( mean( (state - [pf_ekf.mn]).^2, 2 ) )
+mn_rmse_pfp = sqrt( mean( (state - [pf_pfp.mn]).^2, 2 ) )
 
 % NEES
-mn_nees_bs =  mean( 1./(1 + (state - [pf_bs.mn]).^2  ./ ([pf_bs.sd].^2)) )
-mn_nees_ekf = mean( 1./(1 + (state - [pf_ekf.mn]).^2 ./ ([pf_ekf.sd].^2)) )
-mn_nees_pfp = mean( 1./(1 + (state - [pf_pfp.mn]).^2 ./ ([pf_pfp.sd].^2)) )
+% mn_nees_bs =  
+% mn_nees_ekf = 
+% mn_nees_pfp = 
 
 %% Plot graphs
 
 if (~flags.batch) && display.plot_after
     
-    figure, hold on, plot(time, state, 'k', 'linewidth', 2),
-        plot(time, [pf_bs.mn],  'b');
-        plot(time, [pf_ekf.mn], 'g');
-        plot(time, [pf_pfp.mn], 'r');
-        plot(time, [pf_bs.mn] +2*[pf_bs.sd],  ':b');
-        plot(time, [pf_ekf.mn]+2*[pf_ekf.sd], ':g');
-        plot(time, [pf_pfp.mn]+2*[pf_pfp.sd], ':r');
-        plot(time, [pf_bs.mn] -2*[pf_bs.sd],  ':b');
-        plot(time, [pf_ekf.mn]-2*[pf_ekf.sd], ':g');
-        plot(time, [pf_pfp.mn]-2*[pf_pfp.sd], ':r');
+    
+    % Individual state components
+    for dd = 1:model.ds
+        
+        figure, hold on, plot(time, state(dd,:), 'k', 'linewidth', 2),
+        
+        mn_array = [pf_bs.mn]; vr_array = cat(3,pf_bs.vr);
+        plot(time, mn_array(dd,:),  'b');
+        plot(time, mn_array(dd,:)+2*sqrt(vr_array(dd,dd,:)),  ':b');
+        plot(time, mn_array(dd,:)-2*sqrt(vr_array(dd,dd,:)),  ':b');
+        
+        mn_array = [pf_ekf.mn]; vr_array = cat(3,pf_ekf.vr);
+        plot(time, mn_array(dd,:),  'g');
+        plot(time, mn_array(dd,:)+2*sqrt(vr_array(dd,dd,:)),  ':g');
+        plot(time, mn_array(dd,:)-2*sqrt(vr_array(dd,dd,:)),  ':g');
+        
+        mn_array = [pf_pfp.mn]; vr_array = cat(3,pf_pfp.vr);
+        plot(time, mn_array(dd,:),  'r');
+        plot(time, mn_array(dd,:)+2*sqrt(vr_array(dd,dd,:)),  ':r');
+        plot(time, mn_array(dd,:)-2*sqrt(vr_array(dd,dd,:)),  ':r');
+        
+    end
+    
+    % Trajectory
+    figure, hold on, plot(state(1,:), state(2,:), 'k', 'linewidth', 2);
+    
+    mn_array = [pf_bs.mn]; vr_array = cat(3,pf_bs.vr);
+    plot(mn_array(1,:), mn_array(2,:),  'b');
+    
+    mn_array = [pf_ekf.mn]; vr_array = cat(3,pf_bs.vr);
+    plot(mn_array(1,:), mn_array(2,:),  'g');
+    
+    mn_array = [pf_pfp.mn]; vr_array = cat(3,pf_pfp.vr);
+    plot(mn_array(1,:), mn_array(2,:),  'r');
+    
         
     figure, hold on, plot(time, ess_bs, 'b'), plot(time, ess_ekf, 'g'), plot(time, ess_pfp, 'r')
     
