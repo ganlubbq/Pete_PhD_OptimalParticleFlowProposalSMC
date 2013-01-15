@@ -146,17 +146,17 @@ if (~flags.batch) && display.plot_after
         
     end
     
-    % Trajectory
-    figure, hold on, plot(state(1,:), state(2,:), 'k', 'linewidth', 2);
-    
-    mn_array = [pf_bs.mn]; vr_array = cat(3,pf_bs.vr);
-    plot(mn_array(1,:), mn_array(2,:),  'b');
-    
-    mn_array = [pf_ekf.mn]; vr_array = cat(3,pf_bs.vr);
-    plot(mn_array(1,:), mn_array(2,:),  'g');
-    
-    mn_array = [pf_pfp.mn]; vr_array = cat(3,pf_pfp.vr);
-    plot(mn_array(1,:), mn_array(2,:),  'r');
+%     % Trajectory
+%     figure, hold on, plot(state(1,:), state(2,:), 'k', 'linewidth', 2);
+%     
+%     mn_array = [pf_bs.mn]; vr_array = cat(3,pf_bs.vr);
+%     plot(mn_array(1,:), mn_array(2,:),  'b');
+%     
+%     mn_array = [pf_ekf.mn]; vr_array = cat(3,pf_bs.vr);
+%     plot(mn_array(1,:), mn_array(2,:),  'g');
+%     
+%     mn_array = [pf_pfp.mn]; vr_array = cat(3,pf_pfp.vr);
+%     plot(mn_array(1,:), mn_array(2,:),  'r');
     
 %     mn_array = [pf_mhp.mn]; vr_array = cat(3,pf_mhp.vr);
 %     plot(mn_array(1,:), mn_array(2,:),  'm');

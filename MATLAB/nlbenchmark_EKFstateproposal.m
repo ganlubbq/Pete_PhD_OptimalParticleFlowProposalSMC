@@ -10,8 +10,7 @@ prior_vr = model.sigx;
 lin_state = prior_mn;
 
 % Linearise
-H = model.alpha1 * model.alpha2 * lin_state * (lin_state^2)^(model.alpha2/2 - 1);
-H(isnan(H)) = 0;
+H = nlbenchmark_obsjacobian(model, lin_state);
 
 % EKF update
 obs_mn = nlbenchmark_h(model,prior_mn);
