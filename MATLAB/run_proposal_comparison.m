@@ -19,7 +19,7 @@ if ~exist('flags.batch', 'var') || (~flags.batch)
     rand_seed = 0;
     
     % Which model?
-    model_flag = 3;     % 1 = nonlinear benchmark, 2 = target tracking
+    model_flag = 1;     % 1 = nonlinear benchmark, 2 = target tracking
     
     %%%%%%%%%%%%%%%%
     

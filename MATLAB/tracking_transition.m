@@ -5,7 +5,7 @@ function [ new_state, prob ] = tracking_transition( model, kk, state, new_state 
 % prob is a log-probability.
 
 % Calculate new_state mean
-mn = model.A * state;
+mn = tracking_f(model, state);
 
 % Sample state if not provided
 if (nargin<4)||isempty(new_state)

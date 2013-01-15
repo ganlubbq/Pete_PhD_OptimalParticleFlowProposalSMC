@@ -3,7 +3,7 @@ function [ state, prob ] = tracking_PFstateproposal( algo, model, prev_kk, prev_
 %2D tracking. This uses the particle flow approximation to the OID.
 
 % State prior
-prior_mn = model.A*prev_state;
+prior_mn = tracking_f(model, prev_state);
 
 % Sample it
 [state, prob] = tracking_transition(model, prev_kk, prev_state);
@@ -15,35 +15,41 @@ prior_mn = model.A*prev_state;
 %     plot(X, Y, '--r')
 % end
 
-% Flow integration loop
-for ll = 1:algo.L
-    
-    % Step size
-    dl = 1/algo.L;
-    lam = (ll-1)*dl;
+% % Flow integration loop
+% for ll = 1:algo.L
+%     
+%     % Step size
+%     dl = 1/algo.L;
+%     lam = (ll-1)*dl;
 %     lam = (1-2^-(ll-1));
 %     dl = (1-2^-(ll)) - (1-2^-(ll-1));
 %     if ll == algo.L
 %         dl = 2^-(ll-1);
 %     end
     
-    % Predict
-    v = calc_particle_velocity(model, lam, state, observ, prior_mn);
-    pred_state = state + v*dl;
-    
-%     % Update
-    for ii = 1:1
-        pred_v = calc_particle_velocity(model, lam+dl, pred_state, observ, prior_mn);
-        pred_state = state + 0.5*dl*(v+pred_v);
-    end
-    
-    state = pred_state;
+%     % Predict
+%     v = calc_particle_velocity(model, lam, state, observ, prior_mn);
+%     pred_state = state + v*dl;
+%     
+% %     % Update
+%     for ii = 1:1
+%         pred_v = calc_particle_velocity(model, lam+dl, pred_state, observ, prior_mn);
+%         pred_state = state + 0.5*dl*(v+pred_v);
+%     end
+%     
+%     state = pred_state;
     
 %     if prev_kk > 2
 %         figure(1), hold on, plot(state(1), state(2), 'xb')
 %     end
-    
-end
+%     
+% end
+
+lam_rng = [0 1];
+options.Jacobian = @(lam,x)flow_jacobian(model, lam, x);
+[lam, x] = ode23tb(@(lam_in, x_in) calc_particle_velocity(model, lam_in, x_in, observ, prior_mn), lam_rng, state, options);
+
+state = x(end,:)';
 
 end
 
@@ -55,13 +61,13 @@ R = model.R;
 ds = model.ds;
 
 % Linearise
-H = tracking_hessian(x);
+H = tracking_obsjacobian(x);
 
-% % Find particle velocity using Gaussian approximation
-% y_mod = y - tracking_h(model, x) + H*x;
-% A = -0.5*Q*H'*((R+lam*H*Q*H')\H);
-% b = (eye(ds)+2*lam*A)*((eye(ds)+lam*A)*Q*H'*(R\y_mod)+A*m);
-% v = A*x+b;
+% Find particle velocity using Gaussian approximation
+y_mod = y - tracking_h(model, x) + H*x;
+A = -0.5*Q*H'*((R+lam*H*Q*H')\H);
+b = (eye(ds)+2*lam*A)*((eye(ds)+lam*A)*Q*H'*(R\y_mod)+A*m);
+v = A*x+b;
     
 %     % Find particle velocity using Incompresible flow
 %     y_mn = tracking_h(model, x);
@@ -75,13 +81,27 @@ H = tracking_hessian(x);
 % %         v = zeros(model.ds, 1);
 % %     end
 
-    % Find particle velocity using small curvature flow
-    A = -0.5*Q*H'*((R+lam*H*Q*H')\H);
-    y_mn = tracking_h(model, x);
-    dlogp_dx = lam*H'*(R\(y-y_mn)) - Q\(x-m);
-    ddlogp_ddx = -(lam*H'*(R\H) + inv(Q));
-    dloglhood_dx = H'*(R\(y-y_mn));
-    v = -ddlogp_ddx \ ( dloglhood_dx + A'*dlogp_dx );
+%     % Find particle velocity using small curvature flow
+%     A = -0.5*Q*H'*((R+lam*H*Q*H')\H);
+%     y_mn = tracking_h(model, x);
+%     dlogp_dx = lam*H'*(R\(y-y_mn)) - Q\(x-m);
+%     ddlogp_ddx = -(lam*H'*(R\H) + inv(Q));
+%     dloglhood_dx = H'*(R\(y-y_mn));
+%     v = -ddlogp_ddx \ ( dloglhood_dx + A'*dlogp_dx );
 
+
+end
+
+function J = flow_jacobian(model, lam, x)
+
+% Shorter variable names
+Q = model.Q;
+R = model.R;
+
+% Linearise
+H = tracking_obsjacobian(x);
+
+% Jacobian
+J = -0.5*Q*H'*((R+lam*H*Q*H')\H);
 
 end

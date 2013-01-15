@@ -15,7 +15,7 @@ model.do = 2;       % Dimension of the observations
 
 % Parameters
 model.sigx = 10^2;
-model.sigy = 1^2;
+model.sigy = 0.1^2;
 model.alphav = 0.9;
 
 % Matrixes

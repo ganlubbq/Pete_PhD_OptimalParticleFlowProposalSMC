@@ -6,6 +6,8 @@ obs_mn = zeros(model.do,1);
 
 obs_mn(1) = atan2(state(2), state(1));
 obs_mn(2) = magn(state(1:2));
-obs_mn(3) = dot(state(1:2), state(3:4))/obs_mn(2);
+
+v = state(4)*[cos(state(3)); sin(state(3))];
+obs_mn(3) = dot(state(1:2), v)/obs_mn(2);
 
 end
