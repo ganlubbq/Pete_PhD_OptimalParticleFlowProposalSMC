@@ -80,6 +80,14 @@ for kk = 2:model.K
             [~, trans_prob] = feval(fh.transition, model, kk-1, prev_state, state);
             [~, lhood_prob] = feval(fh.observation, model, state, observ(:,kk));
             
+        elseif flag_ppsl_type == 4
+            %%% Metropolis-Hastings OID %%%
+            
+            % Sample a state and evaluate probabilities
+            [state, ppsl_prob] = feval(fh.MHstateproposal, algo, model, kk-1, prev_state, observ(:,kk));
+            [~, trans_prob] = feval(fh.transition, model, kk-1, prev_state, state);
+            [~, lhood_prob] = feval(fh.observation, model, state, observ(:,kk));
+            
         else
             error('Invalid choice of proposal type');
         end
@@ -88,6 +96,9 @@ for kk = 2:model.K
         pf(kk).weight(1,ii) = lhood_prob + trans_prob - ppsl_prob;
         
     end
+    
+    assert(~all(isinf(pf(kk).weight)));
+    assert(all(isreal(pf(kk).weight)));
     
     ess(kk) = calc_ESS(pf(kk).weight);
     

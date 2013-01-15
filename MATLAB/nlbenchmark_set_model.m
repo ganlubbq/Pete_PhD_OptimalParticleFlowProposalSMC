@@ -2,7 +2,7 @@ function model = nlbenchmark_set_model
 
 % Model parameters
 
-model.K = 500;      % Number of time points
+model.K = 100;      % Number of time points
 model.ds = 1;       % Dimension of the states
 model.do = 1;       % Dimension of the observations
 
