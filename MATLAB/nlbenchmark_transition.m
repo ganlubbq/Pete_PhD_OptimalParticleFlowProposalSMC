@@ -10,12 +10,12 @@ mn = nlbenchmark_f(model, kk, state);
 
 % Sample state if not provided
 if (nargin<4)||isempty(new_state)
-    new_state = mvnrnd(mn, model.sigx);
+    new_state = mvnrnd(mn', model.Q)';
 end
 
 % Calculate probability if required
 if nargout>1
-    prob = loggausspdf(new_state, mn, model.sigx);
+    prob = loggausspdf(new_state, mn, model.Q);
 else
     prob = [];
 end

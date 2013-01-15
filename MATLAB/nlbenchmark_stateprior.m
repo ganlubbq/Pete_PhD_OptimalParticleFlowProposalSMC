@@ -6,7 +6,7 @@ function [ state, prob ] = nlbenchmark_stateprior( model, state )
 
 % Sample state if not provided
 if (nargin<2)||isempty(state)
-    state = mvnrnd(model.x1_mn, model.x1_vr);
+    state = mvnrnd(model.x1_mn', model.x1_vr)';
 end
 
 % Calculate probability if required
