@@ -4,7 +4,7 @@ function model = nlbenchmark_set_model
 
 model.K = 100;      % Number of time points
 model.ds = 10;       % Dimension of the states
-model.do = model.ds;%/2;       % Dimension of the observations
+model.do = model.ds/2;       % Dimension of the observations
 
 % Parameters
 model.beta1 = 0.5;
@@ -18,11 +18,11 @@ model.sigy = 1;
 model.Q = model.sigx * eye(model.ds);
 model.R = model.sigy * eye(model.do);
 
-model.Hlin = eye(model.do);
-% model.Hlin = zeros(model.do, model.ds);
-% for ii = 1:model.do
-%     model.Hlin(ii, 2*ii-1:2*ii) = 1/2;
-% end
+% model.Hlin = eye(model.do);
+model.Hlin = zeros(model.do, model.ds);
+for ii = 1:model.do
+    model.Hlin(ii, 2*ii-1:2*ii) = 1/2;
+end
 
 % x1 distribution
 model.x1_mn = zeros(model.ds,1);

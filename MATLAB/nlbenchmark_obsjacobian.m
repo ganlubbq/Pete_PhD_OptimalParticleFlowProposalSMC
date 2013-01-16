@@ -4,8 +4,8 @@ function [ H ] = nlbenchmark_obsjacobian( model, x )
 
 nl = model.alpha1 * model.alpha2 * x .* (x.^2).^(model.alpha2/2 - 1);
 nl(isnan(nl)) = 0;
-H = diag(nl);
-% H = model.Hlin * nl;
+% H = diag(nl);
+H = model.Hlin * diag(nl);
 
 end
 
