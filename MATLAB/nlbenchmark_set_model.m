@@ -3,7 +3,7 @@ function model = nlbenchmark_set_model
 % Model parameters
 
 model.K = 100;      % Number of time points
-model.ds = 10;       % Dimension of the states
+model.ds = 20;       % Dimension of the states
 model.do = model.ds/2;       % Dimension of the observations
 
 % Parameters

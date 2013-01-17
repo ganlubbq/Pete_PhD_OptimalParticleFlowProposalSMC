@@ -108,11 +108,16 @@ mn_ess_pfp = mean(ess_pfp)
 % mn_ess_mhp = mean(ess_mhp)
 
 % RMSE
-mn_rmse_bs =  sqrt( mean( (state - [pf_bs.mn]).^2 , 2 ) )
-mn_rmse_ekf = sqrt( mean( (state - [pf_ekf.mn]).^2, 2 ) )
-mn_rmse_ukf = sqrt( mean( (state - [pf_ukf.mn]).^2, 2 ) )
-mn_rmse_pfp = sqrt( mean( (state - [pf_pfp.mn]).^2, 2 ) )
-% mn_rmse_mhp = sqrt( mean( (state - [pf_mhp.mn]).^2, 2 ) )
+% mn_rmse_bs =  sqrt( mean( (state - [pf_bs.mn]).^2 , 2 ) )
+% mn_rmse_ekf = sqrt( mean( (state - [pf_ekf.mn]).^2, 2 ) )
+% mn_rmse_ukf = sqrt( mean( (state - [pf_ukf.mn]).^2, 2 ) )
+% mn_rmse_pfp = sqrt( mean( (state - [pf_pfp.mn]).^2, 2 ) )
+% % mn_rmse_mhp = sqrt( mean( (state - [pf_mhp.mn]).^2, 2 ) )
+mn_rmse_bs =  sqrt( mean( sum((state - [pf_bs.mn]).^2,1) , 2 ) )
+mn_rmse_ekf = sqrt( mean( sum((state - [pf_ekf.mn]).^2,1) , 2 ) )
+mn_rmse_ukf = sqrt( mean( sum((state - [pf_ukf.mn]).^2,1) , 2 ) )
+mn_rmse_pfp = sqrt( mean( sum((state - [pf_pfp.mn]).^2,1) , 2 ) )
+% mn_rmse_mhp = sqrt( mean( (state - [pf_mhp.mn]).^2,1) , 2 ) )
 
 % NEES
 % mn_nees_bs =  
