@@ -160,6 +160,10 @@ if (~flags.batch) && display.plot_after
 %         plot(time, mn_array(dd,:)-2*sqrt(vr_array(dd,dd,:)),  ':m');
         
     end
+
+%     % Plot particles for first component
+%     bs_states = [pf_bs.x];
+    
     
 %     % Trajectory
 %     figure, hold on, plot(state(1,:), state(2,:), 'k', 'linewidth', 2);
@@ -182,5 +186,25 @@ if (~flags.batch) && display.plot_after
     plot(time, ess_ukf, 'c'),
     plot(time, ess_pfp, 'r'),
 %     plot(time, ess_mhp, 'm')
+    
+end
+
+%% Movie
+
+pf = pf_bs;
+
+mfig = figure; hold on;
+for kk = 1:model.K
+    
+    figure(mfig), clf, hold on
+    xlim([-25 25]), ylim([0 1])
+    
+    plot(pf(kk).state(1,:), exp(normalise_weights(pf(kk).weight)), 'xr')
+    plot(pf(kk).mn(1)*ones(1,2), [0 1], 'r');
+    
+    plot(state(kk)*ones(1,2), [0 1], 'b')
+    plot(-state(kk)*ones(1,2), [0 1], 'b')
+    
+    pause(0.5);
     
 end
