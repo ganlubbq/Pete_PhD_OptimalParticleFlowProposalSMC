@@ -39,7 +39,7 @@ If we simply use the transition density as the importance density (i.e. a bootst
 Fred Daum's particle flow filter works on the following principle. First conduct a set of bootstrap proposals to generate particles from $p(x_{1:t} | y_{1:t-1})$. Now define a ``log-homotopy'' from $p(x_{1:t} | y_{1:t-1})$ to $p(x_{1:t} | y_{1:t})$ as follows,
 %
 \begin{IEEEeqnarray}{rCl}
- \log\left( p(x_t, \lambda) \right) & = & \log\left( \underbrace{p(x_{1:t} | y_{1:t-1})}_{g(x_t)} \right) + \lambda \log\left( \underbrace{p(y_t | x_t)}_{h(x_t)} \right)     .
+ \log\left( p(x_t, \lambda) \right) & = & \log\left( \underbrace{p(x_{t} | y_{1:t-1})}_{g(x_t)} \right) + \lambda \log\left( \underbrace{p(y_t | x_t)}_{h(x_t)} \right)     .
 \end{IEEEeqnarray}
 
 When $\lambda=0$, $p(x_t, \lambda)$ is equal to the prior density, and when $\lambda=1$, it's equal to the posterior. Now we just use the Fokker-Planck equation ``backwards'' to work out the flow of particles corresponding to this flow of density. This requires the solution to an under-determined PDE, which will often require numerical methods, to discover $f(x_t, \lambda)$ and then the solution to the ODE $f(x_t, \lambda)=\frac{dx_t}{d\lambda}$.
@@ -49,6 +49,7 @@ The things I don't like about this are:
   \item A lot of numerical approximations are required to solve the PDE. The one I am most suspicious of is that required to evaluate $g(x)$ at arbitrary points. This can be done using a particle approximation, but this yields an $\mathcal{O}(N^2)$ algorithm. Fred avoids this by using only a small subset of ``approximate nearest neighbour'' particles. I am suspicious of this.
   \item I think there's a problem with multimodal posteriors when one mode is eliminated. How do we remove the particles at this mode. They suddenly have to make a huge jump to the other modes. If they all go to the nearest mode, then this will bias the posterior. We \emph{need} resampling to allow us to ``kill'' particles.
   \item Fred's derivations all require $p(x_t,\lambda)$ to be nowhere vanishing. This is not the case when the domain of $x_t$ is limited, for example a state variable which is strictly positive (e.g. a variance). If there are zeros in the likelihood, we need to be able to kill particles which fall in that region, or otherwise deal with them. If there are zeros in the prior, then we need the boundary condition that $f(x_t, \lambda)$ be parallel to the boundary, so that particles cannot move into the zero-probability region.
+  \item There's no way to deal with mixed states, when we want to estimate discrete and continuous variables in parallel.
 \end{itemize}
 
 
@@ -83,4 +84,4 @@ For the above scheme to be valid, we need the support of the proposal to contain
 
 
 
-\end{document}
+\end{document} 
