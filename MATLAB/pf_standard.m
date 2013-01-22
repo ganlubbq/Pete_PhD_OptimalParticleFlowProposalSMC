@@ -113,7 +113,7 @@ for kk = 2:model.K
     norm_weight = exp(normalise_weights(pf(kk).weight));
     pf(kk).mn = pf(kk).state*norm_weight';
     err = bsxfun(@minus, pf(kk).state, pf(kk).mn);
-    pf(1).vr = err*diag(norm_weight)*err';
+    pf(kk).vr = err*diag(norm_weight)*err';
     
 end
 

@@ -19,7 +19,7 @@ if ~exist('flags.batch', 'var') || (~flags.batch)
     rand_seed = 0;
     
     % Which model?
-    model_flag = 1;     % 1 = nonlinear benchmark, 2 = target tracking
+    model_flag = 4;     % 1 = nonlinear benchmark, 2 = target tracking
     
     %%%%%%%%%%%%%%%%
     
@@ -62,6 +62,16 @@ if ~exist('flags.batch', 'var') || (~flags.batch)
         fh.EKFstateproposal = @linearGaussian_EKFstateproposal;
         fh.PFstateproposal = @linearGaussian_PFstateproposal;
         fh.MHstateproposal = @linearGaussian_MHstateproposal;
+    elseif model_flag == 4
+        fh.set_model = @sinusoidseparation_set_model;
+        fh.set_algo = @sinusoidseparation_set_algo;
+        fh.generate_data = @sinusoidseparation_generate_data;
+        fh.transition = @sinusoidseparation_transition;
+        fh.observation = @sinusoidseparation_observation;
+        fh.stateprior = @sinusoidseparation_stateprior;
+        fh.EKFstateproposal = @sinusoidseparation_EKFstateproposal;
+        fh.UKFstateproposal = @sinusoidseparation_UKFstateproposal;
+        fh.PFstateproposal = @sinusoidseparation_PFstateproposal;
     end
     
     % Set model and algorithm parameters
@@ -136,28 +146,28 @@ if (~flags.batch) && display.plot_after
         
         mn_array = [pf_bs.mn]; vr_array = cat(3,pf_bs.vr);
         plot(time, mn_array(dd,:),  'b');
-        plot(time, mn_array(dd,:)+2*sqrt(vr_array(dd,dd,:)),  ':b');
-        plot(time, mn_array(dd,:)-2*sqrt(vr_array(dd,dd,:)),  ':b');
+        plot(time, mn_array(dd,:)+2*sqrt(squeeze(vr_array(dd,dd,:))'),  ':b');
+        plot(time, mn_array(dd,:)-2*sqrt(squeeze(vr_array(dd,dd,:))'),  ':b');
         
         mn_array = [pf_ekf.mn]; vr_array = cat(3,pf_ekf.vr);
         plot(time, mn_array(dd,:),  'g');
-        plot(time, mn_array(dd,:)+2*sqrt(vr_array(dd,dd,:)),  ':g');
-        plot(time, mn_array(dd,:)-2*sqrt(vr_array(dd,dd,:)),  ':g');
+        plot(time, mn_array(dd,:)+2*sqrt(squeeze(vr_array(dd,dd,:))'),  ':g');
+        plot(time, mn_array(dd,:)-2*sqrt(squeeze(vr_array(dd,dd,:))'),  ':g');
         
         mn_array = [pf_ukf.mn]; vr_array = cat(3,pf_ukf.vr);
-        plot(time, mn_array(dd,:),  'g');
-        plot(time, mn_array(dd,:)+2*sqrt(vr_array(dd,dd,:)),  ':c');
-        plot(time, mn_array(dd,:)-2*sqrt(vr_array(dd,dd,:)),  ':c');
+        plot(time, mn_array(dd,:),  'c');
+        plot(time, mn_array(dd,:)+2*sqrt(squeeze(vr_array(dd,dd,:))'),  ':c');
+        plot(time, mn_array(dd,:)-2*sqrt(squeeze(vr_array(dd,dd,:))'),  ':c');
         
         mn_array = [pf_pfp.mn]; vr_array = cat(3,pf_pfp.vr);
         plot(time, mn_array(dd,:),  'r');
-        plot(time, mn_array(dd,:)+2*sqrt(vr_array(dd,dd,:)),  ':r');
-        plot(time, mn_array(dd,:)-2*sqrt(vr_array(dd,dd,:)),  ':r');
+        plot(time, mn_array(dd,:)+2*sqrt(squeeze(vr_array(dd,dd,:))'),  ':r');
+        plot(time, mn_array(dd,:)-2*sqrt(squeeze(vr_array(dd,dd,:))'),  ':r');
         
 %         mn_array = [pf_mhp.mn]; vr_array = cat(3,pf_mhp.vr);
-%         plot(time, mn_array(dd,:),  'r');
-%         plot(time, mn_array(dd,:)+2*sqrt(vr_array(dd,dd,:)),  ':m');
-%         plot(time, mn_array(dd,:)-2*sqrt(vr_array(dd,dd,:)),  ':m');
+%         plot(time, mn_array(dd,:),  'm');
+%         plot(time, mn_array(dd,:)+2*sqrt(squeeze(vr_array(dd,dd,:))'),  ':m');
+%         plot(time, mn_array(dd,:)-2*sqrt(squeeze(vr_array(dd,dd,:))'),  ':m');
         
     end
 
@@ -191,7 +201,7 @@ end
 
 %% Movie
 
-pf = pf_bs;
+pf = pf_pfp;
 
 mfig = figure; hold on;
 for kk = 1:model.K
@@ -203,7 +213,7 @@ for kk = 1:model.K
     plot(pf(kk).mn(1)*ones(1,2), [0 1], 'r');
     
     plot(state(kk)*ones(1,2), [0 1], 'b')
-    plot(-state(kk)*ones(1,2), [0 1], 'b')
+    plot(-state(kk)*ones(1,2), [0 1], ':b')
     
     pause(0.5);
     
