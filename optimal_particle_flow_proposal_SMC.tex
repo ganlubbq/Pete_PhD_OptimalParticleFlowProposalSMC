@@ -202,7 +202,13 @@ It remains to assign a weight to each particle once a sample has been drawn usin
  q(x_t, \tilde{x}_t | x_{t-1}, y_t) & = & p(\tilde{x}_t | x_{t-1}) \delta_{\phi(\tilde{x}_t)}(x_t)      ,
 \end{IEEEeqnarray}
 %
-where $\tilde{x}_t$ is the intermediate state, and $\phi$ the function which maps $\tilde{x}_t$ to $x_t$ by solving the ODE between $\lambda=0$ and $\lambda=1$. The following extended target distribution may be chosen,
+where $\tilde{x}_t$ is the intermediate state, and $\phi$ the function which maps $\tilde{x}_t$ to $x_t$ by solving the ODE between $\lambda=0$ and $\lambda=1$,
+%
+\begin{IEEEeqnarray}{rCl}
+ \phi(\tilde{x}_t) & = & \tilde{x}_t + \int_{0}^{1} f(x(\lambda), \lambda) d\lambda     .
+\end{IEEEeqnarray}
+%
+The following extended target distribution may be chosen,
 %
 \begin{IEEEeqnarray}{rCl}
  p(x_t, x_{t-1} | y_{1:t}) \delta_{\phi^{-1}(x_t)}(\tilde{x}_t)       .
@@ -301,6 +307,8 @@ Examining the remaining terms using the previously derived formula for $b(\lambd
 \end{IEEEeqnarray}
 %
 Hence the hypothesised solution is valid. There MUST be an easier way to show this!!
+
+This can then be extended to nonlinear Gaussian models by linearisation. This is better that a local linearisation.
 
 
 
