@@ -1,7 +1,7 @@
 function [ pf, ess, running_time ] = pf_standard( display, algo, model, fh, observ, flag_ppsl_type )
 %PF_STANDARD Run a standard particle filter
 
-tic;
+running_time_array = zeros(1,model.K);
 
 if display.text
     fprintf(1, 'Particle Filtering.\n');
@@ -14,6 +14,7 @@ end
 
 if display.text
     fprintf(1, '   Time step 1.\n');
+    tic;
 end
 
 % Initialise arrays
@@ -26,7 +27,6 @@ ess = zeros(1,model.K);
 % Sample first state from prior and calculate weight
 for ii = 1:algo.N
     [pf(1).state(:,ii), ~] = feval(fh.stateprior, model);
-    [~, pf(1).weight(1,ii)] = feval(fh.observation, model, pf(1).state(:,ii), observ(:,1));
 end
 
 ess(1) = calc_ESS(pf(1).weight);
@@ -35,11 +35,15 @@ pf(1).mn = mean(pf(1).state, 2);
 err = bsxfun(@minus, pf(1).state, pf(1).mn);
 pf(1).vr = err*err'/algo.N;
 
+running_time_array(1) = toc;
+fprintf(1, '     That step took %fs.\n', running_time_array(1));
+
 % Loop through time
 for kk = 2:model.K
     
     if display.text
         fprintf(1, '   Time step %u.\n', kk);
+        tic;
     end
     
     % Sample ancestors
@@ -115,9 +119,12 @@ for kk = 2:model.K
     err = bsxfun(@minus, pf(kk).state, pf(kk).mn);
     pf(kk).vr = err*diag(norm_weight)*err';
     
+    running_time_array(kk) = toc;
+    fprintf(1, '     That step took %fs.\n', running_time_array(kk));
+    
 end
 
-running_time = toc;
+running_time = sum(running_time_array);
 
 end
 

@@ -8,14 +8,12 @@ observ = zeros(model.do,model.K);
 
 % First state
 [state(:,1), ~] = sinusoidseparation_stateprior(model);
+observ(:,1) = NaN;
 
 % Loop through time
-for kk = 1:model.K
+for kk = 2:model.K
     
-    if kk > 1
-        [state(:,kk), ~] = sinusoidseparation_transition(model, kk-1, state(:,kk-1));
-    end
-    
+    [state(:,kk), ~] = sinusoidseparation_transition(model, kk-1, state(:,kk-1));
     [observ(:,kk), ~] = sinusoidseparation_observation(model, state(:,kk));
     
 end

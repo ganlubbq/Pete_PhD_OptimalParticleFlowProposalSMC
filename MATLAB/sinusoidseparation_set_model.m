@@ -22,9 +22,10 @@ model.sigA = 0.1;
 model.sigw = 0.1;
 model.sigp = 0.01;
 model.sigy = 0.01;
-model.ptrans_pres = 0.1;
+model.ptrans_pres = 0;
 model.ptrans_noise = 0;
 model.wmin = 0.5;
+model.Amin = 0.5;
 
 model.Q = blkdiag(model.sigA*eye(model.M), model.sigw*eye(model.M), model.sigp*eye(model.M));
 model.R = model.sigy * eye(model.do);
@@ -32,7 +33,7 @@ model.R = model.sigy * eye(model.do);
 % x1 distribution
 model.x1_lin_mn = [ones(model.M,1); ones(model.M,1); zeros(model.M,1)];
 model.x1_lin_vr = model.Q;
-model.pprior_pres = 0.9;
+model.pprior_pres = 1;
 model.pprior_noise = 0;
 
 end

@@ -95,7 +95,7 @@ end
 
 %% Run particle filters
 [pf_bs, ess_bs, running_time_bs] =    pf_standard(display, algo, model, fh, observ, 1);
-[pf_ekf, ess_ekf, running_time_ekf] = pf_standard(display, algo, model, fh, observ, 2);
+% [pf_ekf, ess_ekf, running_time_ekf] = pf_standard(display, algo, model, fh, observ, 2);
 [pf_ukf, ess_ukf, running_time_ukf] = pf_standard(display, algo, model, fh, observ, 3);
 [pf_pfp, ess_pfp, running_time_pfp] = pf_standard(display, algo, model, fh, observ, 4);
 % [pf_mhp, ess_mhp, running_time_mhp] = pf_standard(display, algo, model, fh, observ, 5);
@@ -105,14 +105,14 @@ end
 
 % Time
 running_time_bs
-running_time_ekf
+% running_time_ekf
 running_time_ukf
 running_time_pfp
 % running_time_mhp
 
 % Mean ESS
 mn_ess_bs  = mean(ess_bs)
-mn_ess_ekf = mean(ess_ekf)
+% mn_ess_ekf = mean(ess_ekf)
 mn_ess_ukf = mean(ess_ukf)
 mn_ess_pfp = mean(ess_pfp)
 % mn_ess_mhp = mean(ess_mhp)
@@ -124,7 +124,7 @@ mn_ess_pfp = mean(ess_pfp)
 % mn_rmse_pfp = sqrt( mean( (state - [pf_pfp.mn]).^2, 2 ) )
 % % mn_rmse_mhp = sqrt( mean( (state - [pf_mhp.mn]).^2, 2 ) )
 mn_rmse_bs =  sqrt( mean( sum((state - [pf_bs.mn]).^2,1) , 2 ) )
-mn_rmse_ekf = sqrt( mean( sum((state - [pf_ekf.mn]).^2,1) , 2 ) )
+% mn_rmse_ekf = sqrt( mean( sum((state - [pf_ekf.mn]).^2,1) , 2 ) )
 mn_rmse_ukf = sqrt( mean( sum((state - [pf_ukf.mn]).^2,1) , 2 ) )
 mn_rmse_pfp = sqrt( mean( sum((state - [pf_pfp.mn]).^2,1) , 2 ) )
 % mn_rmse_mhp = sqrt( mean( (state - [pf_mhp.mn]).^2,1) , 2 ) )
@@ -149,10 +149,10 @@ if (~flags.batch) && display.plot_after
         plot(time, mn_array(dd,:)+2*sqrt(squeeze(vr_array(dd,dd,:))'),  ':b');
         plot(time, mn_array(dd,:)-2*sqrt(squeeze(vr_array(dd,dd,:))'),  ':b');
         
-        mn_array = [pf_ekf.mn]; vr_array = cat(3,pf_ekf.vr);
-        plot(time, mn_array(dd,:),  'g');
-        plot(time, mn_array(dd,:)+2*sqrt(squeeze(vr_array(dd,dd,:))'),  ':g');
-        plot(time, mn_array(dd,:)-2*sqrt(squeeze(vr_array(dd,dd,:))'),  ':g');
+%         mn_array = [pf_ekf.mn]; vr_array = cat(3,pf_ekf.vr);
+%         plot(time, mn_array(dd,:),  'g');
+%         plot(time, mn_array(dd,:)+2*sqrt(squeeze(vr_array(dd,dd,:))'),  ':g');
+%         plot(time, mn_array(dd,:)-2*sqrt(squeeze(vr_array(dd,dd,:))'),  ':g');
         
         mn_array = [pf_ukf.mn]; vr_array = cat(3,pf_ukf.vr);
         plot(time, mn_array(dd,:),  'c');
@@ -192,29 +192,29 @@ if (~flags.batch) && display.plot_after
         
     figure, hold on, 
     plot(time, ess_bs, 'b'), 
-    plot(time, ess_ekf, 'g'),
+%     plot(time, ess_ekf, 'g'),
     plot(time, ess_ukf, 'c'),
     plot(time, ess_pfp, 'r'),
 %     plot(time, ess_mhp, 'm')
     
 end
 
-%% Movie
-
-pf = pf_pfp;
-
-mfig = figure; hold on;
-for kk = 1:model.K
-    
-    figure(mfig), clf, hold on
-    xlim([-25 25]), ylim([0 1])
-    
-    plot(pf(kk).state(1,:), exp(normalise_weights(pf(kk).weight)), 'xr')
-    plot(pf(kk).mn(1)*ones(1,2), [0 1], 'r');
-    
-    plot(state(kk)*ones(1,2), [0 1], 'b')
-    plot(-state(kk)*ones(1,2), [0 1], ':b')
-    
-    pause(0.5);
-    
-end
+% %% Movie
+% 
+% pf = pf_pfp;
+% 
+% mfig = figure; hold on;
+% for kk = 1:model.K
+%     
+%     figure(mfig), clf, hold on
+%     xlim([-25 25]), ylim([0 1])
+%     
+%     plot(pf(kk).state(1,:), exp(normalise_weights(pf(kk).weight)), 'xr')
+%     plot(pf(kk).mn(1)*ones(1,2), [0 1], 'r');
+%     
+%     plot(state(kk)*ones(1,2), [0 1], 'b')
+%     plot(-state(kk)*ones(1,2), [0 1], ':b')
+%     
+%     pause(0.5);
+%     
+% end
