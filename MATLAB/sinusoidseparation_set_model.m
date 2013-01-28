@@ -2,7 +2,7 @@ function model = sinusoidseparation_set_model
 
 % Model parameters
 
-model.K = 100;              % Number of time frames
+model.K = 10;              % Number of time frames
 model.M = 1;                % Number of sinusoids
 model.dsc = 3*model.M;      % Number of continuous states
 model.dsd = model.M+1;      % Number of discrete states
@@ -34,6 +34,6 @@ model.R = model.sigy * eye(model.do);
 model.x1_lin_mn = [ones(model.M,1); ones(model.M,1); zeros(model.M,1)];
 model.x1_lin_vr = model.Q;
 model.pprior_pres = 1;
-model.pprior_noise = 0;
+model.pprior_noise = 1;
 
 end

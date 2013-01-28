@@ -17,7 +17,7 @@ if (nargin<3)||isempty(obs)
     if obs_indic == 0
         obs = mvnrnd(mn', model.R)';
     elseif obs_indic == 1
-        obs = mn + mvtrnd(model.R, 1)';
+        obs = mvcauchyrnd(mn', model.R)';
     end
 end
 
@@ -26,7 +26,7 @@ if nargout>1
     if obs_indic == 0
         prob = loggausspdf(obs, mn, model.R);
     elseif obs_indic == 1
-        prob = log(mvtpdf((obs-mn)', model.R, 1));
+        prob = log(mvcauchypdf(obs', mn', model.R));
     end
 else
     prob = [];
