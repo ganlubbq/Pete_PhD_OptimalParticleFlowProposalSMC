@@ -20,8 +20,6 @@ dis_state = state(model.dsc+1:model.ds,1);
 
 % Solve ODE
 lam_rng = [0 1];
-% options.Jacobian = @(lam,x)flow_jacobian(model, lam, x);
-% options.Jacobian = [];
 if dis_state(end) == 0
     options = odeset('Jacobian', @(lam,x)flow_jacobian(model, lam, x, dis_state), 'RelTol', 1E-2);
 else

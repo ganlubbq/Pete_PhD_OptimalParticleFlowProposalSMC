@@ -7,10 +7,10 @@ model.M = 1;                % Number of sinusoids
 model.dsc = 3*model.M;      % Number of continuous states
 model.dsd = model.M+1;      % Number of discrete states
 model.ds = 4*model.M+1;     % Dimension of the state
-model.do = 50;              % Dimension of the observations
+model.do = 10;              % Dimension of the observations
 
 % Parameters
-model.Ts = 0.1;
+model.Ts = 0.5;
 model.beta1 = 0.9;
 model.beta2 = 0.5;
 model.beta3 = 0.95;
