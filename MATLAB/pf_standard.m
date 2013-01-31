@@ -1,4 +1,4 @@
-function [ pf, ess, running_time ] = pf_standard( display, algo, model, fh, observ, flag_ppsl_type )
+function [ pf, ess, running_time ] = pf_standard( display, algo, model, fh, observ, flag_ppsl_type, true_state )
 %PF_STANDARD Run a standard particle filter
 
 running_time_array = zeros(1,model.K);
@@ -34,6 +34,8 @@ ess(1) = calc_ESS(pf(1).weight);
 pf(1).mn = mean(pf(1).state, 2);
 err = bsxfun(@minus, pf(1).state, pf(1).mn);
 pf(1).vr = err*err'/algo.N;
+pf(1).rmse = sum((pf(1).mn(1:model.dsc) - true_state(1:model.dsc,1)).^2);
+pf(1).nees = (pf(1).mn(1:model.dsc) - true_state(1:model.dsc,1))'*(pf(1).vr(1:model.dsc,1:model.dsc)\(pf(1).mn(1:model.dsc) - true_state(1:model.dsc,1)));
 
 running_time_array(1) = toc;
 fprintf(1, '     That step took %fs.\n', running_time_array(1));
@@ -118,6 +120,8 @@ for kk = 2:model.K
     pf(kk).mn = pf(kk).state*norm_weight';
     err = bsxfun(@minus, pf(kk).state, pf(kk).mn);
     pf(kk).vr = err*diag(norm_weight)*err';
+    pf(kk).rmse = sum((pf(kk).mn(1:model.dsc) - true_state(1:model.dsc,kk)).^2);
+    pf(kk).nees = (pf(kk).mn(1:model.dsc) - true_state(1:model.dsc,kk))'*(pf(kk).vr(1:model.dsc,1:model.dsc)\(pf(kk).mn(1:model.dsc) - true_state(1:model.dsc,kk)));
     
     running_time_array(kk) = toc;
     fprintf(1, '     That step took %fs.\n', running_time_array(kk));

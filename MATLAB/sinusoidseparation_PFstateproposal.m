@@ -3,6 +3,8 @@ function [ state, prob ] = sinusoidseparation_PFstateproposal( algo, model, prev
 %model. This uses the particle flow approximation to the OID.
 
 % figure(1), hold on
+% figure(2), hold on
+% figure(3), hold on, plot(observ,'r')
 
 % Split state into continuous and discrete components
 prev_con_state = prev_state(1:model.dsc,1);
@@ -27,35 +29,42 @@ if dis_state(end) == 0
     
 else
     
+    options = [];
+    [lam, x] = ode15s(@(lam_in, x_in) calc_particle_velocity(model, lam_in, x_in, observ, prior_mn, dis_state), lam_rng, con_state, options);
+    con_state = x(end,:)';
+%     if prev_kk > 0
+%         figure(1);
+%         plot(x(:,1), x(:,2))
+%         plot(x(end,1), x(end,2), 'bo')
+%         figure(2);
+%         plot(x(:,2), x(:,3))
+%         plot(x(end,2), x(end,3), 'bo')
+%         figure(3)
+%         pred_obs = sinusoidseparation_h(model, con_state, dis_state);
+%         plot(pred_obs, 'b');
+%     end
+    
+%     % Solve ODE for sample AND UT approximation in parallel, using UT
+%     % approximation to expected log-likelihood
+%     
+%     % UT approximation of (Gaussian) prior
+%     [utw, ~, c] = ut_weights(model.dsc, [], [], 1);
+%     sig_pts = ut_sigmas(prior_mn, model.Q, c);
+%     
+%     % Stack up the sigma points
+%     con_stack = [con_state; sig_pts(:)];
+%     
+%     % Give it to the solver
 %     options = [];
-%     [lam, x] = ode15s(@(lam_in, x_in) calc_particle_velocity(model, lam_in, x_in, observ, prior_mn, dis_state), lam_rng, con_state, options);
-%     con_state = x(end,:)';
+%     [lam, x] = ode15s(@(lam_in, x_in) calc_sigset_particle_velocity(model, lam_in, x_in, observ, prior_mn, utw, dis_state), lam_rng, con_stack, options);
+%     
 % %     if prev_kk > 0
 % %         plot(x(:,1), x(:,2))
 % %         plot(x(end,1), x(end,2), 'bo')
 % %     end
-    
-    % Solve ODE for sample AND UT approximation in parallel, using UT
-    % approximation to expected log-likelihood
-    
-    % UT approximation of (Gaussian) prior
-    [utw, ~, c] = ut_weights(model.dsc, [], [], 1);
-    sig_pts = ut_sigmas(prior_mn, model.Q, c);
-    
-    % Stack up the sigma points
-    con_stack = [con_state; sig_pts(:)];
-    
-    % Give it to the solver
-    options = [];
-    [lam, x] = ode15s(@(lam_in, x_in) calc_sigset_particle_velocity(model, lam_in, x_in, observ, prior_mn, utw, dis_state), lam_rng, con_stack, options);
-    
-%     if prev_kk > 0
-%         plot(x(:,1), x(:,2))
-%         plot(x(end,1), x(end,2), 'bo')
-%     end
-    
-    % Get the right bit
-    con_state = x(end,1:model.dsc)';
+%     
+%     % Get the right bit
+%     con_state = x(end,1:model.dsc)';
     
 end
 
