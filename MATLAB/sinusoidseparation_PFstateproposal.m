@@ -29,9 +29,18 @@ if dis_state(end) == 0
     
 else
     
+    % Sample a mixing variable
+    xi = exprnd(0.5);
+    aug_state = [con_state; xi];
+    
     options = [];
-    [lam, x] = ode15s(@(lam_in, x_in) calc_particle_velocity(model, lam_in, x_in, observ, prior_mn, dis_state), lam_rng, con_state, options);
-    con_state = x(end,:)';
+    [lam, x] = ode15s(@(lam_in, x_in) calc_SMoN_particle_velocity(model, lam_in, x_in, observ, prior_mn, dis_state), lam_rng, aug_state, options);
+    con_state = x(end,1:end-1)';
+    
+%     options = [];
+%     [lam, x] = ode15s(@(lam_in, x_in) calc_particle_velocity(model, lam_in, x_in, observ, prior_mn, dis_state), lam_rng, con_state, options);
+%     con_state = x(end,:)';
+    
 %     if prev_kk > 0
 %         figure(1);
 %         plot(x(:,1), x(:,2))
@@ -128,6 +137,100 @@ elseif dis_state(end) == 1
     v = -loglhood*dlogp_dx/norm_const;% - corr_mat*x;
 
 end
+
+end
+
+function v = calc_SMoN_particle_velocity(model, lam, x, y, m, dis_state)
+
+% Shorter variable names
+Q = model.Q;
+R = model.R;
+ds = model.dsc;
+do = model.do;
+
+xi = x(end);
+x(end) = [];
+
+% Linearise
+H = sinusoidseparation_obsjacobian(model, x, dis_state);
+y_mod = y - sinusoidseparation_h(model, x, dis_state) + H*x;
+
+% Useful intermediates
+D  = (y-H*x)'*(R\(y-H*x));
+% Dp = (y-H*m)'*(R\(y-H*m));
+% D  = (y_mod-H*x)'*(R\(y_mod-H*x));
+
+% xi = do/D;
+
+% Normal state velocity
+Rxi = R/xi;
+A = -0.5*Q*H'*((Rxi+lam*H*Q*H')\H);
+b = (eye(ds)+2*lam*A)*((eye(ds)+lam*A)*Q*H'*(Rxi\y_mod)+A*m);
+vx = A*x+b;
+
+
+
+% if lam > 0
+    
+    
+%     % Some constants
+%     ga = 1+0.5*lam*do;
+%     gb = (1+lam*D)/2;
+%     
+%     g1 = -do/2;
+%     g2 = D/2;
+%     g3 = -(D/(1+lam*D))*ga + 0.5*do*( log(1/gb) + psi(ga) );
+%     
+%     % Integral terms
+%     I1 =  g1 * xi^ga*( log(xi)*(gb*xi)^(-ga)*( gamma(ga)*gammainc(gb*xi,ga) ) - hypergeom([ga ga], [ga+1, ga+1], -gb*xi)/(ga^2) );
+%     I2 = -g2 * gb^(-ga-1) * gamma(ga+1)*gammainc(ga+1,gb*xi,'upper');
+%     I3 = -g3 * gb^(-ga) * gamma(ga)*gammainc(ga,gb*xi,'upper');
+%     
+%     vxi = xi^(-0.5*lam*do)*exp(gb*xi)*(I1+I2+I3);
+    
+%     % Expectation
+%     samps = exprnd(0.5,[100,1]);
+%     I1 = 0; I2 = 0;
+%     for ii = 1:length(samps)
+%         I1 = I1 + samps(ii)^(-0.5*do*(1-lam))*exp(loggausspdf(y,H*m,H*Q*H'+(R/(lam*samps(ii)))));
+%         I1 = I1 + samps(ii)^(-0.5*do*(1-lam))*exp(loggausspdf(y,H*m,H*Q*H'+(R/(lam*samps(ii)))));
+%     end
+%     sf = det(2*pi*R)^(0.5*(1-lam))*lam^(-do/2);
+%     I1 = I1*sf;
+%     I2 = I2*sf;
+% 
+%     
+%     % Scale factor
+%     g1 = (0.5*y'-lam*b'*H')*(R\y);
+%     g2 = -do/2;
+%     g3 = 0.5*log(det(2*pi*R)) - trace(A) + b'*(Q\m) + Elogbeta;
+%     C = gamma(0.5*lam*do+1)*(0.5*lam*D)^(-0.5*lam*do-1)*( g1*(0.5*lam*do+1)/(0.5*lam*D) + g2 + g3*( log(1/(lam*D)) + psi(0.5*lam*do+1) ) );
+%     
+%     % Mixing variable velocity
+%     vxi = C * xi^(-0.5*lam*do)*exp(0.5*xi*lam*D);
+%     
+% else
+%     
+%     % Expectation
+%     Elogbeta = -0.5*log(det(2*pi*R)) + 0.5*do*(log(2)-(-psi(1))) - Dp - trace((H'/R)*(H/Q));
+%     
+%     % Scale factor
+%     g1 = 0.5*y'*(R\y);
+%     g2 = -do/2;
+%     g3 = 0.5*log(det(2*pi*R)) - trace(A) + b'*(Q\m) + Elogbeta;
+%     
+%     % Mixing variable velocity
+%     vxi = 0.5*g1*xi^2 + g2*xi*(log(xi)-1) + g3*xi;
+%     
+% end
+
+% Approximate?
+dtml = do/D - xi;
+vxi = sign(dtml)*(abs(dtml));
+
+% vxi = 0;
+
+v = [vx; vxi];
 
 end
 

@@ -18,9 +18,14 @@ else
     dis_state = state(model.dsc+1:model.ds,1);
 end
 
+if dis_state(end)
+    xi = exprnd(0.5);
+    R = model.R / xi;
+end
+
 % UKF update
 h = @(x, par)sinusoidseparation_h(model, x, dis_state);
-[ppsl_mn, ppsl_vr] = ukf_update1(prior_mn, prior_vr, observ, h, model.R, [], [], [], 1);
+[ppsl_mn, ppsl_vr] = ukf_update1(prior_mn, prior_vr, observ, h, R, [], [], [], 1);
 ppsl_vr = 0.5*(ppsl_vr+ppsl_vr');
 
 % Sample state if not provided

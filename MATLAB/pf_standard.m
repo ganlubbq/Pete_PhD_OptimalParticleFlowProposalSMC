@@ -26,7 +26,11 @@ ess = zeros(1,model.K);
 
 % Sample first state from prior and calculate weight
 for ii = 1:algo.N
-    [pf(1).state(:,ii), ~] = feval(fh.stateprior, model);
+    [state, ~] = feval(fh.stateprior, model);
+    [~, lhood_prob] = feval(fh.observation, model, state, observ(:,1));
+    
+    pf(1).state(:,ii) = state;
+    pf(1).weight(ii) = lhood_prob;
 end
 
 ess(1) = calc_ESS(pf(1).weight);

@@ -24,9 +24,14 @@ end
 % Linearise
 H = sinusoidseparation_obsjacobian(model, lin_state, dis_state);
 
+if dis_state(end)
+    xi = exprnd(0.5);
+    R = model.R / xi;
+end
+
 % EKF update
 obs_mn = sinusoidseparation_h(model, prior_mn, dis_state);
-[ppsl_mn, ppsl_vr] = ekf_update1(prior_mn, prior_vr, observ, H, model.R, obs_mn);
+[ppsl_mn, ppsl_vr] = ekf_update1(prior_mn, prior_vr, observ, H, R, obs_mn);
 ppsl_vr = (ppsl_vr+ppsl_vr')/2;
 
 % Sample continuous state if not provided
