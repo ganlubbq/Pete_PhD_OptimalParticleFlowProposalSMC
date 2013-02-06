@@ -111,23 +111,17 @@ running_time_pfp
 % running_time_mhp
 
 % Mean ESS
-mn_ess_bs  = mean(ess_bs)
-% mn_ess_ekf = mean(ess_ekf)
-mn_ess_ukf = mean(ess_ukf)
-mn_ess_pfp = mean(ess_pfp)
+mn_ess_bs  = mean(ess_bs(2:end))
+% mn_ess_ekf = mean(ess_ekf(2:end))
+mn_ess_ukf = mean(ess_ukf(2:end))
+mn_ess_pfp = mean(ess_pfp(2:end))
 % mn_ess_mhp = mean(ess_mhp)
 
 % RMSE
-% mn_rmse_bs =  sqrt( mean( (state - [pf_bs.mn]).^2 , 2 ) )
-% mn_rmse_ekf = sqrt( mean( (state - [pf_ekf.mn]).^2, 2 ) )
-% mn_rmse_ukf = sqrt( mean( (state - [pf_ukf.mn]).^2, 2 ) )
-% mn_rmse_pfp = sqrt( mean( (state - [pf_pfp.mn]).^2, 2 ) )
-% % mn_rmse_mhp = sqrt( mean( (state - [pf_mhp.mn]).^2, 2 ) )
-mn_rmse_bs =  sqrt( mean( sum((state - [pf_bs.mn]).^2,1) , 2 ) )
-% mn_rmse_ekf = sqrt( mean( sum((state - [pf_ekf.mn]).^2,1) , 2 ) )
-mn_rmse_ukf = sqrt( mean( sum((state - [pf_ukf.mn]).^2,1) , 2 ) )
-mn_rmse_pfp = sqrt( mean( sum((state - [pf_pfp.mn]).^2,1) , 2 ) )
-% mn_rmse_mhp = sqrt( mean( (state - [pf_mhp.mn]).^2,1) , 2 ) )
+pf_mn = [pf_bs.mn];  mn_rmse_bs =  sqrt( mean( sum((state(:,2:end) - pf_mn(:,2:end)).^2,1) , 2 ) )
+% pf_mn = [pf_ekf.mn]; mn_rmse_ekf =  sqrt( mean( sum((state(:,2:end) - pf_mn(:,2:end)).^2,1) , 2 ) )
+pf_mn = [pf_ukf.mn]; mn_rmse_ukf =  sqrt( mean( sum((state(:,2:end) - pf_mn(:,2:end)).^2,1) , 2 ) )
+pf_mn = [pf_pfp.mn]; mn_rmse_pfp =  sqrt( mean( sum((state(:,2:end) - pf_mn(:,2:end)).^2,1) , 2 ) )
 
 % NEES
 % mn_nees_bs =  
@@ -204,10 +198,10 @@ if (~flags.batch) && display.plot_after
     plot(time, [pf_pfp.rmse], 'r');
 
     figure, hold on,
-    plot(time, [pf_bs.nees], 'b');
-%     plot(time, [pf_ekf.nees], 'g');
-    plot(time, [pf_ukf.nees], 'c');
-    plot(time, [pf_pfp.nees], 'r');
+    nees = [pf_bs.nees]; plot(time, nees./(1+nees), 'b');
+%     nees = [pf_ekf.nees]; plot(time, nees./(1+nees), 'g');
+    nees = [pf_ukf.nees]; plot(time, nees./(1+nees), 'c');
+    nees = [pf_pfp.nees]; plot(time, nees./(1+nees), 'r');
     
 end
 
@@ -232,4 +226,4 @@ end
 % end
 
 % figure, hold on, plot(sinusoidseparation_h(model,state(1:model.dsc,kk),state(model.dsc+1:end,kk)),'b'), plot(observ(:,kk),'r')
-
+% err = zeros(1,model.K); for kk = 1:model.K, err(kk)=sum( (observ(:,kk)-sinusoidseparation_h(model,state(1:model.dsc,kk),state(model.dsc+1:end,kk))).^2 ); end

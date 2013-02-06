@@ -5,6 +5,7 @@ function [ state, prob ] = sinusoidseparation_PFstateproposal( algo, model, prev
 % figure(1), hold on
 % figure(2), hold on
 % figure(3), hold on, plot(observ,'r')
+% figure(4), hold on
 
 % Split state into continuous and discrete components
 prev_con_state = prev_state(1:model.dsc,1);
@@ -29,8 +30,34 @@ if dis_state(end) == 0
     
 else
     
+%     [ exp_samps, GL_weights ] = gengausslegquadrule( 5 );
+%     options = [];
+%     
+%     starting_con_state = con_state;
+%     con_state = zeros(model.dsc,1);
+%     
+% %     figure(1), clf, hold on
+%     
+%     for ii = 1:length(exp_samps)
+%         
+%         xi_ii = 2*exp_samps(ii);
+%         aug_state = [starting_con_state; xi_ii];
+%         [lam, x] = ode15s(@(lam_in, x_in) calc_SMoN_particle_velocity(model, lam_in, x_in, observ, prior_mn, dis_state), lam_rng, aug_state, options);
+%         
+%         final_x = x(end,1:end-1)';
+%         
+%         con_state = con_state + GL_weights(ii) * final_x;
+%         
+% %         plot(final_x(1), final_x(2), 'bo');
+%         
+%     end
+    
+%     ppsl_rate = 2;
+%     xi = exprnd(ppsl_rate);
+%     prob = prob + log(gampdf(xi,2,2))-log(exppdf(xi,ppsl_rate));
+    
     % Sample a mixing variable
-    xi = exprnd(0.5);
+    xi = chi2rnd(model.dfy);
     aug_state = [con_state; xi];
     
     options = [];
@@ -42,15 +69,10 @@ else
 %     con_state = x(end,:)';
     
 %     if prev_kk > 0
-%         figure(1);
-%         plot(x(:,1), x(:,2))
-%         plot(x(end,1), x(end,2), 'bo')
-%         figure(2);
-%         plot(x(:,2), x(:,3))
-%         plot(x(end,2), x(end,3), 'bo')
-%         figure(3)
-%         pred_obs = sinusoidseparation_h(model, con_state, dis_state);
-%         plot(pred_obs, 'b');
+%         figure(1), plot(x(:,1), x(:,2)), plot(x(end,1), x(end,2), 'bo')
+%         figure(2), plot(x(:,2), x(:,3)), plot(x(end,2), x(end,3), 'bo')
+%         figure(3), pred_obs = sinusoidseparation_h(model, con_state, dis_state), plot(pred_obs, 'b');
+%         figure(4), plot(lam, log(x(:,end)))
 %     end
     
 %     % Solve ODE for sample AND UT approximation in parallel, using UT
@@ -160,7 +182,13 @@ D  = (y-H*x)'*(R\(y-H*x));
 % Dp = (y-H*m)'*(R\(y-H*m));
 % D  = (y_mod-H*x)'*(R\(y_mod-H*x));
 
-% xi = do/D;
+% Some constants
+ga = 1+0.5*(lam*do-1);
+gb = (1+lam*D)/2;
+
+% Set xi deterministically??
+% xi = gamrnd(ga, 1/gb);
+% xi = ga/gb;
 
 % Normal state velocity
 Rxi = R/xi;
@@ -168,25 +196,42 @@ A = -0.5*Q*H'*((Rxi+lam*H*Q*H')\H);
 b = (eye(ds)+2*lam*A)*((eye(ds)+lam*A)*Q*H'*(Rxi\y_mod)+A*m);
 vx = A*x+b;
 
+%%% XI BIT %%%
+
+% % Some constants
+% g1 = -do/2;
+% g2 = D/2;
+% g3 = -0.5*D*ga/gb + 0.5*do*( psi(ga) - log(gb) );
+% 
+% % Integral terms
+% I2 =  g2 * gb^(-ga-1) * gamma(ga+1)*gammainc(ga+1,gb*xi);
+% I3 =  g3 * gb^(-ga) * gamma(ga)*gammainc(ga,gb*xi);
+% I1 =  g1 * xi^ga*( log(xi)*(gb*xi)^(-ga)*( gamma(ga)*gammainc(gb*xi,ga) ) - hypergeom([ga ga], [ga+1, ga+1], -gb*xi)/(ga^2) );
+% % I1 = 2.2332;
+% 
+% 
+% I = I1 + I2 + I3;
+% 
+% Nsamp = 1000;
+% I1_arr = zeros(1,Nsamp);
+% I2_arr = zeros(1,Nsamp);
+% I3_arr = zeros(1,Nsamp);
+% for ii = 1:Nsamp
+%     samp = inf;
+%     while samp > xi
+%         samp = gamrnd(ga,gb);
+%     end
+%     I1_arr(ii) = g1*log(samp);
+%     I2_arr(ii) = g2*samp;
+%     I3_arr(ii) = g3;
+% end
+% I = (sum(I1_arr)+sum(I2_arr)+sum(I3_arr))*gamma(ga)*gb^(-ga)/Nsamp;
+% 
+% vxi = xi^(1-ga)*exp(gb*xi)*I;
 
 
 % if lam > 0
     
-    
-%     % Some constants
-%     ga = 1+0.5*lam*do;
-%     gb = (1+lam*D)/2;
-%     
-%     g1 = -do/2;
-%     g2 = D/2;
-%     g3 = -(D/(1+lam*D))*ga + 0.5*do*( log(1/gb) + psi(ga) );
-%     
-%     % Integral terms
-%     I1 =  g1 * xi^ga*( log(xi)*(gb*xi)^(-ga)*( gamma(ga)*gammainc(gb*xi,ga) ) - hypergeom([ga ga], [ga+1, ga+1], -gb*xi)/(ga^2) );
-%     I2 = -g2 * gb^(-ga-1) * gamma(ga+1)*gammainc(ga+1,gb*xi,'upper');
-%     I3 = -g3 * gb^(-ga) * gamma(ga)*gammainc(ga,gb*xi,'upper');
-%     
-%     vxi = xi^(-0.5*lam*do)*exp(gb*xi)*(I1+I2+I3);
     
 %     % Expectation
 %     samps = exprnd(0.5,[100,1]);
@@ -224,11 +269,23 @@ vx = A*x+b;
 %     
 % end
 
-% Approximate?
-dtml = do/D - xi;
-vxi = sign(dtml)*(abs(dtml));
+% vxi = xi^(1-ga)*exp(gb*xi);
 
-% vxi = 0;
+% % Moment matching
+% lDp1 = 1 + lam*D;
+% ldp2 = 2 + lam*do;
+% mu = ldp2/lDp1;
+% A = (do - 4*D - lam*do*D)/( 2*lDp1*ldp2 );
+% b = (do - 2*D)/lDp1^2;
+% vxi = A*(xi-mu)+b;
+
+% % Approximate?
+% xi_mn = ga/gb;
+% dtml = xi_mn - xi;
+% vxi = sign(dtml)*abs(dtml);
+
+% Fuck it. Just keep it constant
+vxi = 0;
 
 v = [vx; vxi];
 

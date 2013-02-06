@@ -25,7 +25,7 @@ end
 H = sinusoidseparation_obsjacobian(model, lin_state, dis_state);
 
 if dis_state(end)
-    xi = exprnd(0.5);
+    xi = chi2rnd(model.dfy);
     R = model.R / xi;
 end
 

@@ -19,8 +19,10 @@ else
 end
 
 if dis_state(end)
-    xi = exprnd(0.5);
+    xi = chi2rnd(model.dfy);
     R = model.R / xi;
+else
+    R = model.R;
 end
 
 % UKF update
