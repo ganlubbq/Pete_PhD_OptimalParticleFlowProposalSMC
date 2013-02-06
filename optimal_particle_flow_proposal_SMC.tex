@@ -223,7 +223,7 @@ The resulting importance weights are,
 For the formulation above to be valid, the support of the proposal must have at least as great an extent as that of the target, and the function $\phi$ is bijective. This is true if and only if the flow is reversible. This requires that the flow should never cross a boundary of the state space, which is a restrictive condition when we know the boundaries a priori from physical constraints. However, because the flow is only used to propose a sample, we can simply ignore them, relying on the weighting stage to reject these particles.
 
 
-\section{Gaussian densities}
+\section{Gaussian Densities}
 
 In this section, we derive a useful flow.
 
@@ -308,7 +308,33 @@ Examining the remaining terms using the previously derived formula for $b(\lambd
 %
 Hence the hypothesised solution is valid. There MUST be an easier way to show this!!
 
-This can then be extended to nonlinear Gaussian models by linearisation. This is better that a local linearisation.
+
+
+\section{Gaussian Extensions}
+
+\subsection{Linearisation}
+
+If the observation model is nonlinear, we can linearise it and use the Gaussian flow from the previous section.
+%
+\begin{IEEEeqnarray}{rCl}
+ h(x_t) & \approx & h(x_t^*) + \underbrace{\left.\frac{\partial h}{\partial x_t}\right|_{x_t=x_t^*}}_{H(x_t^*)} (x_t - x_t^*) \nonumber \\
+ \beta(x_t)  & = & \mathcal{N}(y_t|h(x_t),R) \nonumber \\
+             & \approx & \mathcal{N}(y_t-h(x_t^*)+H(x_t^*) x_t^* | H(x_t^*) x_t, R)      .
+\end{IEEEeqnarray}
+%
+Note that this method is far more accurate than an EKF because we are linearising around every point on the particle path, rather than just at a single point. This improved accuracy comes at a cost in computation.
+
+\subsection{Scale Mixtures}
+
+We can use the Gaussian flow when the transition or observation model is non-Gaussian by using a scale mixture of normals (SMoN) representation. Many densities can be written in the form,
+%
+\begin{IEEEeqnarray}{rCl}
+ p(x) & = & \int \mathcal{N}(x|m,\frac{1}{\xi}P) p(\xi) d\xi     .
+\end{IEEEeqnarray}
+%
+For example, if $p(\xi)$ is a chi-square distribution (with $\nu$ degrees of freedom), then $p(x)$ is a student-t distribution (with $\nu$ degrees of freedom). With $1$ degree of freedom, this becomes a Cauchy distribution.
+
+By extending the target distribution to include the auxiliary mixing variable, $\xi$, the distribution becomes gamma-Gaussian. The simplest method for exploiting this is to sample $\xi$ from the prior and then use the Gaussian flow. It would be nicer if we could somehow infer $\xi$ with some sort of joint flow.
 
 
 
@@ -322,59 +348,59 @@ This can then be extended to nonlinear Gaussian models by linearisation. This is
 
 
 
-\section{The Situation}
-
-Consider a particle filter for estimating $p(x_{1:t} | y_{1:t})$. Lets say that the transition density, $p(x_t | x_{t-1})$, is easily sampled and that both the transition density and the likelihood, $p(y_t | x_t)$, can be evaluated and differentiated. The optimal proposal density is $p(x_t | x_{1:t-1}, y_t)$. In our example, This, in general, cannot be sampled from, nor easily approximated, and may well be multimodal.
-
-If we simply use the transition density as the importance density (i.e. a bootstrap filter) then we will need many particles to get a good approximation.
-
-
-
-\section{Particle Flow}
-
-Fred Daum's particle flow filter works on the following principle. First conduct a set of bootstrap proposals to generate particles from $p(x_{1:t} | y_{1:t-1})$. Now define a ``log-homotopy'' from $p(x_{1:t} | y_{1:t-1})$ to $p(x_{1:t} | y_{1:t})$ as follows,
+%\section{The Situation}
 %
-\begin{IEEEeqnarray}{rCl}
- \log\left( p(x_t, \lambda) \right) & = & \log\left( \underbrace{p(x_{t} | y_{1:t-1})}_{g(x_t)} \right) + \lambda \log\left( \underbrace{p(y_t | x_t)}_{h(x_t)} \right)     .
-\end{IEEEeqnarray}
-
-When $\lambda=0$, $p(x_t, \lambda)$ is equal to the prior density, and when $\lambda=1$, it's equal to the posterior. Now we just use the Fokker-Planck equation ``backwards'' to work out the flow of particles corresponding to this flow of density. This requires the solution to an under-determined PDE, which will often require numerical methods, to discover $f(x_t, \lambda)$ and then the solution to the ODE $f(x_t, \lambda)=\frac{dx_t}{d\lambda}$.
-
-The things I don't like about this are:
-\begin{itemize}
-  \item A lot of numerical approximations are required to solve the PDE. The one I am most suspicious of is that required to evaluate $g(x)$ at arbitrary points. This can be done using a particle approximation, but this yields an $\mathcal{O}(N^2)$ algorithm. Fred avoids this by using only a small subset of ``approximate nearest neighbour'' particles. I am suspicious of this.
-  \item I think there's a problem with multimodal posteriors when one mode is eliminated. How do we remove the particles at this mode. They suddenly have to make a huge jump to the other modes. If they all go to the nearest mode, then this will bias the posterior. We \emph{need} resampling to allow us to ``kill'' particles.
-  \item Fred's derivations all require $p(x_t,\lambda)$ to be nowhere vanishing. This is not the case when the domain of $x_t$ is limited, for example a state variable which is strictly positive (e.g. a variance). If there are zeros in the likelihood, we need to be able to kill particles which fall in that region, or otherwise deal with them. If there are zeros in the prior, then we need the boundary condition that $f(x_t, \lambda)$ be parallel to the boundary, so that particles cannot move into the zero-probability region.
-  \item There's no way to deal with mixed states, when we want to estimate discrete and continuous variables in parallel.
-\end{itemize}
-
-
-
-\section{Optimal Proposals}
-
-Instead of sampling $p(x_t | y_{1:t})$ using the homotopy, we can sample the optimal proposal density, $p(x_t | x_{t-1}, y_t)$. This solves the first problem in the list above, because we now have $g(x_t)=p(x_t|x_{t-1})$ in our homotopy, which can be both evaluated and probably differentiated analytically.
-
-A further corollary of this is that our particles will now have a weight again, so we will need to reintroduce resampling. This solves the second problem, although it does reintroduce a bottleneck.
-
-The weight evaluation is problematic, since the particle weights ought to be $w_t = p(y_t | x_{t-1})$, which cannot be evaluated. We solve this by using an SMC sampler which jointly targets the prior and posterior positions of the particles (i.e. before and after the homotopy is applied). The proposal is thus,
+%Consider a particle filter for estimating $p(x_{1:t} | y_{1:t})$. Lets say that the transition density, $p(x_t | x_{t-1})$, is easily sampled and that both the transition density and the likelihood, $p(y_t | x_t)$, can be evaluated and differentiated. The optimal proposal density is $p(x_t | x_{1:t-1}, y_t)$. In our example, This, in general, cannot be sampled from, nor easily approximated, and may well be multimodal.
 %
-\begin{IEEEeqnarray}{c}
- p(x_{1:t-1} | y_{1:t-1}) p(x_t^* | x_{t-1}) \delta_{F(x_t^*)}(x_t)     ,
-\end{IEEEeqnarray}
+%If we simply use the transition density as the importance density (i.e. a bootstrap filter) then we will need many particles to get a good approximation.
 %
-where $x_t^*$ is the prior state of the particle and $x_t$ the posterior, and $F(x)$ describes the effect of the homotopy. We use the augmented target distribution,
 %
-\begin{IEEEeqnarray}{rCl}
- p(x_{1:t} | y_{1:t}) \delta_{F^{-1}(x_t)}(x_t^*)     .
-\end{IEEEeqnarray}
 %
-This leads to an unnormalised weight of,
+%\section{Particle Flow}
 %
-\begin{IEEEeqnarray}{rCl}
- w_t & = & \frac{ p(y_t|x_t)p(x_t|x_{t-1}) }{ p(x_t^* | x_{t-1}) }     .
-\end{IEEEeqnarray}
-
-For the above scheme to be valid, we need the support of the proposal to contain that of the target. This is only the case if $F$ is bijective (I think), necessary conditions for which are that $f(x_t, \lambda)$ be smooth and the boundary condition $f(x_t, \lambda)$ parallel to the boundary of the region $g(x_t)=0$.
+%Fred Daum's particle flow filter works on the following principle. First conduct a set of bootstrap proposals to generate particles from $p(x_{1:t} | y_{1:t-1})$. Now define a ``log-homotopy'' from $p(x_{1:t} | y_{1:t-1})$ to $p(x_{1:t} | y_{1:t})$ as follows,
+%%
+%\begin{IEEEeqnarray}{rCl}
+% \log\left( p(x_t, \lambda) \right) & = & \log\left( \underbrace{p(x_{t} | y_{1:t-1})}_{g(x_t)} \right) + \lambda \log\left( \underbrace{p(y_t | x_t)}_{h(x_t)} \right)     .
+%\end{IEEEeqnarray}
+%
+%When $\lambda=0$, $p(x_t, \lambda)$ is equal to the prior density, and when $\lambda=1$, it's equal to the posterior. Now we just use the Fokker-Planck equation ``backwards'' to work out the flow of particles corresponding to this flow of density. This requires the solution to an under-determined PDE, which will often require numerical methods, to discover $f(x_t, \lambda)$ and then the solution to the ODE $f(x_t, \lambda)=\frac{dx_t}{d\lambda}$.
+%
+%The things I don't like about this are:
+%\begin{itemize}
+%  \item A lot of numerical approximations are required to solve the PDE. The one I am most suspicious of is that required to evaluate $g(x)$ at arbitrary points. This can be done using a particle approximation, but this yields an $\mathcal{O}(N^2)$ algorithm. Fred avoids this by using only a small subset of ``approximate nearest neighbour'' particles. I am suspicious of this.
+%  \item I think there's a problem with multimodal posteriors when one mode is eliminated. How do we remove the particles at this mode. They suddenly have to make a huge jump to the other modes. If they all go to the nearest mode, then this will bias the posterior. We \emph{need} resampling to allow us to ``kill'' particles.
+%  \item Fred's derivations all require $p(x_t,\lambda)$ to be nowhere vanishing. This is not the case when the domain of $x_t$ is limited, for example a state variable which is strictly positive (e.g. a variance). If there are zeros in the likelihood, we need to be able to kill particles which fall in that region, or otherwise deal with them. If there are zeros in the prior, then we need the boundary condition that $f(x_t, \lambda)$ be parallel to the boundary, so that particles cannot move into the zero-probability region.
+%  \item There's no way to deal with mixed states, when we want to estimate discrete and continuous variables in parallel.
+%\end{itemize}
+%
+%
+%
+%\section{Optimal Proposals}
+%
+%Instead of sampling $p(x_t | y_{1:t})$ using the homotopy, we can sample the optimal proposal density, $p(x_t | x_{t-1}, y_t)$. This solves the first problem in the list above, because we now have $g(x_t)=p(x_t|x_{t-1})$ in our homotopy, which can be both evaluated and probably differentiated analytically.
+%
+%A further corollary of this is that our particles will now have a weight again, so we will need to reintroduce resampling. This solves the second problem, although it does reintroduce a bottleneck.
+%
+%The weight evaluation is problematic, since the particle weights ought to be $w_t = p(y_t | x_{t-1})$, which cannot be evaluated. We solve this by using an SMC sampler which jointly targets the prior and posterior positions of the particles (i.e. before and after the homotopy is applied). The proposal is thus,
+%%
+%\begin{IEEEeqnarray}{c}
+% p(x_{1:t-1} | y_{1:t-1}) p(x_t^* | x_{t-1}) \delta_{F(x_t^*)}(x_t)     ,
+%\end{IEEEeqnarray}
+%%
+%where $x_t^*$ is the prior state of the particle and $x_t$ the posterior, and $F(x)$ describes the effect of the homotopy. We use the augmented target distribution,
+%%
+%\begin{IEEEeqnarray}{rCl}
+% p(x_{1:t} | y_{1:t}) \delta_{F^{-1}(x_t)}(x_t^*)     .
+%\end{IEEEeqnarray}
+%%
+%This leads to an unnormalised weight of,
+%%
+%\begin{IEEEeqnarray}{rCl}
+% w_t & = & \frac{ p(y_t|x_t)p(x_t|x_{t-1}) }{ p(x_t^* | x_{t-1}) }     .
+%\end{IEEEeqnarray}
+%
+%For the above scheme to be valid, we need the support of the proposal to contain that of the target. This is only the case if $F$ is bijective (I think), necessary conditions for which are that $f(x_t, \lambda)$ be smooth and the boundary condition $f(x_t, \lambda)$ parallel to the boundary of the region $g(x_t)=0$.
 
 
 
