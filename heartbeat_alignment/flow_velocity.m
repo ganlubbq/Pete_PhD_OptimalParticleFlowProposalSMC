@@ -12,6 +12,7 @@ y = signal';
 ds = 2;
 tau_a = model.tau_a;
 tau_b = model.tau_b;
+tau_s = model.tau_s;
 
 % Linearise
 t = (0:model.K-1)'/model.fs;
@@ -27,8 +28,8 @@ y_mod = y - Amp*H*template.m + dH*x;
 % Use matching to find equivalent Gaussian
 
 % tau
-p0 = invgampdf(tau-model.tau_s, model.tau_a, model.tau_b);
-d0 = ((tau_b^tau_a)/gamma(tau_a))*tau^(-(tau_a+1)-2)*exp(-tau_b/tau)*(tau_b-(tau_a+1)*tau);
+p0 = invgampdf(tau-tau_s, model.tau_a, model.tau_b);
+d0 = ((tau_b^tau_a)/gamma(tau_a))*(tau-tau_s)^(-(tau_a+1)-2)*exp(-tau_b/(tau-tau_s))*(tau_b-(tau_a+1)*(tau-tau_s));
 Del = -d0/p0;
 Qt = lambertw_ex(Del^2/(2*pi*p0^2))/Del^2;
 mt = tau - Del*Qt;
