@@ -11,7 +11,7 @@ H(isinf(grid))=0;
 
 R = model.y_obs_vr*eye(model.K);
 
-lhood = loggausspdf(signal', A*(H*template.m), A^2*H*template.P*H'+R);
+lhood = loggausspdf(signal', A*(H*template.m), R);
 
 end
 

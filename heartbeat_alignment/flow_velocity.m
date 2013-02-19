@@ -1,10 +1,10 @@
-function [ v ] = flow_velocity( model, lam, x, template, signal )
+function [ v ] = flow_velocity( model, lam, x, template, signal, D )
 %FLOW_VELOCITY 
 
 tau = x(1);
 Amp = x(2);
 
-x(2) = [];
+% x(2) = [];
 
 % Things
 R = model.y_obs_vr*eye(model.K);
@@ -19,10 +19,10 @@ n = 0:model.dw-1;
 grid = (t*model.fs*ones(1,model.dw)-ones(length(t),1)*n) - tau*model.fs;
 H = sinc(grid);
 H(isinf(grid))=0;
-% dH = [-Amp*model.fs*dsinc(grid)*template.m, H*template.m];
-dH = -Amp*model.fs*dsinc(grid)*template.m;
+dH = [-Amp*model.fs*dsinc(grid)*template.m, H*template.m];
+% dH = -Amp*model.fs*dsinc(grid)*template.m;
 y_mod = y - Amp*H*template.m + dH*x;
-R = R + Amp^2*H*template.P*H';
+% R = R + Amp^2*H*template.P*H';
 
 % Use matching to find equivalent Gaussian
 
@@ -38,26 +38,27 @@ if isnan(Qt)||isinf(Qt)
     Qt = 1;
 end
 
-% % Amp
-% ma = model.A_mn;
-% Qa = model.A_vr;
-% 
-% m = [mt; ma];
-% Q = diag([Qt Qa]);
-m = mt;
-Q = Qt;
-ds = 1;
+% Amp
+ma = model.A_mn;
+Qa = model.A_vr;
+
+m = [mt; ma];
+Q = diag([Qt Qa]);
+% m = mt;
+% Q = Qt;
+% ds = 1;
 
 % Find particle velocity using Gaussian approximation
-A = -0.5*Q*dH'*((R+lam*dH*Q*dH')\dH);
-b = (eye(ds)+2*lam*A)*((eye(ds)+lam*A)*Q*dH'*(R\y_mod)+A*m);
+A = -0.5*Q*dH'*((R+lam*dH*Q*dH')\dH) - D*(Q - Q*dH'*((R/lam+dH*Q*dH')\dH*Q));
+b = (eye(ds)+2*lam*A)*((eye(ds)+lam*A)*Q*dH'*(R\y_mod)+A*m) + 2*D*(Q\m + lam*dH'*(R\y));
 
 
 
 v = A * x + b;
 
 
-v = [v; 0];
+% v = [v; 0];
+
 
 end
 
