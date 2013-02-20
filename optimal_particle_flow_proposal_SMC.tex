@@ -34,11 +34,11 @@ The particle filter advances a set of samples through time, drawn approximately 
 
 One of the principal difficulties when designing a particle filter is the selection of the importance distribution. The easiest choice is to sample from the transition density, which leads to a simplification in the weight formula. The resulting algorithm is the ``bootstrap filter'' of \cite{Gordon1993}. In many cases, such bootstrap proposals result in poor filter performance due to a mismatch in the areas of high probability in the transition and observation densities.
 
-Amongst others, \cite{Doucet2000a} demonstrated that the ideal choice of importance density is the conditional posterior given both the previous state and the new observation, dubbed the ``optimal importance distribution''. In all but a few cases, this cannot be calculated analytically (and in those few, a particle filter would be unnecessary anyway). A popular solution is to use an extended (EKF) or unscented (UKF) Kalman filter to select a Gaussian importance distribution. However, such schemes can fail when the model is highly nonlinear or non-Gaussian, as the approximation is poor.
+Amongst others, \cite{Doucet2000a} demonstrated that the ideal choice of importance density is the conditional posterior given both the previous state and the new observation, dubbed the ``optimal importance distribution''. In all but a few cases, this cannot be calculated analytically. A popular solution is to use an extended (EKF) or unscented (UKF) Kalman filter to select a Gaussian importance distribution. However, such schemes can fail when the model is highly nonlinear or non-Gaussian, as the approximation is poor.
 
-In this paper, we consider a new scheme for proposing samples from the optimal importance distribution. This relies on uniting two recent advances in particle filter research. The first is the concept of an augmented target distribution, introduced in the context of sequential Monte Carlo (SMC) samplers in \cite{DelMoral2006}. By extending the space spanned by the target distribution using an artificial extension, an intractable weight calculations can be avoided. The second idea we use is that of particle flow or transport, developed independently by \cite{Daum2008,Daum2011d} and \cite{Reich2011}. In these papers, schemes are developed for deterministically moving particles according to a homotopy or transport map such that they represent the required posterior distribution.
+In this paper, we consider a new scheme for proposing samples from the optimal importance distribution. This relies on uniting two recent advances in particle filter research. The first is the concept of an augmented target distribution, introduced in the context of sequential Monte Carlo (SMC) samplers in \cite{DelMoral2006}. By extending the space spanned by the target distribution using an artificial extension, intractable weight calculations can be avoided. The second idea we use is that of particle flow or transport, developed independently by \cite{Daum2008,Daum2011d} and \cite{Reich2011}. In these papers, schemes are developed for deterministically moving particles according to a homotopy or transport map such that they represent the required posterior distribution.
 
-While powerful, particle flow methods are limited to a certain class of state spaces. (The state must be a vector of continuous variables with the filtering distribution nowhere vanishing in $\mathbb{R}^d$.) Here we modify them for sampling particles from the optimal importance density, for use with mixed continuous-discrete states and for continuous states with known boundaries.
+While powerful, particle flow methods are limited to a certain class of state spaces. (The state must be a vector of continuous variables with the filtering distribution nowhere vanishing in $\mathbb{R}^d$.) Furthermore, in all but the simplest (linear Gaussian) cases, multiple approximations must be used in the calculation of particle flows. Here we modify these methods to use them for sampling particles from the optimal importance density. Hence, they can be used with mixed continuous-discrete states and for continuous states with known boundaries. Moreover, since the approximations are moved into the proposal step, they are accounted for in the importance weights. Thus, many existing convergence results for standard particle filters may be applied.
 
 
 
@@ -79,12 +79,13 @@ The practical performance of the particle filter is determined by the variance o
 %
 This quantity takes a value between $1$ (bad) and $N_F$ (good), the number of filtering particles.
 
-The simplest choice of importance density is use the transition density,
+The simplest choice of importance density is the transition density,
+%
 \begin{IEEEeqnarray}{rCl}
  q(x_t | x_{t-1}^{(i)}, y_t) = p(x_t^{(i)} | x_{t-1}^{(i)})     .
 \end{IEEEeqnarray}
 %
-This results in the ``bootstrap filter'' of \cite{Gordon1993}. Often this is inefficient, especially when the variance of the transition density is greater than that of the observation density. With such a condition, the samples are widely spread over the state space, and only a few fall in the region of high likelihood. This results in a large weight variance and poor filter performance.
+This results in the ``bootstrap filter'' of \cite{Gordon1993}. Often this is inefficient, especially when the variance of the transition density is greater than that of the observation density. In this situation, the samples are widely spread over the state space, and only a few fall in the region of high likelihood. This results in a large weight variance and poor filter performance.
 
 It was shown in \cite{Doucet2000a}, and references therein, that the weight variance is minimised by using the conditional posterior as the importance distribution,
 %
@@ -95,7 +96,7 @@ It was shown in \cite{Doucet2000a}, and references therein, that the weight vari
 resulting in the following weight formula,
 %
 \begin{IEEEeqnarray}{rCl}
- w_t^{(i)} & \propto & p(y_t | x_{t-1}^{(i)}) p(x_t^{(i)} | x_{t-1}^{(i)})     .
+ w_t^{(i)} & \propto & p(y_t | x_{t-1}^{(i)})      .
 \end{IEEEeqnarray}
 %
 This choice is thus known as the ``optimal importance density'' (OID). It may be sampled from, and the weights calculated in closed form, when the observation density is linearly dependent on the state and both transition and observation densities are Gaussian. (The state need not be linearly dependent on the previous state.) However, for most models this density can be neither calculated, nor efficiently sampled from. Thus, it is common to use the same Gaussian approximations to estimate and sample from the OID as were used in the formulation of the EKF and UKF \cite{Doucet2000a,Merwe2000}. These work well when the OID is unimodal, and the observation nonlinearity is weak, but can otherwise perform worse even than the bootstrap filter.
@@ -115,7 +116,7 @@ where the integral has no analytic solution. A particle can be generated by firs
 The solution to this problem is to introduce the parameter into the target distribution, by using an artificial conditional density \cite{DelMoral2006}. The new target distribution is,
 %
 \begin{IEEEeqnarray}{rCl}
- p(x_t | y_{1:t}) \rho(\psi | x_t, y_{1:t})     ,
+ p(x_t | y_{1:t}) \rho(\phi | x_t, y_{1:t})     ,
 \end{IEEEeqnarray}
 %
 and the corresponding proposal is,
@@ -285,7 +286,8 @@ Now equating terms gives us the following three equations, which allow us to fin
 where we have used $Q A(\lambda)^T = A(\lambda) Q$ in the last line. Finally we need to make sure the constant terms balance,
 %
 \begin{IEEEeqnarray}{rCl}
- -y^T R^{-1} H \mu(\lambda) + \frac{1}{2} \mu(\lambda)^T H^T R^{-1} H \mu(\lambda) + \frac{1}{2} \mathcal{TR}\left( H^T R^{-1} H \Sigma(\lambda) \right) & = & - \mathcal{TR}(A) - b(\lambda)^T \left[ Q^{-1}m + \lambda H^T R^{-1} y \right]     .
+ \IEEEeqnarraymulticol{3}{l}{-y^T R^{-1} H \mu(\lambda) + \frac{1}{2} \mu(\lambda)^T H^T R^{-1} H \mu(\lambda) + \frac{1}{2} \mathcal{TR}\left( H^T R^{-1} H \Sigma(\lambda) \right)} \nonumber \\
+ \qquad \qquad \qquad & = & - \mathcal{TR}(A) - b(\lambda)^T \left[ Q^{-1}m + \lambda H^T R^{-1} y \right]     .
 \end{IEEEeqnarray}
 %
 Comparing the trace terms using the previously derived formula for $A(\lambda)$,
@@ -324,6 +326,10 @@ If the observation model is nonlinear, we can linearise it and use the Gaussian 
 %
 Note that this method is far more accurate than an EKF because we are linearising around every point on the particle path, rather than just at a single point. This improved accuracy comes at a cost in computation.
 
+In fact, we can design a filter in which the prior and likelihood are approximated at each point by some closest Gaussian. This should allow us to use a particle flow proposal for any nonlinear problem, in the same we as we could use an EKF for problem. The difference from previous particle flow methods is that this is a proposal, and so the filter is exact --- the weights will correct for the approximations.
+
+
+
 \subsection{Scale Mixtures}
 
 We can use the Gaussian flow when the transition or observation model is non-Gaussian by using a scale mixture of normals (SMoN) representation. Many densities can be written in the form,
@@ -336,6 +342,123 @@ For example, if $p(\xi)$ is a chi-square distribution (with $\nu$ degrees of fre
 
 By extending the target distribution to include the auxiliary mixing variable, $\xi$, the distribution becomes gamma-Gaussian. The simplest method for exploiting this is to sample $\xi$ from the prior and then use the Gaussian flow. It would be nicer if we could somehow infer $\xi$ with some sort of joint flow.
 
+
+
+\section{Stochastic Method}
+
+Suppose, instead of moving the particles according to an ODE, we introduce a stochastic component to their motion,
+%
+\begin{IEEEeqnarray}{rCl}
+ dx_t & = & f(x_t, \lambda) d\lambda + g(x_t, \lambda) d\epsilon_\lambda     ,
+\end{IEEEeqnarray}
+%
+where $\epsilon_\lambda$ is a Brownian motion. The Fokker-Planck equation then gives us,
+%
+\begin{IEEEeqnarray}{rCl}
+ \frac{\partial \pi}{\partial \lambda} & = & -\nabla \cdot \left[ f(x_t, \lambda) \pi(x_t, \lambda) \right] + \sum_i \sum_j \frac{\partial^2}{\partial x_{t,i} \partial x_{t,j}} \left[ D_{i,j}(x_t, \lambda) \pi(x_t, \lambda) \right]       ,
+\end{IEEEeqnarray}
+%
+where
+%
+\begin{IEEEeqnarray}{rCl}
+ D(x_t, \lambda) & = & \frac{1}{2} g(x_t, \lambda) g(x_t, \lambda)^T     .
+\end{IEEEeqnarray}
+%
+If we assume that $D$ is independent of $x_t$, then this becomes (as before),
+%
+\begin{IEEEeqnarray}{rCl}
+ \frac{\partial \pi}{\partial \lambda} & = & -\nabla \cdot \left[ f(x_t, \lambda) \pi(x_t, \lambda) \right] + \nabla \cdot \left[ D(\lambda) \nabla \pi(x_t, \lambda) \right]     \nonumber \\
+\log\left(\beta(x_t)\right) - \mathbb{E}_{\pi}\left[ \log\left(\beta(x_t)\right) \right] & = & -\nabla\cdot f(x_t, \lambda) - f(x_t, \lambda) \cdot \nabla \log\left( \pi(x_t, \lambda) \right) \nonumber \\
+ &   & \qquad + \: \frac{1}{\pi(x_t, \lambda)} \nabla \cdot \left[ D(\lambda) \nabla \pi(x_t, \lambda) \right]      .
+\end{IEEEeqnarray}
+
+For the Gaussian model considered previously, recall that,
+%
+\begin{IEEEeqnarray}{rCl}
+ \pi(x, \lambda) & = & \mathcal{N}(x|\mu(\lambda),\Sigma(\lambda)) = \left|\left| 2 \pi \Sigma(\lambda) \right|\right|^{-\frac{1}{2}} \exp\left\{ -\frac{1}{2} \left[ \left(x-\mu(\lambda)\right)^T \Sigma(\lambda)^{-1} \left(x-\mu(\lambda)\right) \right] \right\}      \nonumber \\
+ \Sigma(\lambda) & = & \left[ Q^{-1} + H^T \left(\frac{R}{\lambda}\right)^{-1} H \right]^{-1} \nonumber \\
+ \mu(\lambda)    & = & \left[ Q^{-1} + H^T \left(\frac{R}{\lambda}\right)^{-1} H \right]^{-1} \left[ Q^{-1} m + H^T \left(\frac{R}{\lambda}\right)^{-1} y \right] \nonumber     .
+\end{IEEEeqnarray}
+%
+Hence,
+%
+\begin{IEEEeqnarray}{rCl}
+ \nabla \pi(x, \lambda) & = & \pi(x, \lambda) \left[ -\Sigma(\lambda)^{-1} \left(x-\mu(\lambda)\right) \right] \\
+ \nabla \cdot \left[ D(\lambda) \nabla \pi(x_t, \lambda) \right] & = & \nabla \cdot \left\{ \pi(x, \lambda) \left[ - D(\lambda) \Sigma(\lambda)^{-1} \left(x-\mu(\lambda)\right) \right] \right\} \nonumber \\
+ & = & \nabla \pi(x, \lambda) \cdot \left[ - D(\lambda) \Sigma(\lambda)^{-1} \left(x-\mu(\lambda)\right) \right] + \pi(x, \lambda) \nabla \cdot \left[ - D(\lambda) \Sigma(\lambda)^{-1} \left(x-\mu(\lambda)\right) \right] \nonumber \\
+ & = & \pi(x, \lambda) \left\{ \left(x-\mu(\lambda)\right)^T \Sigma(\lambda)^{-1} D(\lambda) \Sigma(\lambda)^{-1} \left(x-\mu(\lambda)\right) - \mathcal{T}\left[ D \Sigma(\lambda)^{-1} \right] \right\}     .
+\end{IEEEeqnarray}
+
+If we again assume that the drift depends linearly on $x$,
+%
+\begin{IEEEeqnarray}{rCl}
+ f(x_t, \lambda) & = & A_D(\lambda) x + b_D(\lambda)     ,
+\end{IEEEeqnarray}
+%
+then we can find $A_D$ and $b_D$ by equating terms again. For $A_D$,
+%
+\begin{IEEEeqnarray}{rCl}
+ - \frac{1}{2} H^T R^{-1} H & = & - A_D(\lambda)^T \Sigma(\lambda)^{-1} + \Sigma(\lambda)^{-1} D(\lambda) \Sigma(\lambda)^{-1} \nonumber \\
+ A_D(\lambda) & = & - \frac{1}{2} \Sigma(\lambda) H^T R^{-1} H - D(\lambda) \Sigma(\lambda)^{-1} \nonumber \\
+              & = & A(\lambda) - D(\lambda) \Sigma(\lambda)^{-1}      .
+\end{IEEEeqnarray}
+%
+For $b_D$,
+%
+\begin{IEEEeqnarray}{rCl}
+ y^T R^{-1} H  & = & b_D(\lambda)^T \Sigma(\lambda)^{-1} + \left[ - m^T Q^{-1} - \lambda y^T R^{-1} H \right] A_D(\lambda) - 2 \mu(\lambda)^T \Sigma(\lambda)^{-1} D(\lambda) \Sigma(\lambda)^{-1} \nonumber \\
+ b_D(\lambda) & = & \Sigma(\lambda) \left[ H^T R^{-1} y + \lambda A_D(\lambda)^T H^T R^{-1} y + A_D(\lambda)^T Q^{-1} m \right] + 2 D(\lambda) \Sigma(\lambda)^{-1} \mu(\lambda) \nonumber \\
+            & = & b(\lambda) + 2 D(\lambda) \Sigma(\lambda)^{-1} \mu(\lambda) \nonumber \\
+            & = & b(\lambda) + 2 D(\lambda) \left[ Q^{-1} m + \lambda H^T R^{-1} y \right]     .
+\end{IEEEeqnarray}
+%
+Note that for numerical reasons, $\Sigma$ should be calculated using the matrix inversion lemma,
+%
+\begin{IEEEeqnarray}{rCl}
+ \Sigma(\lambda) & = & \left[ Q^{-1} + H^T \left(\frac{R}{\lambda}\right)^{-1} H \right]^{-1} \nonumber \\
+                 & = & Q - Q H^T \left(\left(\frac{R}{\lambda}\right)^{-1} + H Q H^T\right)^{-1} H Q     .
+\end{IEEEeqnarray}
+
+Finally, we need to check again that the constant terms balance.
+%
+\begin{IEEEeqnarray}{rCl}
+ - \mathcal{TR}(A_D) - \mathcal{TR}\left( D(\lambda) \Sigma(\lambda)^{-1} \right) & = & - \mathcal{TR}\left( A_D + D(\lambda) \Sigma(\lambda)^{-1} \right) \nonumber \\
+                   & = & \mathcal{TR}\left( \Sigma(\lambda) H^T R^{-1} H \right) \nonumber \\
+                   & = & \frac{1}{2} \mathcal{TR}\left( \Sigma(\lambda) H^T R^{-1} H \right) \nonumber \\
+                   & = & \frac{1}{2} \mathcal{TR}\left( H^T R^{-1} H \Sigma(\lambda) \right)      .
+\end{IEEEeqnarray}
+%
+\begin{IEEEeqnarray}{rCl}
+\IEEEeqnarraymulticol{3}{l}{ -y^T R^{-1} H \mu(\lambda) + \frac{1}{2} \mu(\lambda)^T H^T R^{-1} H \mu(\lambda) } \nonumber \\
+ \qquad & = & - \left[ y^T R^{-1} H + \left[ m^T Q^{-1} + y^T \left(\frac{R}{\lambda}\right)^{-1} H \right] \underbrace{\left(- \frac{1}{2}\right) \Sigma(\lambda) H^T R^{-1} H}_{A_D(\lambda) + D(\lambda) \Sigma(\lambda)^{-1}} \right] \Sigma(\lambda) \left[ Q^{-1} m + H^T \left(\frac{R}{\lambda}\right)^{-1} y \right] \nonumber \\
+        & = & - b(\lambda)^T \left[ Q^{-1}m + \lambda H^T R^{-1} y \right] - \mu(\lambda)^T \Sigma(\lambda)^{-1} D(\lambda) \left[ Q^{-1} m + H^T \left(\frac{R}{\lambda}\right)^{-1} y \right] \nonumber \\
+        & = & - b_D(\lambda)^T \left[ Q^{-1}m + \lambda H^T R^{-1} y \right] + \mu(\lambda)^T \Sigma(\lambda)^{-1} D(\lambda) \left[ Q^{-1} m + H^T \left(\frac{R}{\lambda}\right)^{-1} y \right] \nonumber \\
+        & = & - b_D(\lambda)^T \left[ Q^{-1}m + \lambda H^T R^{-1} y \right] + \mu(\lambda)^T \Sigma(\lambda)^{-1} D(\lambda) \Sigma(\lambda)^{-1} \mu(\lambda)     .
+\end{IEEEeqnarray}
+
+Again, that was unnecessarily convoluted.
+
+We now turn to the problem of weighting particles generated by simulating the SDE. This time we consider the joint distribution over $\tilde{x}_t$, an intermediate state sampled from the prior, and $x_t(\lambda)$, the state at artificial time $\lambda$. We use the extended target distribution is $\pi(x_t(\lambda), \lambda) \rho(\tilde{x}_t | x_t(\lambda))$, and the proposal $p(\tilde{x}_t | x_{t-1}) q(x_t(\lambda) | \tilde{x}_t)$. $q(x_t(\lambda) | \tilde{x}_t)$ is the distribution of a particle sampled by simulating the SDE. We remove this term by selecting the artificial conditional, $\rho(\tilde{x}_t | x_t(\lambda))$, such that the two cancel out, i.e.
+%
+\begin{IEEEeqnarray}{rCl}
+ \frac{\rho(\tilde{x}_t | x_t(\lambda))}{q(x_t(\lambda) | \tilde{x}_t)} & \propto & 1
+\end{IEEEeqnarray}
+%
+where the proportionality is with respect to $x_t(\lambda)$ and $\tilde{x}_t$. This requires that such a density exists, and this needs some thought, but we do not need to know what it is. The weights then simplify to,
+%
+\begin{IEEEeqnarray}{rCl}
+ w_t(\lambda)^{(i)} & = & \frac{ p(y_t | x_t^{(i)}(\lambda))^\lambda p(x_t^{(i)}(\lambda) | x_{t-1}^{(i)}) }{ p(\tilde{x}_t^{(i)} | x_{t-1}^{(i)}) }     .
+\end{IEEEeqnarray}
+
+If we know the weights at an earlier time, $\lambda_1$, and we want to calculate them at a later time, $\lambda_2$, then we can write the weight update as,
+%
+\begin{IEEEeqnarray}{rCl}
+ w_t(\lambda_2)^{(i)} & = & w_t(\lambda_1)^{(i)} \frac{ p(y_t | x_t^{(i)}(\lambda_2))^{\lambda_2} p(x_t^{(i)}(\lambda_2) | x_{t-1}^{(i)}) }{ p(y_t | x_t^{(i)}(\lambda_1))^{\lambda_1} p(x_t^{(i)}(\lambda_1) | x_{t-1}^{(i)}) }     .
+\end{IEEEeqnarray}
+
+Now we have a collection of weighted particles evolving stochastically in continuous time which initially approximate the prior density and finally approximate the posterior. We can resample these in the same manner as a continuous time particle filter, either on a fixed schedule or when the effective sample size falls below a threshold. In this way, we ensure that a diverse particle collection is maintained
+
+The final consideration is how to choose the diffusion matrix, $g(\lambda)$ for the SDE. Small values will result in strong dependence between the posterior particles is resampling takes place. In the limit with no diffusion, there will be multiple identical copies of each resampled particle. With larger diffusion values, the SDE becomes harder to simulate, with smaller step sizes required for accurate results. However, the particles are able to ``de-correlate'' and explore the posterior modes more thoroughly. As a guideline, the value should be chosen to reflect the size (and possibly shape) of posterior modes
 
 
 \section{Numerical Illustrations}
