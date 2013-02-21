@@ -50,12 +50,15 @@ Q = diag([Qt Qa]);
 % ds = 1;
 
 % Find particle velocity using Gaussian approximation
-A = -0.5*Q*dH'*((R+lam*dH*Q*dH')\dH) - D*(Q - Q*dH'*((R/lam+dH*Q*dH')\dH*Q));
-b = (eye(ds)+2*lam*A)*((eye(ds)+lam*A)*Q*dH'*(R\y_mod)+A*m) + 2*D*(Q\m + lam*dH'*(R\y));
+Sig_inv = inv(Q)+lam*dH'*(R\dH);
+A = -0.5*Q*dH'*((R+lam*dH*Q*dH')\dH);
+AD = A - D*Sig_inv;
+b = (eye(ds)+2*lam*A)*((eye(ds)+lam*A)*Q*dH'*(R\y_mod)+A*m);
+bD = b + D*(Q\m + lam*dH'*(R\y_mod));
 
 
 
-v = A * x + b;
+v = AD * x + bD;
 
 
 % v = [v; 0];

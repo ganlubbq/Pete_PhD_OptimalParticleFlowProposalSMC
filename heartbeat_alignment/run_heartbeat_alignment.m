@@ -5,8 +5,8 @@ dbstop if warning
 
 % Make an artificial signal
 load('template_beat.mat');
-% signal = [template(21:end) zeros(1,5) template zeros(1,3) template(1:12)];
-tmp = 20; signal = [zeros(1,10) template zeros(1,20)] + [zeros(1,tmp) template zeros(1,30-tmp)];
+signal = [template(21:end) zeros(1,5) template zeros(1,3) template(1:12)];
+% tmp = 20; signal = [zeros(1,10) template zeros(1,20)] + [zeros(1,tmp) template zeros(1,30-tmp)];
 signal = signal + mvnrnd(0, 0.01, length(signal))';
 
 model.K = length(signal);
@@ -21,12 +21,12 @@ model.A_mn = 1;
 model.A_vr = 0.1;
 model.tau_a = 2;
 model.tau_b = 0.6;
-model.tau_s = 0;
+model.tau_s = 0.2;
 model.fs = 30;
 model.y_obs_vr = 0.2^2;
 
 % Some settings
-algo.N = 100;
+algo.N = 20;
 
 % Arrays
 prior_tau = zeros(algo.N,1);
@@ -45,7 +45,7 @@ t = (0:model.K-1)'/model.fs;
 % figure, plot(t, signal)
 
 % Diffusion matrix
-D = diag([0.0001 0.001]);
+D = diag([0.0001 0.0001]);
 
 tic
 
@@ -119,7 +119,7 @@ for ll = 1:L-1;
             
             v = flow_velocity(model, lam, last_x, template, signal, D);
             
-            x = last_x + v*dl + mvnrnd(zeros(1,2), D*dl)';
+            x = last_x + v*dl + mvnrnd(zeros(1,2), 2*D*dl)';
             
             evo_tau(ii,ll+1) = x(1);
             evo_A(ii,ll+1) = x(2);
@@ -250,6 +250,7 @@ toc
 %% Analysis
 
 figure, plot(lam_rng, evo_tau')
+figure, plot(lam_rng, evo_A')
 figure, plot(evo_ess)
 
 % ESS
@@ -261,3 +262,11 @@ bs_tau_mn  = exp(normalise_weights(bs_weight)) *prior_tau
 pfp_tau_mn = exp(normalise_weights(pfp_weight))*posterior_tau
 bs_A_mn  = exp(normalise_weights(bs_weight)) *prior_A
 pfp_A_mn = exp(normalise_weights(pfp_weight))*posterior_A
+
+%% Actual posterior
+clear lhood_rng; clear prior_rng;
+tau_rng = 0.5; 0.655; 0.3:0.01:1; 
+A_rng = 0:0.01:2; 1; 
+for ll = 1:length(A_rng), for kk = 1:length(tau_rng), prior_rng(ll,kk) = loggausspdf(A_rng(ll),model.A_mn,model.A_vr)+log(invgampdf(tau_rng(kk)-model.tau_s,model.tau_a,model.tau_b)); lhood_rng(ll,kk) = likelihood(model, tau_rng(kk), A_rng(ll), template, signal); end, end
+figure,plot(A_rng, exp(prior_rng+lhood_rng-logsumexp(prior_rng+lhood_rng)))
+% figure,plot(tau_rng, exp(prior_rng+lhood_rng-logsumexp(prior_rng+lhood_rng,2)))
