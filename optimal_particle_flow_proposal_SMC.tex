@@ -240,13 +240,15 @@ giving us the following intermediate terms\footnote{Subscripts omitted for clari
 \begin{IEEEeqnarray}{rCl}
  \log\left(\alpha(x)\right) & = & -\frac{1}{2}\log\left(\left| 2 \pi Q \right|\right) - \frac{1}{2}(x-m)^T Q^{-1}(x-m) \\
  \log\left(\beta(x)\right)  & = & -\frac{1}{2}\log\left(\left| 2 \pi R \right|\right) - \frac{1}{2}(y-Hx)^T R^{-1}(y-Hx) \\
- \nabla \cdot \log\left(\alpha(x)\right) & = & -Q^{-1}(x-m) \\
- \nabla \cdot \log\left(\beta(x)\right)  & = & H^T R^{-1}(y-Hx) \\
+ \nabla \log\left(\alpha(x)\right) & = & -Q^{-1}(x-m) \\
+ \nabla \log\left(\beta(x)\right)  & = & H^T R^{-1}(y-Hx) \\
+ \nabla \log\left(\pi(x,\lambda)\right)  & = & \left[ -Q^{-1}(x-m) + \lambda H^T R^{-1}(y-Hx) \right] \nonumber \\
+                                         & = & - \Sigma(\lambda)^{-1} \left(x-\mu(\lambda)\right) \\
  \pi(x, \lambda) & = & \mathcal{N}(x|\mu(\lambda),\Sigma(\lambda)) \\
  \Sigma(\lambda) & = & \left[ Q^{-1} + H^T \left(\frac{R}{\lambda}\right)^{-1} H \right]^{-1} \\
- \mu(\lambda)    & = & \left[ Q^{-1} + H^T \left(\frac{R}{\lambda}\right)^{-1} H \right]^{-1} \left[ Q^{-1} m + H^T \left(\frac{R}{\lambda}\right)^{-1} y \right] \\
+ \mu(\lambda)    & = & \Sigma(\lambda) \left[ Q^{-1} m + H^T \left(\frac{R}{\lambda}\right)^{-1} y \right] \\
  \mathbb{E}_{\pi}\left[ \log\left(\beta(x)\right) \right] & = & -\frac{1}{2}\log\left(\left| 2 \pi R \right|\right) - \frac{1}{2} \mathbb{E}_{\pi}\left[ (y-Hx)^T R^{-1}(y-Hx) \right] \\
- \mathbb{E}_{\pi}\left[ (y-Hx)^T R^{-1}(y-Hx) \right] & = & y^T R^{-1} y - 2 y^T R^{-1} H \mu(\lambda) + \mu(\lambda)^T H^T R^{-1} H \mu(\lambda) + \mathcal{T}\left( H^T R^{-1} H \Sigma(\lambda) \right) \nonumber
+ \mathbb{E}_{\pi}\left[ (y-Hx)^T R^{-1}(y-Hx) \right] & = & y^T R^{-1} y - 2 y^T R^{-1} H \mu(\lambda) + \mu(\lambda)^T H^T R^{-1} H \mu(\lambda) + \mathcal{TR}\left( H^T R^{-1} H \Sigma(\lambda) \right) \nonumber
 \end{IEEEeqnarray}
 
 Assume the flow takes the form,
@@ -259,16 +261,16 @@ Then,
 %
 \begin{IEEEeqnarray}{rCl}
 \IEEEeqnarraymulticol{3}{l}{ -\frac{1}{2}(y-Hx)^T R^{-1}(y-Hx) + \frac{1}{2}\mathbb{E}_{\pi}\left[ (y-Hx)^T R^{-1}(y-Hx) \right] } \nonumber \\
- \qquad & = & - \mathcal{TR}(A) - \left( A(\lambda) x_t + b(\lambda) \right)^T \left[ -Q^{-1}(x-m) + \lambda H^T R^{-1}(y-Hx) \right] \nonumber \\
+ \qquad & = & - \mathcal{TR}(A) + \left( A(\lambda) x_t + b(\lambda) \right)^T \Sigma(\lambda)^{-1} \left(x-\mu(\lambda)\right) \nonumber \\
 \IEEEeqnarraymulticol{3}{l}{ y^T R^{-1} H (x - \mu(\lambda)) + \frac{1}{2}\left[ \mu(\lambda)^T H^T R^{-1} H \mu(\lambda) + \mathcal{TR}\left( H^T R^{-1} H \Sigma(\lambda) \right) - x^T H^T R^{-1} H x \right] } \nonumber \\
- \qquad & = & - \mathcal{TR}(A) - \left( A(\lambda) x + b(\lambda) \right)^T \left[ -Q^{-1}(x-m) + \lambda H^T R^{-1}(y-Hx) \right]      .
+ \qquad & = & - \mathcal{TR}(A) + \left( A(\lambda) x + b(\lambda) \right)^T \Sigma(\lambda)^{-1} \left(x-\mu(\lambda)\right)      .
 \end{IEEEeqnarray}
 %
 Now equating terms gives us the following three equations, which allow us to find values of $A$ and $b$,
 %
 \begin{IEEEeqnarray}{rCl}
- - \frac{1}{2} H^T R^{-1} H & = & - A(\lambda)^T \left[ -Q^{-1} - \lambda H^T R^{-1} H \right] \nonumber \\
- A(\lambda) & = & - \frac{1}{2} \left[ Q^{-1} + H^T \left(\frac{R}{\lambda}\right)^{-1} H \right]^{-1} H^T R^{-1} H \nonumber \\
+ - \frac{1}{2} H^T R^{-1} H & = & A(\lambda)^T \Sigma(\lambda)^{-1} \nonumber \\
+ A(\lambda) & = & - \frac{1}{2} \Sigma(\lambda) H^T R^{-1} H \nonumber \\
             & = & - \frac{1}{2} \left[ Q - Q H^T \left(\left(\frac{R}{\lambda}\right) + H Q H^T \right)^{-1} H Q \right] H^T R^{-1} H \nonumber \\
             & = & - \frac{1}{2} Q H^T \left[ R^{-1} - \left(\left(\frac{R}{\lambda}\right) + H Q H^T \right)^{-1} H Q H^T R^{-1} \right] H \nonumber \\
             & = & - \frac{1}{2} Q H^T \left(\left(\frac{R}{\lambda}\right) + H Q H^T \right)^{-1} \underbrace{\left[ \left(\left(\frac{R}{\lambda}\right) + H Q H^T \right) R^{-1} - H Q H^T R^{-1} \right]}_{\frac{1}{\lambda} I} H \nonumber \\
@@ -276,8 +278,9 @@ Now equating terms gives us the following three equations, which allow us to fin
 \end{IEEEeqnarray}
 %
 \begin{IEEEeqnarray}{rCl}
- y^T R^{-1} H  & = & b(\lambda)^T \left[ Q^{-1} + \lambda H^T R^{-1} H \right] + \left[ - m^T Q^{-1} - \lambda y^T R^{-1} H \right] A(\lambda) \nonumber \\
- b(\lambda) & = & \left[ Q^{-1} + \lambda H^T R^{-1} H \right]^{-1} \left[ H^T R^{-1} y + \lambda A(\lambda)^T H^T R^{-1} y + A(\lambda)^T Q^{-1} m \right] \nonumber \\
+ y^T R^{-1} H  & = & b(\lambda)^T \Sigma(\lambda)^{-1} - \mu(\lambda)^T \Sigma(\lambda)^{-1} A(\lambda) \nonumber \\
+ b(\lambda) & = & \Sigma(\lambda) \left[ H^T R^{-1} y + A(\lambda)^T \Sigma(\lambda)^{-1} \mu(\lambda) \right] \nonumber \\
+            & = & \left[ Q^{-1} + \lambda H^T R^{-1} H \right]^{-1} \left[ H^T R^{-1} y + \lambda A(\lambda)^T H^T R^{-1} y + A(\lambda)^T Q^{-1} m \right] \nonumber \\
             & = & \left[ Q - Q H^T \left(\left(\frac{R}{\lambda}\right) + H Q H^T \right)^{-1} H Q \right] \left[ (I + \lambda A(\lambda)^T) H^T R^{-1} y + A(\lambda)^T Q^{-1} m \right] \nonumber \\
             & = & \left[ I + 2 \lambda A(\lambda) \right] Q \left[ (I + \lambda A(\lambda)^T) H^T R^{-1} y + A(\lambda)^T Q^{-1} m \right] \nonumber \\
             & = & \left[ I + 2 \lambda A(\lambda) \right] \left[ (I + \lambda A(\lambda)) Q H^T R^{-1} y + A(\lambda) m \right]     ,
@@ -287,28 +290,29 @@ where we have used $Q A(\lambda)^T = A(\lambda) Q$ in the last line. Finally we 
 %
 \begin{IEEEeqnarray}{rCl}
  \IEEEeqnarraymulticol{3}{l}{-y^T R^{-1} H \mu(\lambda) + \frac{1}{2} \mu(\lambda)^T H^T R^{-1} H \mu(\lambda) + \frac{1}{2} \mathcal{TR}\left( H^T R^{-1} H \Sigma(\lambda) \right)} \nonumber \\
- \qquad \qquad \qquad & = & - \mathcal{TR}(A) - b(\lambda)^T \left[ Q^{-1}m + \lambda H^T R^{-1} y \right]     .
+ \qquad \qquad \qquad & = & - \mathcal{TR}(A) + b(\lambda)^T \Sigma(\lambda)^{-1} \mu(\lambda)     .
 \end{IEEEeqnarray}
 %
-Comparing the trace terms using the previously derived formula for $A(\lambda)$,
+Comparing the trace terms using the formula for $A(\lambda)$,
 %
 \begin{IEEEeqnarray}{rCl}
- - \mathcal{TR}(A) & = & \frac{1}{2} \mathcal{TR}\left( \left[ Q^{-1} + H^T \left(\frac{R}{\lambda}\right)^{-1} H \right]^{-1} H^T R^{-1} H \right) \nonumber \\
-                   & = & \frac{1}{2} \mathcal{TR}\left( \Sigma(\lambda) H^T R^{-1} H \right) \nonumber \\
-                   & = & \frac{1}{2} \mathcal{TR}\left( H^T R^{-1} H \Sigma(\lambda) \right)      .
+ \text{RHS} & = & - \mathcal{TR}(A) \nonumber \\
+            & = & \frac{1}{2} \mathcal{TR}\left( \Sigma(\lambda) H^T R^{-1} H \right) \nonumber \\
+            & = & \frac{1}{2} \mathcal{TR}\left( H^T R^{-1} H \Sigma(\lambda) \right) \nonumber \\
+            & = & \text{LHS}     .
 \end{IEEEeqnarray}
 %
-Examining the remaining terms using the previously derived formula for $b(\lambda)$,
+Examining the remaining terms using the formula for $b(\lambda)$ and $A(\lambda)$,
 %
 \begin{IEEEeqnarray}{rCl}
-\IEEEeqnarraymulticol{3}{l}{ -y^T R^{-1} H \mu(\lambda) + \frac{1}{2} \mu(\lambda)^T H^T R^{-1} H \mu(\lambda) } \nonumber \\
- \qquad & = & \left[ -y^T + \frac{1}{2} \mu(\lambda)^T H^T \right] R^{-1} H \mu(\lambda) \nonumber \\
-        & = & \left[ -y^T + \frac{1}{2} \left[ m^T Q^{-1} + y^T \left(\frac{R}{\lambda}\right)^{-1} H \right] \Sigma(\lambda) H^T \right] R^{-1} H \Sigma(\lambda) \left[ Q^{-1} m + H^T \left(\frac{R}{\lambda}\right)^{-1} y \right] \nonumber \\
-        & = & - \left[ y^T R^{-1} H + \left[ m^T Q^{-1} + y^T \left(\frac{R}{\lambda}\right)^{-1} H \right] \underbrace{\left(- \frac{1}{2}\right) \Sigma(\lambda) H^T R^{-1} H}_{A(\lambda)} \right] \Sigma(\lambda) \left[ Q^{-1} m + H^T \left(\frac{R}{\lambda}\right)^{-1} y \right] \nonumber \\
-        & = & - b(\lambda)^T \left[ Q^{-1}m + \lambda H^T R^{-1} y \right]
+ \text{RHS} & = & - b(\lambda)^T \Sigma(\lambda)^{-1} \mu(\lambda) \nonumber \\
+            & = & - \left[ H^T R^{-1} y + A(\lambda)^T \Sigma(\lambda)^{-1} \mu(\lambda) \right]^T \mu(\lambda) \nonumber \\
+            & = & - \left[ H^T R^{-1} y - \frac{1}{2} H^T R^{-1} H \mu(\lambda) \right]^T \mu(\lambda) \nonumber \\
+            & = & -y^T R^{-1} H \mu(\lambda) + \frac{1}{2} \mu(\lambda)^T H^T R^{-1} H \mu(\lambda) \nonumber \\
+            & = & \text{LHS}     .
 \end{IEEEeqnarray}
 %
-Hence the hypothesised solution is valid. There MUST be an easier way to show this!!
+Hence the hypothesised solution is valid.
 
 
 
@@ -364,7 +368,7 @@ where
  D(x_t, \lambda) & = & \frac{1}{2} g(x_t, \lambda) g(x_t, \lambda)^T     .
 \end{IEEEeqnarray}
 %
-If we assume that $D$ is independent of $x_t$, then this becomes (as before),
+If we assume that $g$ (and hence $D$) is independent of $x_t$, then this becomes (as before),
 %
 \begin{IEEEeqnarray}{rCl}
  \frac{\partial \pi}{\partial \lambda} & = & -\nabla \cdot \left[ f(x_t, \lambda) \pi(x_t, \lambda) \right] + \nabla \cdot \left[ D(\lambda) \nabla \pi(x_t, \lambda) \right]     \nonumber \\
@@ -375,9 +379,9 @@ If we assume that $D$ is independent of $x_t$, then this becomes (as before),
 For the Gaussian model considered previously, recall that,
 %
 \begin{IEEEeqnarray}{rCl}
- \pi(x, \lambda) & = & \mathcal{N}(x|\mu(\lambda),\Sigma(\lambda)) = \left|\left| 2 \pi \Sigma(\lambda) \right|\right|^{-\frac{1}{2}} \exp\left\{ -\frac{1}{2} \left[ \left(x-\mu(\lambda)\right)^T \Sigma(\lambda)^{-1} \left(x-\mu(\lambda)\right) \right] \right\}      \nonumber \\
+ \pi(x, \lambda) & = & \mathcal{N}(x|\mu(\lambda),\Sigma(\lambda)) = \left| 2 \pi \Sigma(\lambda) \right|^{-\frac{1}{2}} \exp\left\{ -\frac{1}{2} \left[ \left(x-\mu(\lambda)\right)^T \Sigma(\lambda)^{-1} \left(x-\mu(\lambda)\right) \right] \right\}      \nonumber \\
  \Sigma(\lambda) & = & \left[ Q^{-1} + H^T \left(\frac{R}{\lambda}\right)^{-1} H \right]^{-1} \nonumber \\
- \mu(\lambda)    & = & \left[ Q^{-1} + H^T \left(\frac{R}{\lambda}\right)^{-1} H \right]^{-1} \left[ Q^{-1} m + H^T \left(\frac{R}{\lambda}\right)^{-1} y \right] \nonumber     .
+ \mu(\lambda)    & = & \Sigma(\lambda) \left[ Q^{-1} m + H^T \left(\frac{R}{\lambda}\right)^{-1} y \right] \nonumber     .
 \end{IEEEeqnarray}
 %
 Hence,
@@ -398,7 +402,7 @@ If we again assume that the drift depends linearly on $x$,
 then we can find $A_D$ and $b_D$ by equating terms again. For $A_D$,
 %
 \begin{IEEEeqnarray}{rCl}
- - \frac{1}{2} H^T R^{-1} H & = & - A_D(\lambda)^T \Sigma(\lambda)^{-1} + \Sigma(\lambda)^{-1} D(\lambda) \Sigma(\lambda)^{-1} \nonumber \\
+ - \frac{1}{2} H^T R^{-1} H & = & A_D(\lambda)^T \Sigma(\lambda)^{-1} + \Sigma(\lambda)^{-1} D(\lambda) \Sigma(\lambda)^{-1} \nonumber \\
  A_D(\lambda) & = & - \frac{1}{2} \Sigma(\lambda) H^T R^{-1} H - D(\lambda) \Sigma(\lambda)^{-1} \nonumber \\
               & = & A(\lambda) - D(\lambda) \Sigma(\lambda)^{-1}      .
 \end{IEEEeqnarray}
@@ -406,37 +410,39 @@ then we can find $A_D$ and $b_D$ by equating terms again. For $A_D$,
 For $b_D$,
 %
 \begin{IEEEeqnarray}{rCl}
- y^T R^{-1} H  & = & b_D(\lambda)^T \Sigma(\lambda)^{-1} + \left[ - m^T Q^{-1} - \lambda y^T R^{-1} H \right] A_D(\lambda) - 2 \mu(\lambda)^T \Sigma(\lambda)^{-1} D(\lambda) \Sigma(\lambda)^{-1} \nonumber \\
- b_D(\lambda) & = & \Sigma(\lambda) \left[ H^T R^{-1} y + \lambda A_D(\lambda)^T H^T R^{-1} y + A_D(\lambda)^T Q^{-1} m \right] + 2 D(\lambda) \Sigma(\lambda)^{-1} \mu(\lambda) \nonumber \\
-            & = & b(\lambda) + 2 D(\lambda) \Sigma(\lambda)^{-1} \mu(\lambda) \nonumber \\
-            & = & b(\lambda) + 2 D(\lambda) \left[ Q^{-1} m + \lambda H^T R^{-1} y \right]     .
+ y^T R^{-1} H  & = & b_D(\lambda)^T \Sigma(\lambda)^{-1} - \mu(\lambda)^T \Sigma(\lambda)^{-1} A_D(\lambda) - 2 \mu(\lambda)^T \Sigma(\lambda)^{-1} D(\lambda) \Sigma(\lambda)^{-1} \nonumber \\
+ b_D(\lambda) & = & \Sigma(\lambda) \left[ H^T R^{-1} y + A_D(\lambda)^T \Sigma(\lambda)^{-1} \mu(\lambda) \right] + 2 D(\lambda) \Sigma(\lambda)^{-1} \mu(\lambda) \nonumber \\
+              & = & \Sigma(\lambda) \left[ H^T R^{-1} y + A(\lambda)^T \Sigma(\lambda)^{-1} \mu(\lambda) \right] + D(\lambda) \Sigma(\lambda)^{-1} \mu(\lambda) \nonumber \\
+            & = & b(\lambda) + D(\lambda) \Sigma(\lambda)^{-1} \mu(\lambda) \nonumber \\
+            & = & b(\lambda) + D(\lambda) \left[ Q^{-1} m + \lambda H^T R^{-1} y \right]     .
 \end{IEEEeqnarray}
 %
-Note that for numerical reasons, $\Sigma$ should be calculated using the matrix inversion lemma,
-%
-\begin{IEEEeqnarray}{rCl}
- \Sigma(\lambda) & = & \left[ Q^{-1} + H^T \left(\frac{R}{\lambda}\right)^{-1} H \right]^{-1} \nonumber \\
-                 & = & Q - Q H^T \left(\left(\frac{R}{\lambda}\right)^{-1} + H Q H^T\right)^{-1} H Q     .
-\end{IEEEeqnarray}
+%Note that for numerical reasons, $\Sigma$ should be calculated using the matrix inversion lemma,
+%%
+%\begin{IEEEeqnarray}{rCl}
+% \Sigma(\lambda) & = & \left[ Q^{-1} + H^T \left(\frac{R}{\lambda}\right)^{-1} H \right]^{-1} \nonumber \\
+%                 & = & Q - Q H^T \left(\left(\frac{R}{\lambda}\right) + H Q H^T\right)^{-1} H Q     .
+%\end{IEEEeqnarray}
 
 Finally, we need to check again that the constant terms balance.
 %
 \begin{IEEEeqnarray}{rCl}
- - \mathcal{TR}(A_D) - \mathcal{TR}\left( D(\lambda) \Sigma(\lambda)^{-1} \right) & = & - \mathcal{TR}\left( A_D + D(\lambda) \Sigma(\lambda)^{-1} \right) \nonumber \\
-                   & = & \mathcal{TR}\left( \Sigma(\lambda) H^T R^{-1} H \right) \nonumber \\
-                   & = & \frac{1}{2} \mathcal{TR}\left( \Sigma(\lambda) H^T R^{-1} H \right) \nonumber \\
-                   & = & \frac{1}{2} \mathcal{TR}\left( H^T R^{-1} H \Sigma(\lambda) \right)      .
+ \text{RHS} & = & - \mathcal{TR}(A_D) - \mathcal{TR}\left( D(\lambda) \Sigma(\lambda)^{-1} \right) \nonumber \\
+            & = & - \mathcal{TR}\left( A_D + D(\lambda) \Sigma(\lambda)^{-1} \right) \nonumber \\
+            & = & \mathcal{TR}\left( A \right) \nonumber \\
+            & = & \frac{1}{2} \mathcal{TR}\left( \Sigma(\lambda) H^T R^{-1} H \right) \nonumber \\
+            & = & \frac{1}{2} \mathcal{TR}\left( H^T R^{-1} H \Sigma(\lambda) \right)      .
 \end{IEEEeqnarray}
 %
 \begin{IEEEeqnarray}{rCl}
-\IEEEeqnarraymulticol{3}{l}{ -y^T R^{-1} H \mu(\lambda) + \frac{1}{2} \mu(\lambda)^T H^T R^{-1} H \mu(\lambda) } \nonumber \\
- \qquad & = & - \left[ y^T R^{-1} H + \left[ m^T Q^{-1} + y^T \left(\frac{R}{\lambda}\right)^{-1} H \right] \underbrace{\left(- \frac{1}{2}\right) \Sigma(\lambda) H^T R^{-1} H}_{A_D(\lambda) + D(\lambda) \Sigma(\lambda)^{-1}} \right] \Sigma(\lambda) \left[ Q^{-1} m + H^T \left(\frac{R}{\lambda}\right)^{-1} y \right] \nonumber \\
-        & = & - b(\lambda)^T \left[ Q^{-1}m + \lambda H^T R^{-1} y \right] - \mu(\lambda)^T \Sigma(\lambda)^{-1} D(\lambda) \left[ Q^{-1} m + H^T \left(\frac{R}{\lambda}\right)^{-1} y \right] \nonumber \\
-        & = & - b_D(\lambda)^T \left[ Q^{-1}m + \lambda H^T R^{-1} y \right] + \mu(\lambda)^T \Sigma(\lambda)^{-1} D(\lambda) \left[ Q^{-1} m + H^T \left(\frac{R}{\lambda}\right)^{-1} y \right] \nonumber \\
-        & = & - b_D(\lambda)^T \left[ Q^{-1}m + \lambda H^T R^{-1} y \right] + \mu(\lambda)^T \Sigma(\lambda)^{-1} D(\lambda) \Sigma(\lambda)^{-1} \mu(\lambda)     .
+ \text{RHS} & = & - b_D(\lambda)^T \Sigma(\lambda)^{-1} \mu(\lambda) + \mu(\lambda)^T \Sigma(\lambda)^{-1} D(\lambda) \Sigma(\lambda)^{-1} \mu(\lambda) \nonumber \\
+            & = & - \left[  b(\lambda) + 2 D(\lambda) \Sigma(\lambda)^{-1} \mu(\lambda) \right]^T \Sigma(\lambda)^{-1} \mu(\lambda) + \mu(\lambda)^T \Sigma(\lambda)^{-1} D(\lambda) \Sigma(\lambda)^{-1} \mu(\lambda) \nonumber \\
+            & = & - b(\lambda)^T \Sigma(\lambda)^{-1} \mu(\lambda) - \mu(\lambda)^T \Sigma(\lambda)^{-1} D(\lambda) \Sigma(\lambda)^{-1} \mu(\lambda) \nonumber \\
+            & = & - \left[ H^T R^{-1} y + A_D(\lambda)^T \Sigma(\lambda)^{-1} \mu(\lambda) \right]^T \mu(\lambda) - \mu(\lambda)^T \Sigma(\lambda)^{-1} D(\lambda) \Sigma(\lambda)^{-1} \mu(\lambda) \nonumber \\
+            & = & - \left[ H^T R^{-1} y - \frac{1}{2} H^T R^{-1} H \mu(\lambda) - \Sigma(\lambda)^{-1}D(\lambda)\Sigma(\lambda)^{-1}\mu(\lambda) \right]^T \mu(\lambda) - \mu(\lambda)^T \Sigma(\lambda)^{-1} D(\lambda) \Sigma(\lambda)^{-1} \mu(\lambda) \nonumber \\
+            & = & -y^T R^{-1} H \mu(\lambda) + \frac{1}{2} \mu(\lambda)^T H^T R^{-1} H \mu(\lambda) \nonumber \\
+            & = & \text{LHS}     .
 \end{IEEEeqnarray}
-
-Again, that was unnecessarily convoluted.
 
 We now turn to the problem of weighting particles generated by simulating the SDE. This time we consider the joint distribution over $\tilde{x}_t$, an intermediate state sampled from the prior, and $x_t(\lambda)$, the state at artificial time $\lambda$. We use the extended target distribution is $\pi(x_t(\lambda), \lambda) \rho(\tilde{x}_t | x_t(\lambda))$, and the proposal $p(\tilde{x}_t | x_{t-1}) q(x_t(\lambda) | \tilde{x}_t)$. $q(x_t(\lambda) | \tilde{x}_t)$ is the distribution of a particle sampled by simulating the SDE. We remove this term by selecting the artificial conditional, $\rho(\tilde{x}_t | x_t(\lambda))$, such that the two cancel out, i.e.
 %
@@ -444,7 +450,7 @@ We now turn to the problem of weighting particles generated by simulating the SD
  \frac{\rho(\tilde{x}_t | x_t(\lambda))}{q(x_t(\lambda) | \tilde{x}_t)} & \propto & 1
 \end{IEEEeqnarray}
 %
-where the proportionality is with respect to $x_t(\lambda)$ and $\tilde{x}_t$. This requires that such a density exists, and this needs some thought, but we do not need to know what it is. The weights then simplify to,
+where the proportionality is with respect to $x_t(\lambda)$ and $\tilde{x}_t$. This requires that such a density exists, and this needs some thought, but we do not need to know what it is. {\meta Actually, I think we need to include the entire continuous trajectory as an (infinite dimensional) auxiliary variable. Then I think its always possible to make this cancellation.} The weights then simplify to,
 %
 \begin{IEEEeqnarray}{rCl}
  w_t(\lambda)^{(i)} & = & \frac{ p(y_t | x_t^{(i)}(\lambda))^\lambda p(x_t^{(i)}(\lambda) | x_{t-1}^{(i)}) }{ p(\tilde{x}_t^{(i)} | x_{t-1}^{(i)}) }     .
