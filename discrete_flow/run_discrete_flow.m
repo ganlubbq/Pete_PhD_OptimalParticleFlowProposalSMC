@@ -24,7 +24,7 @@ nu_prior = poissrnd(lambda, [N,1]);
 nu_prior_prob = log(poisspdf(nu_prior, lambda));
 nu_arr = nu_prior;
 weight = zeros(N,1);
-inc_w = weight;
+inc_w = nu_prior_prob;
 
 % Artificial time discretisation
 lam_rng = 0:0.01:1;
@@ -36,7 +36,7 @@ for kk = 1:length(nu_rng), lhood_rng(kk) = sum(log(tpdf(observ,nu_rng(kk)))); en
 lhood_rng(1) = -inf;
 
 % Set random seed
-rand_seed = 0;
+rand_seed = 1;
 s = RandStream('mt19937ar', 'seed', rand_seed);
 RandStream.setDefaultStream(s);
 
@@ -53,35 +53,37 @@ for ll = 1:L-1
     
     % Sample particles
     anc = sample_weights(weight, N, 2);
+%     anc = 1:N;
     
     post_rng = prior_rng+lam*lhood_rng;
     post_rng(isnan(post_rng)) = -inf;
     post_rng = post_rng - logsumexp(post_rng,2);
-%     % Histogram states
-%     count = histc(nu_arr, nu_rng);
-%     pt_prob_rng = count/N;
-    pt_prob_rng = post_rng;
+%     pt_prob_rng = exp(post_rng);
     
-    % Log-likelihoods
-    for ii = 1:N
-        lhood_arr(ii) = sum(log(tpdf(observ,nu_arr(ii))));
-    end
+    % Histogram states
+    count = hist(nu_arr, nu_rng);
+    pt_prob_rng = count/N;
     
     % Arrays
     last_nu_arr = nu_arr; nu_arr = zeros(size(nu_arr));
     last_inc_w = inc_w; inc_w = zeros(size(inc_w));
+    last_weight = weight;
     jump_count = 0;
+    
+    % Log-likelihoods
+    max_lhood = max(lhood_rng(last_nu_arr));
     
     % Particle loop
     for ii = 1:N
         
         % Get things
         nu = last_nu_arr(anc(ii));
-        lhood = lhood_arr(anc(ii));
+        lhood = lhood_rng(nu==nu_rng);
         
         % Exit rate
         pt_prob = pt_prob_rng(nu==nu_rng);
-        exit_rate = -(1-pt_prob).*(lhood-max(lhood_arr)-1);
+        exit_rate = -(1-pt_prob).*(lhood-max_lhood-0.1);
+%         exit_rate = 10000;
         
         % See if there should be a transition in the next dl
         hold_time = exprnd(1/exit_rate);
@@ -95,12 +97,14 @@ for ll = 1:L-1
                 
                 p_change = post_rng;
                 p_change(nu==nu_rng) = -inf;
-                nu_idx = sample_weights(p_change,1,1);
+                p_change(nu_rng<(nu-1)) = -inf;
+                p_change(nu_rng>(nu+1)) = -inf;
+                nu_idx = sample_weights(p_change,1,2);
                 nu = nu_rng(nu_idx);
                 
 %                 p_change = ones(1,2)/2;
 
-                % Calculate transition probabilities
+% %                 Calculate transition probabilities
 %                 p_change(1) = log(poisspdf(nu+1,lambda)) + lam*sum(log(tpdf(observ,nu+1)));
 %                 p_change(2) = log(poisspdf(nu-1,lambda)) + lam*sum(log(tpdf(observ,nu-1)));
 %                 if nu == 1
@@ -129,8 +133,9 @@ for ll = 1:L-1
         nu_arr(ii) = nu;
         
         % Weight particle
-        inc_w(ii) = log(poisspdf(nu,lambda)) + lam*sum(log(tpdf(observ,nu)));
+        inc_w(ii) = prior_rng(nu==nu_rng) + lam*lhood_rng(nu==nu_rng);
         weight(ii) = inc_w(ii) - last_inc_w(anc(ii));
+%         weight(ii) = last_weight(anc(ii)) + inc_w(ii) - last_inc_w(anc(ii));
         
     end
     
@@ -142,7 +147,7 @@ end
 
 [anc] = sample_weights(weight,N,2);
 nu_arr = nu_arr(anc);
-figure(1), hist(nu_arr, 0:nu_lim);
+figure(1), hist(nu_arr, 0:20);
 
 
 %%
@@ -158,3 +163,8 @@ post_rng = post_rng - logsumexp(post_rng,2);
 figure, hold on
 plot(nu_rng, exp(post_rng), 'm')
 figure, plot(histc(nu_arr,0:nu_lim)/N-exp(post_rng'))
+
+%%
+% Ntest = N;
+% test = nu_rng(sample_weights(post_rng,Ntest,1));
+% figure, plot(histc(test,0:nu_lim)/Ntest-exp(post_rng))

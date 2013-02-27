@@ -22,7 +22,7 @@ con_state = state(1:model.dsc,1);
 dis_state = state(model.dsc+1:model.ds,1);
 
 % Solve ODE
-lam_rng = 0:0.01:1;%[0 1];
+lam_rng = [0 1];%0:0.01:1;%
 if dis_state(end) == 0
     options = odeset('Jacobian', @(lam,x)flow_jacobian(model, lam, x, dis_state), 'RelTol', 1E-2);
     [lam, x] = ode23(@(lam_in, x_in) calc_particle_velocity(model, lam_in, x_in, observ, prior_mn, dis_state), lam_rng, con_state, options);
@@ -60,9 +60,30 @@ else
     xi = chi2rnd(model.dfy);
     aug_state = [con_state; xi];
     
-    options = [];
-    [lam, x] = ode15s(@(lam_in, x_in) calc_SMoN_particle_velocity(model, lam_in, x_in, observ, prior_mn, dis_state), lam_rng, aug_state, options);
-    con_state = x(end,1:end-1)';
+    lam_rng = [0:1E-5:1E-4 2E-4:1E-4:1E-3 2E-3:1E-3:1E-2 2E-2:1E-2:1E-1 2E-1:1E-1:9E-1 9.1E-1:1E-2:1];
+    L = length(lam_rng);
+    x = aug_state;
+    
+    for ll = 1:L-1
+        
+        lam = lam_rng(ll);
+        dl = lam_rng(ll+1)-lam_rng(ll);
+        
+        v = calc_SMoN_particle_velocity(model, lam, x, observ, prior_mn, dis_state);
+        
+        x = v*dl;
+        
+        if x(end) < 0
+            x(end) = 1E-5;
+        end
+        
+%         figure(1), plot(lam, x(end), 'x');
+        
+    end
+    
+%     options = [];
+%     [lam, x] = ode15s(@(lam_in, x_in) calc_SMoN_particle_velocity(model, lam_in, x_in, observ, prior_mn, dis_state), lam_rng, aug_state, options);
+%     con_state = x(end,1:end-1)';
     
 %     options = [];
 %     [lam, x] = ode15s(@(lam_in, x_in) calc_particle_velocity(model, lam_in, x_in, observ, prior_mn, dis_state), lam_rng, con_state, options);
@@ -160,6 +181,11 @@ elseif dis_state(end) == 1
 
 end
 
+% if lam > 0
+%     figure(1)
+%     plot(lam, loggausspdf(y_mod,H*m,H*Q*H'+R/lam));
+% end
+
 end
 
 function v = calc_SMoN_particle_velocity(model, lam, x, y, m, dis_state)
@@ -169,32 +195,64 @@ Q = model.Q;
 R = model.R;
 ds = model.dsc;
 do = model.do;
+G = chol(R);
 
 xi = x(end);
 x(end) = [];
 
+% Sample epsilon_0
+ep = randn(do,1);
+Hxi = -0.5*xi^(-3/2)*G*ep;
+
 % Linearise
+my = sinusoidseparation_h(model, x, dis_state);
 H = sinusoidseparation_obsjacobian(model, x, dis_state);
-y_mod = y - sinusoidseparation_h(model, x, dis_state) + H*x;
+y_mod = y - my + H*x - xi^(-3/2)*(xi+0.5)*G*ep;
 
 % Useful intermediates
-D  = (y-H*x)'*(R\(y-H*x));
+D  = (y-my)'*(R\(y-my));
+% D  = (y-H*x)'*(R\(y-H*x));
 % Dp = (y-H*m)'*(R\(y-H*m));
 % D  = (y_mod-H*x)'*(R\(y_mod-H*x));
 
 % Some constants
-ga = 1+0.5*(lam*do-1);
+ga = (1+lam*do)/2;
 gb = (1+lam*D)/2;
+
+% Approximate xi gamma distribution with a Gaussian
+p0 = gampdf(xi, ga, 1/gb);
+d0 = ((gb^ga)/gamma(ga))*xi^(ga-2)*exp(-gb*xi)*(ga-1-gb*xi);
+Del = -d0/p0;
+Qxi = lambertw_ex(Del^2/(2*pi*p0^2))/Del^2;
+mxi = xi - Del*Qxi;
+if isnan(Qxi)
+    Qxi = 1000000;
+    mxi = 0;
+end
+assert(~(isnan(Qxi)||isinf(Qxi)))
+% if isnan(Qxi)||isinf(Qxi)
+%     mt = model.tau_s + model.tau_b/(model.tau_a-1);
+%     Qt = 1;
+% end
+
+m = [m; mxi];
+Q = blkdiag(Q, Qxi);
+H = [H Hxi];
+
 
 % Set xi deterministically??
 % xi = gamrnd(ga, 1/gb);
 % xi = ga/gb;
+% xi = lam*xi + (1-lam)*ga/gb;
+% xi = xi^(1-lam) + (ga/gb)^lam;
+% figure(1), plot(lam, xi, 'x')
 
 % Normal state velocity
 Rxi = R/xi;
 A = -0.5*Q*H'*((Rxi+lam*H*Q*H')\H);
-b = (eye(ds)+2*lam*A)*((eye(ds)+lam*A)*Q*H'*(Rxi\y_mod)+A*m);
-vx = A*x+b;
+b = (eye(ds+1)+2*lam*A)*((eye(ds+1)+lam*A)*Q*H'*(Rxi\y_mod)+A*m);
+% vx = A*x+b;
+vx = A*[x; xi]+b;
 
 %%% XI BIT %%%
 
@@ -284,10 +342,12 @@ vx = A*x+b;
 % dtml = xi_mn - xi;
 % vxi = sign(dtml)*abs(dtml);
 
-% Fuck it. Just keep it constant
-vxi = 0;
+% % Fuck it. Just keep it constant
+% vxi = 0;
+% 
+% v = [vx; vxi];
 
-v = [vx; vxi];
+v = vx;
 
 end
 

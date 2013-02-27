@@ -27,6 +27,8 @@ H = sinusoidseparation_obsjacobian(model, lin_state, dis_state);
 if dis_state(end)
     xi = chi2rnd(model.dfy);
     R = model.R / xi;
+else
+    R = model.R;
 end
 
 % EKF update
