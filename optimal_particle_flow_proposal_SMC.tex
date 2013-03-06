@@ -22,9 +22,16 @@
 \newcommand{\xtl}{x_{t,\lambda}}
 \newcommand{\xtldl}{x_{t,\lambda+\delta\lambda}}
 \newcommand{\pilam}{\pi_{\lambda}}
+\newcommand{\pildl}{\pi_{\lambda+\delta\lambda}}
+\newcommand{\piztl}{\pi_{0:\lambda}}
+\newcommand{\piztldl}{\pi_{0:\lambda+\delta\lambda}}
 \newcommand{\xlam}{x_{\lambda}}
+\newcommand{\xldl}{x_{\lambda+\delta\lambda}}
+\newcommand{\xztl}{x_{0:\lambda}}
+\newcommand{\xztldl}{x_{0:\lambda+\delta\lambda}}
 \newcommand{\flam}{f_{\lambda}}
 \newcommand{\xtraj}{\tilde{x}_{0:\lambda}}
+
 
 
 \title{Optimal Proposals Using Particle Flow for SMC Samplers}
@@ -172,7 +179,7 @@ Since we need consider only a single step and a single particle, we omit the tim
 \begin{IEEEeqnarray}{rCl}
  \alpha(x) & = & p(x|x_{t-1}) \nonumber \\
  \beta(x) & = & p(y_t|x) \nonumber      .
-\end{IEEEeqnarray} 
+\end{IEEEeqnarray}
 %
 The sampling procedure is derived by considering the following homotopy between the prior density and the posterior,
 %
@@ -226,44 +233,94 @@ Thus,
 The result is a highly under-determined partial differential equation (PDE), and any solution for $\flam(\xlam)$ will result in a flow which maps particles sampled from the prior (i.e. the transition density) to new locations distributed according to the posterior (i.e. the OID). This is achieved by numerically integrating $\flam(\xlam)$ along the particle trajectory over the range $\lambda \in [0, 1]$. We will write the map generating by integrating the flow as,
 %
 \begin{IEEEeqnarray}{rCcCl}
- \xlam & = & \phi(x_{0}) & = & x_{0} + \int_{0}^{\lambda} f_{l}(x_{l}) dl     .
+ x_{\lambda_2} & = & \phi_{\lambda_1,\lambda_2}(x_{\lambda_1}) & = & x_{\lambda_1} + \int_{x_{\lambda_1}}^{\lambda_2} f_{l}(x_{l}) dl     .
 \end{IEEEeqnarray}
+
+Note that the weight formulas derived in this section do not require us to be using an exact solution for $\flam(\xlam)$. The are valid for any deterministic flow.
 
 
 
 \subsection{Continuous Weight Update}
 
-Having found a suitable mechanism for generating particles, we next come to the question of how to weight them correctly. In this section, we denote the continuous trajectory of the state over the pseudo-time interval $[\lambda_1, \lambda_2]$ as $x_{\lambda_1:\lambda_2}$. We assume that $\flam$ satisfies conditions which ensure that there is only one trajectory which leads to a given state, $\xlam$, and we write this trajectory as $\xtraj$. {\meta I think the required condition is simply that $\flam$ be smooth.} 
+The proposal mechanism described above consists of sampling a particle from the transition density, and then moving it deterministically to a new position. We now come to the question of how to weight these particles correctly. In this section, we denote the continuous trajectory of the state over the pseudo-time interval $\left[\lambda_1, \lambda_2\right)$ as $x_{\lambda_1:\lambda_2}$. We assume that $\flam$ satisfies conditions which ensure that there is only one trajectory which leads to a given state, $\xlam$, and we write this trajectory as $\xtraj$. {\meta I think the required condition is simply that $\flam$ be smooth.}
 
-
-
-
-\section{Particle Weights}
-
-We use the particle flow to propagate a set of weighted particles from the prior to the posterior. Particle weights can be calculated by considering the move from $\lambda$ to $\lambda + \delta \lambda$. A particle $x(\lambda)$ is first proposed from the time-$\lambda$ particles and propagated deterministically to time-$(\lambda+\delta\lambda)$ using $x(\lambda+\delta\lambda) \approx x(\lambda) + f(x(\lambda),\lambda) \delta\lambda$. The importance weight is then given by,
+In order to yield tractable weight calculations, at pseudo-time $\lambda$ we employ a target distribution over not only the latest state, $\xlam$, but over the entire continuous pseudo-time trajectory from $0$ to $\lambda$. We construct this distribution as,
 %
 \begin{IEEEeqnarray}{rCl}
- w(\lambda+\lambda\delta) & \approx & \frac{ d\pi_{\lambda+\delta\lambda}(x(\lambda+\delta\lambda)) \mathbbm{1}_{\phi^{-1}(\lambda+\delta\lambda)}(x(\lambda)) }{ d\pi_{\lambda}(x(\lambda)) \mathbbm{1}_{\phi(\lambda)}(x(\lambda+\delta\lambda)) } \nonumber \\
-            & \approx & \frac{ \pi_{\lambda+\delta\lambda}(x(\lambda+\delta\lambda))  }{ \pi_{\lambda}(x(\lambda))  } \left| \frac{\partial x(\lambda+\delta\lambda)}{\partial x(\lambda)} \right|     .
+ d\piztl(\xztl) & = & d\pilam(\xlam) d\rho(\xztl | \xlam)     ,
 \end{IEEEeqnarray}
 %
-If the $x(\lambda)$ values are proposed from the unweighted set (i.e. no resampling), then this becomes,
+using measures rather than densities so as to appropriately handle the deterministic movements and infinite dimensional random variable represented by the trajectory. The measure $d\rho$ is an artificial extension to the distribution and can be chosen as a design parameter --- ultimately we only care about the distribution of the final states.
+
+Supposing we have a particle approximation to this distribution from which we can sample. The particles are then advanced to $\lambda+\delta\lambda$ deterministically and the weights updated using,
 %
 \begin{IEEEeqnarray}{rCl}
- w(\lambda+\lambda\delta) & \approx & w(\lambda) \frac{ \pi_{\lambda+\delta\lambda}(x(\lambda+\delta\lambda))  }{ \pi_{\lambda}(x(\lambda))  } \left| \frac{\partial x(\lambda+\delta\lambda)}{\partial x(\lambda)} \right|     .
+ w(\lambda+\delta\lambda) & = & \frac{ d\pildl(\xldl) d\rho(\xztldl | \xldl) }{ d\pilam(\xlam) d\rho(\xztl | \xlam) \mathbbm{1}_{\phi_{\lambda,\lambda+\delta\lambda}(\xlam)}(\xldl) } \nonumber \\
+                          & = & \frac{ d\pildl(\xldl) d\rho(\xlam | \xldl) }{ d\pilam(\xlam) \mathbbm{1}_{\phi_{\lambda,\lambda+\delta\lambda}(\xlam)}(\xldl) } \nonumber \\
+                          & = & \frac{ \pildl(\xldl) }{ \pilam(\xlam) } \left|\frac{ \partial \xldl }{ \partial \xlam }\right| \frac{ d\rho(\xlam | \xldl) }{ \mathbbm{1}_{\phi_{\lambda,\lambda+\delta\lambda}(\xlam)}(\xldl) } \nonumber      .
 \end{IEEEeqnarray}
 %
-The Jacobian is given by,
+If we choose $d\rho(\xlam | \xldl) = \mathbbm{1}_{\phi_{\lambda,\lambda+\delta\lambda}^{-1}(\xldl)}(\xlam)$, then the indicator measures cancel out and we are left with,
 %
 \begin{IEEEeqnarray}{rCl}
- \left| \frac{\partial x(\lambda+\delta\lambda)}{\partial x(\lambda)} \right| & \approx & \left| I + \delta\lambda \left.\frac{\partial f}{\partial x}\right|_{x(\lambda),\lambda} \right|
+ w(\lambda+\delta\lambda) & = & \frac{ \pildl(\xldl) }{ \pilam(\xlam) } \left|\frac{ \partial \xldl }{ \partial \xlam }\right| \nonumber       .
 \end{IEEEeqnarray}
 
-With no intermediate resampling, and using the fact that $det(I+\epsilon A) \approx 1 + \epsilon \mathcal{TR}(A)$, the weights can be written in terms of the starting state,
+For a short interval, $\delta\lambda$, we have,
 %
 \begin{IEEEeqnarray}{rCl}
- w(\lambda) & \approx & w(0) \frac{ \pi_{\lambda}(x(\lambda))  }{ \pi_{0}(x(0))  } \left[ 1 + \int \mathcal{TR}\left( \left.\frac{\partial f}{\partial x}\right|_{x(\lambda),\lambda} \right) d\lambda \right]     .
+ \xldl & = & \xlam + \flam(\xlam) \delta\lambda \nonumber      ,
 \end{IEEEeqnarray}
+%
+in which case the Jacobian is given by,
+%
+\begin{IEEEeqnarray}{rCl}
+ \left|\frac{ \partial \xldl }{ \partial \xlam }\right| & = & \left| I + \delta\lambda \left.\frac{\partial\flam}{\partial\xlam}\right|_{\lambda,\xlam} \right|     .
+\end{IEEEeqnarray}
+
+If the particles at time $\lambda$ are already weighted, then the short interval weight update is,
+%
+\begin{IEEEeqnarray}{rCl}
+ w(\lambda+\delta\lambda) & = & w(\lambda) \frac{ \pildl(\xldl) }{ \pilam(\xlam) } \left| I + \delta\lambda \left.\frac{\partial\flam}{\partial\xlam}\right|_{\lambda,\xlam} \right| \nonumber       ,
+\end{IEEEeqnarray}
+%
+using the same logic as an ordinary particle filter. If we divide the interval $[0,\lambda)$ into many small intervals, then the weight update from pseudo-time $0$ is,
+\begin{IEEEeqnarray}{rCl}
+ w(\lambda) & = & w(0) \frac{ \pildl(\xldl) }{ \pi_{0}(x_0) } \prod_n \left| I + \delta\lambda \left.\frac{\partial f_{\nu}}{\partial x_{\nu}}\right|_{n\delta\lambda,x_{n\delta\lambda}} \right| \nonumber \\
+ & = & w(0) \frac{ \pildl(\xldl) }{ \pi_{0}(x_0) } \left| I + \delta\lambda \sum_n \left.\frac{\partial f_{\nu}}{\partial x_{\nu}}\right|_{n\delta\lambda,x_{n\delta\lambda}} + \mathcal{O}(\delta\lambda^2) \right| \nonumber \\
+ & = & w(0) \frac{ \pildl(\xldl) }{ \pi_{0}(x_0) } \left[ 1 + \delta\lambda \sum_n \mathcal{TR}\left[ \left.\frac{\partial f_{\nu}}{\partial x_{\nu}}\right|_{n\delta\lambda,x_{n\delta\lambda}} + \mathcal{O}(\delta\lambda)\right] \right] \nonumber \\
+ & \rightarrow & w(0) \frac{ \pildl(\xldl) }{ \pi_{0}(x_0) } \left[ 1 + \int_{0}^{\lambda} \mathcal{TR}\left[ \left.\frac{\partial f_{\nu}}{\partial x_{\nu}}\right|_{l,x_l} \right] dl \right]       .
+\end{IEEEeqnarray}
+
+Both the total and incremental weight formulas will be useful later.
+
+
+%\section{Particle Weights}
+%
+%We use the particle flow to propagate a set of weighted particles from the prior to the posterior. Particle weights can be calculated by considering the move from $\lambda$ to $\lambda + \delta \lambda$. A particle $x(\lambda)$ is first proposed from the time-$\lambda$ particles and propagated deterministically to time-$(\lambda+\delta\lambda)$ using $x(\lambda+\delta\lambda) \approx x(\lambda) + f(x(\lambda),\lambda) \delta\lambda$. The importance weight is then given by,
+%%
+%\begin{IEEEeqnarray}{rCl}
+% w(\lambda+\lambda\delta) & \approx & \frac{ d\pi_{\lambda+\delta\lambda}(x(\lambda+\delta\lambda)) \mathbbm{1}_{\phi^{-1}(\lambda+\delta\lambda)}(x(\lambda)) }{ d\pi_{\lambda}(x(\lambda)) \mathbbm{1}_{\phi(\lambda)}(x(\lambda+\delta\lambda)) } \nonumber \\
+%            & \approx & \frac{ \pi_{\lambda+\delta\lambda}(x(\lambda+\delta\lambda))  }{ \pi_{\lambda}(x(\lambda))  } \left| \frac{\partial x(\lambda+\delta\lambda)}{\partial x(\lambda)} \right|     .
+%\end{IEEEeqnarray}
+%%
+%If the $x(\lambda)$ values are proposed from the unweighted set (i.e. no resampling), then this becomes,
+%%
+%\begin{IEEEeqnarray}{rCl}
+% w(\lambda+\lambda\delta) & \approx & w(\lambda) \frac{ \pi_{\lambda+\delta\lambda}(x(\lambda+\delta\lambda))  }{ \pi_{\lambda}(x(\lambda))  } \left| \frac{\partial x(\lambda+\delta\lambda)}{\partial x(\lambda)} \right|     .
+%\end{IEEEeqnarray}
+%%
+%The Jacobian is given by,
+%%
+%\begin{IEEEeqnarray}{rCl}
+% \left| \frac{\partial x(\lambda+\delta\lambda)}{\partial x(\lambda)} \right| & \approx & \left| I + \delta\lambda \left.\frac{\partial f}{\partial x}\right|_{x(\lambda),\lambda} \right|
+%\end{IEEEeqnarray}
+%
+%With no intermediate resampling, and using the fact that $det(I+\epsilon A) \approx 1 + \epsilon \mathcal{TR}(A)$, the weights can be written in terms of the starting state,
+%%
+%\begin{IEEEeqnarray}{rCl}
+% w(\lambda) & \approx & w(0) \frac{ \pi_{\lambda}(x(\lambda))  }{ \pi_{0}(x(0))  } \left[ 1 + \int \mathcal{TR}\left( \left.\frac{\partial f}{\partial x}\right|_{x(\lambda),\lambda} \right) d\lambda \right]     .
+%\end{IEEEeqnarray}
 
 
 
@@ -291,56 +348,56 @@ With no intermediate resampling, and using the fact that $det(I+\epsilon A) \app
 % w_t^{(i)} & = & \frac{ p(y_t | x_t^{(i)}) p(x_t^{(i)} | x_{t-1}^{(i)}) }{ p(\tilde{x}_t^{(i)} | x_{t-1}^{(i)}) }     .
 %\end{IEEEeqnarray}
 
-For the formulation above to be valid, the support of the proposal must have at least as great an extent as that of the target, and the function $\phi$ is bijective. This is true if and only if the flow is reversible. This requires that the flow should never cross a boundary of the state space, which is a restrictive condition when we know the boundaries a priori from physical constraints. However, because the flow is only used to propose a sample, we can simply ignore them, relying on the weighting stage to reject these particles.
+%For the formulation above to be valid, the support of the proposal must have at least as great an extent as that of the target, and the function $\phi$ is bijective. This is true if and only if the flow is reversible. This requires that the flow should never cross a boundary of the state space, which is a restrictive condition when we know the boundaries a priori from physical constraints. However, because the flow is only used to propose a sample, we can simply ignore them, relying on the weighting stage to reject these particles.
 
 
 \section{Gaussian Densities}
 
-In this section, we derive a useful flow.
+\subsection{Derivation of the Flow}
 
 If the transition and observation densities are Gaussian, and the observation function is linear, then the PDE can be solved analytically. The densities are given by,
 %
 \begin{IEEEeqnarray}{rCl}
- \alpha(x_t) & = & \mathcal{N}(x_t|m,P) \\
- \beta(x_t)  & = & \mathcal{N}(y_t|H x_t,R)     ,
+ \alpha(x) & = & \mathcal{N}(x|m,P) \\
+ \beta(x)  & = & \mathcal{N}(y|H x,R)     ,
 \end{IEEEeqnarray}
 %
-giving us the following intermediate terms\footnote{Subscripts omitted for clarity.},
+giving us the following intermediate terms,
 %
 \begin{IEEEeqnarray}{rCl}
- \log\left(\alpha(x)\right) & = & -\frac{1}{2}\log\left(\left| 2 \pi Q \right|\right) - \frac{1}{2}(x-m)^T Q^{-1}(x-m) \\
- \log\left(\beta(x)\right)  & = & -\frac{1}{2}\log\left(\left| 2 \pi R \right|\right) - \frac{1}{2}(y-Hx)^T R^{-1}(y-Hx) \\
- \nabla \log\left(\alpha(x)\right) & = & -Q^{-1}(x-m) \\
- \nabla \log\left(\beta(x)\right)  & = & H^T R^{-1}(y-Hx) \\
- \nabla \log\left(\pi(x,\lambda)\right)  & = & \left[ -Q^{-1}(x-m) + \lambda H^T R^{-1}(y-Hx) \right] \nonumber \\
-                                         & = & - \Sigma(\lambda)^{-1} \left(x-\mu(\lambda)\right) \\
- \pi(x, \lambda) & = & \mathcal{N}(x|\mu(\lambda),\Sigma(\lambda)) \\
- \Sigma(\lambda) & = & \left[ Q^{-1} + H^T \left(\frac{R}{\lambda}\right)^{-1} H \right]^{-1} \\
- \mu(\lambda)    & = & \Sigma(\lambda) \left[ Q^{-1} m + H^T \left(\frac{R}{\lambda}\right)^{-1} y \right] \\
- \mathbb{E}_{\pi}\left[ \log\left(\beta(x)\right) \right] & = & -\frac{1}{2}\log\left(\left| 2 \pi R \right|\right) - \frac{1}{2} \mathbb{E}_{\pi}\left[ (y-Hx)^T R^{-1}(y-Hx) \right] \\
- \mathbb{E}_{\pi}\left[ (y-Hx)^T R^{-1}(y-Hx) \right] & = & y^T R^{-1} y - 2 y^T R^{-1} H \mu(\lambda) + \mu(\lambda)^T H^T R^{-1} H \mu(\lambda) + \mathcal{TR}\left( H^T R^{-1} H \Sigma(\lambda) \right) \nonumber
+ \log\left(\alpha(\xlam)\right) & = & -\frac{1}{2}\log\left(\left| 2 \pi Q \right|\right) - \frac{1}{2}(\xlam-m)^T Q^{-1}(\xlam-m) \\
+ \log\left(\beta(\xlam)\right)  & = & -\frac{1}{2}\log\left(\left| 2 \pi R \right|\right) - \frac{1}{2}(y-H\xlam)^T R^{-1}(y-H\xlam) \\
+ \nabla \log\left(\alpha(\xlam)\right) & = & -Q^{-1}(\xlam-m) \\
+ \nabla \log\left(\beta(\xlam)\right)  & = & H^T R^{-1}(y-H\xlam) \\
+ \nabla \log\left(\pilam(\xlam)\right)  & = & \left[ -Q^{-1}(\xlam-m) + \lambda H^T R^{-1}(y-H\xlam) \right] \nonumber \\
+                                         & = & - \Sigma_{\lambda}^{-1} \left(\xlam-\mu_{\lambda}\right) \\
+ \pilam(\xlam) & = & \mathcal{N}(\xlam|\mu_{\lambda},\Sigma_{\lambda}) \\
+ \Sigma_{\lambda} & = & \left[ Q^{-1} + H^T \left(\frac{R}{\lambda}\right)^{-1} H \right]^{-1} \\
+ \mu_{\lambda}    & = & \Sigma_{\lambda} \left[ Q^{-1} m + H^T \left(\frac{R}{\lambda}\right)^{-1} y \right] \\
+ \mathbb{E}_{\pilam}\left[ \log\left(\beta(\xlam)\right) \right] & = & -\frac{1}{2}\log\left(\left| 2 \pi R \right|\right) - \frac{1}{2} \mathbb{E}_{\pilam}\left[ (y-H\xlam)^T R^{-1}(y-H\xlam) \right] \\
+ \mathbb{E}_{\pilam}\left[ (y-H\xlam)^T R^{-1}(y-H\xlam) \right] & = & y^T R^{-1} y - 2 y^T R^{-1} H \mu_{\lambda} + \mu_{\lambda}^T H^T R^{-1} H \mu_{\lambda} + \mathcal{TR}\left( H^T R^{-1} H \Sigma_{\lambda} \right) \nonumber
 \end{IEEEeqnarray}
 
 Assume the flow takes the form,
 %
 \begin{IEEEeqnarray}{rCl}
- f(x_t, \lambda) & = & A(\lambda) x_t + b(\lambda)     .
+ \flam(\xlam) & = & A_{\lambda} \xlam + b_{\lambda}     .
 \end{IEEEeqnarray}
 %
 Then,
 %
 \begin{IEEEeqnarray}{rCl}
-\IEEEeqnarraymulticol{3}{l}{ -\frac{1}{2}(y-Hx)^T R^{-1}(y-Hx) + \frac{1}{2}\mathbb{E}_{\pi}\left[ (y-Hx)^T R^{-1}(y-Hx) \right] } \nonumber \\
- \qquad & = & - \mathcal{TR}(A) + \left( A(\lambda) x_t + b(\lambda) \right)^T \Sigma(\lambda)^{-1} \left(x-\mu(\lambda)\right) \nonumber \\
-\IEEEeqnarraymulticol{3}{l}{ y^T R^{-1} H (x - \mu(\lambda)) + \frac{1}{2}\left[ \mu(\lambda)^T H^T R^{-1} H \mu(\lambda) + \mathcal{TR}\left( H^T R^{-1} H \Sigma(\lambda) \right) - x^T H^T R^{-1} H x \right] } \nonumber \\
- \qquad & = & - \mathcal{TR}(A) + \left( A(\lambda) x + b(\lambda) \right)^T \Sigma(\lambda)^{-1} \left(x-\mu(\lambda)\right)      .
+\IEEEeqnarraymulticol{3}{l}{ -\frac{1}{2}(y-H\xlam)^T R^{-1}(y-H\xlam) + \frac{1}{2}\mathbb{E}_{\pi}\left[ (y-H\xlam)^T R^{-1}(y-H\xlam) \right] } \nonumber \\
+ \qquad & = & - \mathcal{TR}(A) + \left( A_{\lambda} \xlam + b_{\lambda} \right)^T \Sigma_{\lambda}^{-1} \left(\xlam-\mu_{\lambda}\right) \nonumber \\
+\IEEEeqnarraymulticol{3}{l}{ y^T R^{-1} H (\xlam - \mu_{\lambda}) + \frac{1}{2}\left[ \mu_{\lambda}^T H^T R^{-1} H \mu_{\lambda} + \mathcal{TR}\left( H^T R^{-1} H \Sigma_{\lambda} \right) - \xlam^T H^T R^{-1} H \xlam \right] } \nonumber \\
+ \qquad & = & - \mathcal{TR}(A) + \left( A_{\lambda} \xlam + b_{\lambda} \right)^T \Sigma_{\lambda}^{-1} \left(\xlam-\mu_{\lambda}\right)      .
 \end{IEEEeqnarray}
 %
 Now equating terms gives us the following three equations, which allow us to find values of $A$ and $b$,
 %
 \begin{IEEEeqnarray}{rCl}
- - \frac{1}{2} H^T R^{-1} H & = & A(\lambda)^T \Sigma(\lambda)^{-1} \nonumber \\
- A(\lambda) & = & - \frac{1}{2} \Sigma(\lambda) H^T R^{-1} H \nonumber \\
+ - \frac{1}{2} H^T R^{-1} H & = & A_{\lambda}^T \Sigma_{\lambda}^{-1} \nonumber \\
+ A_{\lambda} & = & - \frac{1}{2} \Sigma_{\lambda} H^T R^{-1} H \nonumber \\
             & = & - \frac{1}{2} \left[ Q - Q H^T \left(\left(\frac{R}{\lambda}\right) + H Q H^T \right)^{-1} H Q \right] H^T R^{-1} H \nonumber \\
             & = & - \frac{1}{2} Q H^T \left[ R^{-1} - \left(\left(\frac{R}{\lambda}\right) + H Q H^T \right)^{-1} H Q H^T R^{-1} \right] H \nonumber \\
             & = & - \frac{1}{2} Q H^T \left(\left(\frac{R}{\lambda}\right) + H Q H^T \right)^{-1} \underbrace{\left[ \left(\left(\frac{R}{\lambda}\right) + H Q H^T \right) R^{-1} - H Q H^T R^{-1} \right]}_{\frac{1}{\lambda} I} H \nonumber \\
@@ -348,37 +405,37 @@ Now equating terms gives us the following three equations, which allow us to fin
 \end{IEEEeqnarray}
 %
 \begin{IEEEeqnarray}{rCl}
- y^T R^{-1} H  & = & b(\lambda)^T \Sigma(\lambda)^{-1} - \mu(\lambda)^T \Sigma(\lambda)^{-1} A(\lambda) \nonumber \\
- b(\lambda) & = & \Sigma(\lambda) \left[ H^T R^{-1} y + A(\lambda)^T \Sigma(\lambda)^{-1} \mu(\lambda) \right] \nonumber \\
-            & = & \left[ Q^{-1} + \lambda H^T R^{-1} H \right]^{-1} \left[ H^T R^{-1} y + \lambda A(\lambda)^T H^T R^{-1} y + A(\lambda)^T Q^{-1} m \right] \nonumber \\
-            & = & \left[ Q - Q H^T \left(\left(\frac{R}{\lambda}\right) + H Q H^T \right)^{-1} H Q \right] \left[ (I + \lambda A(\lambda)^T) H^T R^{-1} y + A(\lambda)^T Q^{-1} m \right] \nonumber \\
-            & = & \left[ I + 2 \lambda A(\lambda) \right] Q \left[ (I + \lambda A(\lambda)^T) H^T R^{-1} y + A(\lambda)^T Q^{-1} m \right] \nonumber \\
-            & = & \left[ I + 2 \lambda A(\lambda) \right] \left[ (I + \lambda A(\lambda)) Q H^T R^{-1} y + A(\lambda) m \right]     ,
+ y^T R^{-1} H  & = & b_{\lambda}^T \Sigma_{\lambda}^{-1} - \mu_{\lambda}^T \Sigma_{\lambda}^{-1} A_{\lambda} \nonumber \\
+ b_{\lambda} & = & \Sigma_{\lambda} \left[ H^T R^{-1} y + A_{\lambda}^T \Sigma_{\lambda}^{-1} \mu_{\lambda} \right] \nonumber \\
+            & = & \left[ Q^{-1} + \lambda H^T R^{-1} H \right]^{-1} \left[ H^T R^{-1} y + \lambda A_{\lambda}^T H^T R^{-1} y + A_{\lambda}^T Q^{-1} m \right] \nonumber \\
+            & = & \left[ Q - Q H^T \left(\left(\frac{R}{\lambda}\right) + H Q H^T \right)^{-1} H Q \right] \left[ (I + \lambda A_{\lambda}^T) H^T R^{-1} y + A_{\lambda}^T Q^{-1} m \right] \nonumber \\
+            & = & \left[ I + 2 \lambda A_{\lambda} \right] Q \left[ (I + \lambda A_{\lambda}^T) H^T R^{-1} y + A_{\lambda}^T Q^{-1} m \right] \nonumber \\
+            & = & \left[ I + 2 \lambda A_{\lambda} \right] \left[ (I + \lambda A_{\lambda}) Q H^T R^{-1} y + A_{\lambda} m \right]     ,
 \end{IEEEeqnarray}
 %
-where we have used $Q A(\lambda)^T = A(\lambda) Q$ in the last line. Finally we need to make sure the constant terms balance,
+where we have used $Q A_{\lambda}^T = A_{\lambda} Q$ in the last line. Finally we need to make sure the constant terms balance,
 %
 \begin{IEEEeqnarray}{rCl}
- \IEEEeqnarraymulticol{3}{l}{-y^T R^{-1} H \mu(\lambda) + \frac{1}{2} \mu(\lambda)^T H^T R^{-1} H \mu(\lambda) + \frac{1}{2} \mathcal{TR}\left( H^T R^{-1} H \Sigma(\lambda) \right)} \nonumber \\
- \qquad \qquad \qquad & = & - \mathcal{TR}(A) + b(\lambda)^T \Sigma(\lambda)^{-1} \mu(\lambda)     .
+ \IEEEeqnarraymulticol{3}{l}{-y^T R^{-1} H \mu_{\lambda} + \frac{1}{2} \mu_{\lambda}^T H^T R^{-1} H \mu_{\lambda} + \frac{1}{2} \mathcal{TR}\left( H^T R^{-1} H \Sigma_{\lambda} \right)} \nonumber \\
+ \qquad \qquad \qquad & = & - \mathcal{TR}(A) + b_{\lambda}^T \Sigma_{\lambda}^{-1} \mu_{\lambda}     .
 \end{IEEEeqnarray}
 %
-Comparing the trace terms using the formula for $A(\lambda)$,
+Comparing the trace terms using the formula for $A_{\lambda}$,
 %
 \begin{IEEEeqnarray}{rCl}
  \text{RHS} & = & - \mathcal{TR}(A) \nonumber \\
-            & = & \frac{1}{2} \mathcal{TR}\left( \Sigma(\lambda) H^T R^{-1} H \right) \nonumber \\
-            & = & \frac{1}{2} \mathcal{TR}\left( H^T R^{-1} H \Sigma(\lambda) \right) \nonumber \\
+            & = & \frac{1}{2} \mathcal{TR}\left( \Sigma_{\lambda} H^T R^{-1} H \right) \nonumber \\
+            & = & \frac{1}{2} \mathcal{TR}\left( H^T R^{-1} H \Sigma_{\lambda} \right) \nonumber \\
             & = & \text{LHS}     .
 \end{IEEEeqnarray}
 %
-Examining the remaining terms using the formula for $b(\lambda)$ and $A(\lambda)$,
+Examining the remaining terms using the formula for $b_{\lambda}$ and $A_{\lambda}$,
 %
 \begin{IEEEeqnarray}{rCl}
- \text{RHS} & = & - b(\lambda)^T \Sigma(\lambda)^{-1} \mu(\lambda) \nonumber \\
-            & = & - \left[ H^T R^{-1} y + A(\lambda)^T \Sigma(\lambda)^{-1} \mu(\lambda) \right]^T \mu(\lambda) \nonumber \\
-            & = & - \left[ H^T R^{-1} y - \frac{1}{2} H^T R^{-1} H \mu(\lambda) \right]^T \mu(\lambda) \nonumber \\
-            & = & -y^T R^{-1} H \mu(\lambda) + \frac{1}{2} \mu(\lambda)^T H^T R^{-1} H \mu(\lambda) \nonumber \\
+ \text{RHS} & = & - b_{\lambda}^T \Sigma_{\lambda}^{-1} \mu_{\lambda} \nonumber \\
+            & = & - \left[ H^T R^{-1} y + A_{\lambda}^T \Sigma_{\lambda}^{-1} \mu_{\lambda} \right]^T \mu_{\lambda} \nonumber \\
+            & = & - \left[ H^T R^{-1} y - \frac{1}{2} H^T R^{-1} H \mu_{\lambda} \right]^T \mu_{\lambda} \nonumber \\
+            & = & -y^T R^{-1} H \mu_{\lambda} + \frac{1}{2} \mu_{\lambda}^T H^T R^{-1} H \mu_{\lambda} \nonumber \\
             & = & \text{LHS}     .
 \end{IEEEeqnarray}
 %
@@ -387,37 +444,71 @@ Hence the hypothesised solution is valid.
 For the weight calculation, we note that,
 %
 \begin{IEEEeqnarray}{rCl}
- \left.\frac{\partial f}{\partial x}\right|_{x(\lambda),\lambda} & = & A     .
+ \left.\frac{\partial f_{\nu}}{\partial x_{\nu}}\right|_{\lambda,\xlam} & = & A_{\lambda}     .
 \end{IEEEeqnarray}
 %
-Hence, we can approximate the weights using the following approximation on the same numerical grid as the ODE solution.
+Hence the integral in the total weight expression is given by
 %
 \begin{IEEEeqnarray}{rCl}
- w(\lambda+\lambda\delta) & \approx & w(\lambda) \frac{ \pi_{\lambda+\delta\lambda}(x(\lambda+\delta\lambda))  }{ \pi_{\lambda}(x(\lambda))  } \left[ 1 + \delta\lambda \mathcal{TR}(A) \right]     .
+ \int_{0}^{\lambda} \mathcal{TR}\left[ \left.\frac{\partial f_{\nu}}{\partial x_{\nu}}\right|_{l,x_l} \right] dl & = & -\frac{1}{2} \int_{0}^{\lambda} \mathcal{TR}\left[ Q H^T \left(R + \lambda H Q H^T \right)^{-1} H \right] dl \nonumber \\
+ & = & -\frac{1}{2} \int_{0}^{\lambda} \mathcal{TR}\left[ H Q H^T \left(R + \lambda H Q H^T \right)^{-1} \right] dl \nonumber \\
+ & = & -\frac{1}{2} \mathcal{TR}\left[ \int_{0}^{\lambda} H Q H^T \left(R + \lambda H Q H^T \right)^{-1} dl \right] \nonumber \\
+ & = & -\frac{1}{2} \mathcal{TR}\left[ \log \left(R + \lambda H Q H^T \right) \right]      ,
 \end{IEEEeqnarray}
+%
+using the basic properties of the matrix log. The weights are then given exactly by,
+%
+\begin{IEEEeqnarray}{rCl}
+ w(\lambda) & = & w(0) \frac{ \pildl(\xldl) }{ \pi_{0}(x_0) } \left[ 1 - \frac{1}{2} \mathcal{TR}\left[ \log \left(R + \lambda H Q H^T \right) \right] \right]    .
+\end{IEEEeqnarray}
+%
+Since $A_\lambda$ is independent of $\xlam$ and will be the same for all particles, the matrix log term need not actually be calculated, since it will disappear in the normalisation.
+
+We could also update the weights incrementally, in which case,
+%
+\begin{IEEEeqnarray}{rCl}
+ w(\lambda+\delta\lambda) & = & w(\lambda) \frac{ \pildl(\xldl) }{ \pilam(\xlam) } \left| I + \delta\lambda A_\lambda \right|        .
+\end{IEEEeqnarray}
+%
+Again, since the determinant term does not depend on $\xlam$, it will disappear in the normalisation.
 
 
-\section{Gaussian Extensions}
 
-Although the linear Gaussian case is one of only a few in which the flow can be calculated analytically, we can nevertheless make use of it with just about any nonlinear, non-Gaussian problem, using linearisation and functional approximations to the model densities. Unlike conventional particle flows, such approximations do not affect the validity of the particle filter. Since the flow is used as a proposal mechanism, it is an `exact approximation'' and the convergence properties remain. We can think of the approximations as being corrected by the particle weighting.
+\subsection{Some Thoughts on Errors}
+
+For the Gaussian flow, the only source of error (besides the usual Monte Carlo error) is in the numerical integration of $\flam$. The weights are calculated exactly for each particle at each point in pseudo-time. $\flam$ itself me be calculated analytically according to the optimal proposal.
+
+
+
+\section{All Other Models}
+
+We will use the exact flow solution for the Gaussian model as a tool to generate an approximate solution for any other model. For a particle at pseudo-time $\lambda$ and state $\xlam$, we find values of $m$, $Q$, $H$ and $R$, such that the transition and observation densities are locally approximated by two Gaussians. we then calculate $\flam(\xlam) = A_{\lambda} \xlam + b_{\lambda}$ assuming these matrixes are fixed for the whole state space, and use this for the current step of the numerical integration. Weights are updated incrementally using the same equation as before. However, since $A$ is different for every particle, the determinant term may not be neglected. Such a weight is still ``exact''. The only error is introduced by the numerical integration still.
+
+The flow produced in this manner approximates the optimal one with a series of linear sections.
+
+
+
+%\section{Gaussian Extensions}
+%
+%Although the linear Gaussian case is one of only a few in which the flow can be calculated analytically, we can nevertheless make use of it with just about any nonlinear, non-Gaussian problem, using linearisation and functional approximations to the model densities. Unlike conventional particle flows, such approximations do not affect the validity of the particle filter. Since the flow is used as a proposal mechanism, it is an `exact approximation'' and the convergence properties remain. We can think of the approximations as being corrected by the particle weighting.
 
 \subsection{Linearisation}
 
-If the densities are Gaussian but the observation model is nonlinear, we can linearise it and use the Gaussian flow from the previous section.
+If the densities are Gaussian but the observation model is nonlinear, we can linearise it in the normal way.
 %
 \begin{IEEEeqnarray}{rCl}
  h(x_t) & \approx & h(x_t^*) + \underbrace{\left.\frac{\partial h}{\partial x_t}\right|_{x_t=x_t^*}}_{H(x_t^*)} (x_t - x_t^*) \nonumber \\
  \beta(x_t)  & = & \mathcal{N}(y_t|h(x_t),R) \nonumber \\
              & \approx & \mathcal{N}(y_t-h(x_t^*)+H(x_t^*) x_t^* | H(x_t^*) x_t, R)      .
 \end{IEEEeqnarray}
-%
-Note that this method is far more accurate than an EKF because we are linearising around every point on the particle path, rather than just at a single point. This improved accuracy comes at a cost in computation.
 
 \subsection{Matching}
 
 If the transition or observation density is not Gaussian, we can use a further approximation. A Gaussian is selected which is in some sense the ``closest'' to the true density at the current state. This can be achieved by setting the mean and covariance so as to match the value and gradient of the exact and approximate densities. More crudely, we could simply moment match.
 
 \subsection{Scale Mixtures}
+
+{\meta THIS DOES NOT WORK. AT ALL. BOTHER.}
 
 We can use the Gaussian flow when the transition or observation model is non-Gaussian by using a scale mixture of normals (SMoN) representation. Many densities can be written in the form,
 %
@@ -433,117 +524,166 @@ By extending the target distribution to include the auxiliary mixing variable, $
 
 \section{Stochastic Method}
 
+\subsection{SDE flow}
+
 Suppose, instead of moving the particles according to an ODE, we introduce a stochastic component to their motion,
 %
 \begin{IEEEeqnarray}{rCl}
- dx_t & = & f(x_t, \lambda) d\lambda + g(x_t, \lambda) d\epsilon_\lambda     ,
+ d\xlam & = & \flam(\xlam) d\lambda + g_{\lambda}(\xlam) d\epsilon_\lambda     ,
 \end{IEEEeqnarray}
 %
 where $\epsilon_\lambda$ is a Brownian motion. The Fokker-Planck equation then gives us,
 %
 \begin{IEEEeqnarray}{rCl}
- \frac{\partial \pi}{\partial \lambda} & = & -\nabla \cdot \left[ f(x_t, \lambda) \pi(x_t, \lambda) \right] + \sum_i \sum_j \frac{\partial^2}{\partial x_{t,i} \partial x_{t,j}} \left[ D_{i,j}(x_t, \lambda) \pi(x_t, \lambda) \right]       ,
+ \frac{\partial \pilam}{\partial \lambda} & = & -\nabla \cdot \left[ \flam(\xlam) \pilam(\xlam) \right] + \sum_i \sum_j \frac{\partial^2}{\partial x_{\lambda,i} \partial x_{\lambda,j}} \left[ D_{\lambda,i,j}(\xlam) \pilam(\xlam) \right]       ,
 \end{IEEEeqnarray}
 %
 where
 %
 \begin{IEEEeqnarray}{rCl}
- D(x_t, \lambda) & = & \frac{1}{2} g(x_t, \lambda) g(x_t, \lambda)^T     .
+ D_{\lambda}(\xlam) & = & \frac{1}{2} g_{\lambda}(\xlam) g_{\lambda}(\xlam)^T     .
 \end{IEEEeqnarray}
 %
-If we assume that $g$ (and hence $D$) is independent of $x_t$, then this becomes (as before),
+If we assume that $g$ (and hence $D$) is independent of $\xlam$, then this becomes (as before),
 %
 \begin{IEEEeqnarray}{rCl}
- \frac{\partial \pi}{\partial \lambda} & = & -\nabla \cdot \left[ f(x_t, \lambda) \pi(x_t, \lambda) \right] + \nabla \cdot \left[ D(\lambda) \nabla \pi(x_t, \lambda) \right]     \nonumber \\
-\log\left(\beta(x_t)\right) - \mathbb{E}_{\pi}\left[ \log\left(\beta(x_t)\right) \right] & = & -\nabla\cdot f(x_t, \lambda) - f(x_t, \lambda) \cdot \nabla \log\left( \pi(x_t, \lambda) \right) \nonumber \\
- &   & \qquad + \: \frac{1}{\pi(x_t, \lambda)} \nabla \cdot \left[ D(\lambda) \nabla \pi(x_t, \lambda) \right]      .
+ \frac{\partial \pilam}{\partial \lambda} & = & -\nabla \cdot \left[ \flam(\xlam) \pilam(\xlam) \right] + \nabla \cdot \left[ D_{\lambda} \nabla \pilam(\xlam) \right]     \nonumber \\
+\log\left(\beta(\xlam)\right) - \mathbb{E}_{\pilam}\left[ \log\left(\beta(\xlam)\right) \right] & = & -\nabla\cdot \flam(\xlam) - \flam(\xlam) \cdot \nabla \log\left( \pilam(\xlam) \right) \nonumber \\
+ &   & \qquad + \: \frac{1}{\pilam(\xlam)} \nabla \cdot \left[ D_{\lambda} \nabla \pilam(\xlam) \right]      .
 \end{IEEEeqnarray}
 
 For the Gaussian model considered previously, recall that,
 %
 \begin{IEEEeqnarray}{rCl}
- \pi(x, \lambda) & = & \mathcal{N}(x|\mu(\lambda),\Sigma(\lambda)) = \left| 2 \pi \Sigma(\lambda) \right|^{-\frac{1}{2}} \exp\left\{ -\frac{1}{2} \left[ \left(x-\mu(\lambda)\right)^T \Sigma(\lambda)^{-1} \left(x-\mu(\lambda)\right) \right] \right\}      \nonumber \\
- \Sigma(\lambda) & = & \left[ Q^{-1} + H^T \left(\frac{R}{\lambda}\right)^{-1} H \right]^{-1} \nonumber \\
- \mu(\lambda)    & = & \Sigma(\lambda) \left[ Q^{-1} m + H^T \left(\frac{R}{\lambda}\right)^{-1} y \right] \nonumber     .
+ \pi(x, \lambda) & = & \mathcal{N}(x|\mu_{\lambda},\Sigma_{\lambda}) = \left| 2 \pi \Sigma_{\lambda} \right|^{-\frac{1}{2}} \exp\left\{ -\frac{1}{2} \left[ \left(x-\mu_{\lambda}\right)^T \Sigma_{\lambda}^{-1} \left(x-\mu_{\lambda}\right) \right] \right\}      \nonumber \\
+ \Sigma_{\lambda} & = & \left[ Q^{-1} + H^T \left(\frac{R}{\lambda}\right)^{-1} H \right]^{-1} \nonumber \\
+ \mu_{\lambda}    & = & \Sigma_{\lambda} \left[ Q^{-1} m + H^T \left(\frac{R}{\lambda}\right)^{-1} y \right] \nonumber     .
 \end{IEEEeqnarray}
 %
 Hence,
 %
 \begin{IEEEeqnarray}{rCl}
- \nabla \pi(x, \lambda) & = & \pi(x, \lambda) \left[ -\Sigma(\lambda)^{-1} \left(x-\mu(\lambda)\right) \right] \\
- \nabla \cdot \left[ D(\lambda) \nabla \pi(x_t, \lambda) \right] & = & \nabla \cdot \left\{ \pi(x, \lambda) \left[ - D(\lambda) \Sigma(\lambda)^{-1} \left(x-\mu(\lambda)\right) \right] \right\} \nonumber \\
- & = & \nabla \pi(x, \lambda) \cdot \left[ - D(\lambda) \Sigma(\lambda)^{-1} \left(x-\mu(\lambda)\right) \right] + \pi(x, \lambda) \nabla \cdot \left[ - D(\lambda) \Sigma(\lambda)^{-1} \left(x-\mu(\lambda)\right) \right] \nonumber \\
- & = & \pi(x, \lambda) \left\{ \left(x-\mu(\lambda)\right)^T \Sigma(\lambda)^{-1} D(\lambda) \Sigma(\lambda)^{-1} \left(x-\mu(\lambda)\right) - \mathcal{T}\left[ D \Sigma(\lambda)^{-1} \right] \right\}     .
+ \nabla \pi(x, \lambda) & = & \pi(x, \lambda) \left[ -\Sigma_{\lambda}^{-1} \left(x-\mu_{\lambda}\right) \right] \\
+ \nabla \cdot \left[ D_{\lambda} \nabla \pi(\xlam, \lambda) \right] & = & \nabla \cdot \left\{ \pi(x, \lambda) \left[ - D_{\lambda} \Sigma_{\lambda}^{-1} \left(x-\mu_{\lambda}\right) \right] \right\} \nonumber \\
+ & = & \nabla \pi(x, \lambda) \cdot \left[ - D_{\lambda} \Sigma_{\lambda}^{-1} \left(x-\mu_{\lambda}\right) \right] + \pi(x, \lambda) \nabla \cdot \left[ - D_{\lambda} \Sigma_{\lambda}^{-1} \left(x-\mu_{\lambda}\right) \right] \nonumber \\
+ & = & \pi(x, \lambda) \left\{ \left(x-\mu_{\lambda}\right)^T \Sigma_{\lambda}^{-1} D_{\lambda} \Sigma_{\lambda}^{-1} \left(x-\mu_{\lambda}\right) - \mathcal{T}\left[ D \Sigma_{\lambda}^{-1} \right] \right\}     .
 \end{IEEEeqnarray}
 
 If we again assume that the drift depends linearly on $x$,
 %
 \begin{IEEEeqnarray}{rCl}
- f(x_t, \lambda) & = & A_D(\lambda) x + b_D(\lambda)     ,
+ \flam(\xlam) & = & A_{D,\lambda} x + b_{D,\lambda}     ,
 \end{IEEEeqnarray}
 %
 then we can find $A_D$ and $b_D$ by equating terms again. For $A_D$,
 %
 \begin{IEEEeqnarray}{rCl}
- - \frac{1}{2} H^T R^{-1} H & = & A_D(\lambda)^T \Sigma(\lambda)^{-1} + \Sigma(\lambda)^{-1} D(\lambda) \Sigma(\lambda)^{-1} \nonumber \\
- A_D(\lambda) & = & - \frac{1}{2} \Sigma(\lambda) H^T R^{-1} H - D(\lambda) \Sigma(\lambda)^{-1} \nonumber \\
-              & = & A(\lambda) - D(\lambda) \Sigma(\lambda)^{-1}      .
+ - \frac{1}{2} H^T R^{-1} H & = & A_{D,\lambda}^T \Sigma_{\lambda}^{-1} + \Sigma_{\lambda}^{-1} D_{\lambda} \Sigma_{\lambda}^{-1} \nonumber \\
+ A_{D,\lambda} & = & - \frac{1}{2} \Sigma_{\lambda} H^T R^{-1} H - D_{\lambda} \Sigma_{\lambda}^{-1} \nonumber \\
+              & = & A_{\lambda} - D_{\lambda} \Sigma_{\lambda}^{-1}      .
 \end{IEEEeqnarray}
 %
 For $b_D$,
 %
 \begin{IEEEeqnarray}{rCl}
- y^T R^{-1} H  & = & b_D(\lambda)^T \Sigma(\lambda)^{-1} - \mu(\lambda)^T \Sigma(\lambda)^{-1} A_D(\lambda) - 2 \mu(\lambda)^T \Sigma(\lambda)^{-1} D(\lambda) \Sigma(\lambda)^{-1} \nonumber \\
- b_D(\lambda) & = & \Sigma(\lambda) \left[ H^T R^{-1} y + A_D(\lambda)^T \Sigma(\lambda)^{-1} \mu(\lambda) \right] + 2 D(\lambda) \Sigma(\lambda)^{-1} \mu(\lambda) \nonumber \\
-              & = & \Sigma(\lambda) \left[ H^T R^{-1} y + A(\lambda)^T \Sigma(\lambda)^{-1} \mu(\lambda) \right] + D(\lambda) \Sigma(\lambda)^{-1} \mu(\lambda) \nonumber \\
-            & = & b(\lambda) + D(\lambda) \Sigma(\lambda)^{-1} \mu(\lambda) \nonumber \\
-            & = & b(\lambda) + D(\lambda) \left[ Q^{-1} m + \lambda H^T R^{-1} y \right]     .
+ y^T R^{-1} H  & = & b_{D,\lambda}^T \Sigma_{\lambda}^{-1} - \mu_{\lambda}^T \Sigma_{\lambda}^{-1} A_{D,\lambda} - 2 \mu_{\lambda}^T \Sigma_{\lambda}^{-1} D_{\lambda} \Sigma_{\lambda}^{-1} \nonumber \\
+ b_{D,\lambda} & = & \Sigma_{\lambda} \left[ H^T R^{-1} y + A_{D,\lambda}^T \Sigma_{\lambda}^{-1} \mu_{\lambda} \right] + 2 D_{\lambda} \Sigma_{\lambda}^{-1} \mu_{\lambda} \nonumber \\
+              & = & \Sigma_{\lambda} \left[ H^T R^{-1} y + A_{\lambda}^T \Sigma_{\lambda}^{-1} \mu_{\lambda} \right] + D_{\lambda} \Sigma_{\lambda}^{-1} \mu_{\lambda} \nonumber \\
+            & = & b_{\lambda} + D_{\lambda} \Sigma_{\lambda}^{-1} \mu_{\lambda} \nonumber \\
+            & = & b_{\lambda} + D_{\lambda} \left[ Q^{-1} m + \lambda H^T R^{-1} y \right]     .
 \end{IEEEeqnarray}
 %
 %Note that for numerical reasons, $\Sigma$ should be calculated using the matrix inversion lemma,
 %%
 %\begin{IEEEeqnarray}{rCl}
-% \Sigma(\lambda) & = & \left[ Q^{-1} + H^T \left(\frac{R}{\lambda}\right)^{-1} H \right]^{-1} \nonumber \\
+% \Sigma_{\lambda} & = & \left[ Q^{-1} + H^T \left(\frac{R}{\lambda}\right)^{-1} H \right]^{-1} \nonumber \\
 %                 & = & Q - Q H^T \left(\left(\frac{R}{\lambda}\right) + H Q H^T\right)^{-1} H Q     .
 %\end{IEEEeqnarray}
 
 Finally, we need to check again that the constant terms balance.
 %
 \begin{IEEEeqnarray}{rCl}
- \text{RHS} & = & - \mathcal{TR}(A_D) - \mathcal{TR}\left( D(\lambda) \Sigma(\lambda)^{-1} \right) \nonumber \\
-            & = & - \mathcal{TR}\left( A_D + D(\lambda) \Sigma(\lambda)^{-1} \right) \nonumber \\
+ \text{RHS} & = & - \mathcal{TR}(A_D) - \mathcal{TR}\left( D_{\lambda} \Sigma_{\lambda}^{-1} \right) \nonumber \\
+            & = & - \mathcal{TR}\left( A_D + D_{\lambda} \Sigma_{\lambda}^{-1} \right) \nonumber \\
             & = & \mathcal{TR}\left( A \right) \nonumber \\
-            & = & \frac{1}{2} \mathcal{TR}\left( \Sigma(\lambda) H^T R^{-1} H \right) \nonumber \\
-            & = & \frac{1}{2} \mathcal{TR}\left( H^T R^{-1} H \Sigma(\lambda) \right)      .
+            & = & \frac{1}{2} \mathcal{TR}\left( \Sigma_{\lambda} H^T R^{-1} H \right) \nonumber \\
+            & = & \frac{1}{2} \mathcal{TR}\left( H^T R^{-1} H \Sigma_{\lambda} \right)      .
 \end{IEEEeqnarray}
 %
 \begin{IEEEeqnarray}{rCl}
- \text{RHS} & = & - b_D(\lambda)^T \Sigma(\lambda)^{-1} \mu(\lambda) + \mu(\lambda)^T \Sigma(\lambda)^{-1} D(\lambda) \Sigma(\lambda)^{-1} \mu(\lambda) \nonumber \\
-            & = & - \left[  b(\lambda) + 2 D(\lambda) \Sigma(\lambda)^{-1} \mu(\lambda) \right]^T \Sigma(\lambda)^{-1} \mu(\lambda) + \mu(\lambda)^T \Sigma(\lambda)^{-1} D(\lambda) \Sigma(\lambda)^{-1} \mu(\lambda) \nonumber \\
-            & = & - b(\lambda)^T \Sigma(\lambda)^{-1} \mu(\lambda) - \mu(\lambda)^T \Sigma(\lambda)^{-1} D(\lambda) \Sigma(\lambda)^{-1} \mu(\lambda) \nonumber \\
-            & = & - \left[ H^T R^{-1} y + A_D(\lambda)^T \Sigma(\lambda)^{-1} \mu(\lambda) \right]^T \mu(\lambda) - \mu(\lambda)^T \Sigma(\lambda)^{-1} D(\lambda) \Sigma(\lambda)^{-1} \mu(\lambda) \nonumber \\
-            & = & - \left[ H^T R^{-1} y - \frac{1}{2} H^T R^{-1} H \mu(\lambda) - \Sigma(\lambda)^{-1}D(\lambda)\Sigma(\lambda)^{-1}\mu(\lambda) \right]^T \mu(\lambda) - \mu(\lambda)^T \Sigma(\lambda)^{-1} D(\lambda) \Sigma(\lambda)^{-1} \mu(\lambda) \nonumber \\
-            & = & -y^T R^{-1} H \mu(\lambda) + \frac{1}{2} \mu(\lambda)^T H^T R^{-1} H \mu(\lambda) \nonumber \\
+ \text{RHS} & = & - b_{D,\lambda}^T \Sigma_{\lambda}^{-1} \mu_{\lambda} + \mu_{\lambda}^T \Sigma_{\lambda}^{-1} D_{\lambda} \Sigma_{\lambda}^{-1} \mu_{\lambda} \nonumber \\
+            & = & - \left[  b_{\lambda} + 2 D_{\lambda} \Sigma_{\lambda}^{-1} \mu_{\lambda} \right]^T \Sigma_{\lambda}^{-1} \mu_{\lambda} + \mu_{\lambda}^T \Sigma_{\lambda}^{-1} D_{\lambda} \Sigma_{\lambda}^{-1} \mu_{\lambda} \nonumber \\
+            & = & - b_{\lambda}^T \Sigma_{\lambda}^{-1} \mu_{\lambda} - \mu_{\lambda}^T \Sigma_{\lambda}^{-1} D_{\lambda} \Sigma_{\lambda}^{-1} \mu_{\lambda} \nonumber \\
+            & = & - \left[ H^T R^{-1} y + A_{D,\lambda}^T \Sigma_{\lambda}^{-1} \mu_{\lambda} \right]^T \mu_{\lambda} - \mu_{\lambda}^T \Sigma_{\lambda}^{-1} D_{\lambda} \Sigma_{\lambda}^{-1} \mu_{\lambda} \nonumber \\
+            & = & - \left[ H^T R^{-1} y - \frac{1}{2} H^T R^{-1} H \mu_{\lambda} - \Sigma_{\lambda}^{-1}D_{\lambda}\Sigma_{\lambda}^{-1}\mu_{\lambda} \right]^T \mu_{\lambda} - \mu_{\lambda}^T \Sigma_{\lambda}^{-1} D_{\lambda} \Sigma_{\lambda}^{-1} \mu_{\lambda} \nonumber \\
+            & = & -y^T R^{-1} H \mu_{\lambda} + \frac{1}{2} \mu_{\lambda}^T H^T R^{-1} H \mu_{\lambda} \nonumber \\
             & = & \text{LHS}     .
 \end{IEEEeqnarray}
 
-We now turn to the problem of weighting particles generated by simulating the SDE. This time we consider the joint distribution over $\tilde{x}_t$, an intermediate state sampled from the prior, and $x_t(\lambda)$, the state at artificial time $\lambda$. We use the extended target distribution is $\pi(x_t(\lambda), \lambda) \rho(\tilde{x}_t | x_t(\lambda))$, and the proposal $p(\tilde{x}_t | x_{t-1}) q(x_t(\lambda) | \tilde{x}_t)$. $q(x_t(\lambda) | \tilde{x}_t)$ is the distribution of a particle sampled by simulating the SDE. We remove this term by selecting the artificial conditional, $\rho(\tilde{x}_t | x_t(\lambda))$, such that the two cancel out, i.e.
-%
+\subsection{Weight Update}
+
+As before, we target the artificial distribution over the latest state and the continuous pseudo-time trajectory,
+
 \begin{IEEEeqnarray}{rCl}
- \frac{\rho(\tilde{x}_t | x_t(\lambda))}{q(x_t(\lambda) | \tilde{x}_t)} & \propto & 1
-\end{IEEEeqnarray}
-%
-where the proportionality is with respect to $x_t(\lambda)$ and $\tilde{x}_t$. This requires that such a density exists, and this needs some thought, but we do not need to know what it is. {\meta Actually, I think we need to include the entire continuous trajectory as an (infinite dimensional) auxiliary variable. Then I think its always possible to make this cancellation.} The weights then simplify to,
-%
-\begin{IEEEeqnarray}{rCl}
- w_t(\lambda)^{(i)} & = & \frac{ p(y_t | x_t^{(i)}(\lambda))^\lambda p(x_t^{(i)}(\lambda) | x_{t-1}^{(i)}) }{ p(\tilde{x}_t^{(i)} | x_{t-1}^{(i)}) }     .
+ d\piztl(\xztl) & = & d\pilam(\xlam) d\rho(\xztl | \xlam)     .
 \end{IEEEeqnarray}
 
-If we know the weights at an earlier time, $\lambda_1$, and we want to calculate them at a later time, $\lambda_2$, then we can write the weight update as,
+Supposing we have a particle approximation to this distribution from which we can sample. The particles are then advanced to $\lambda+\delta\lambda$ by simulation from the SDE. The weights are then updated using,
 %
 \begin{IEEEeqnarray}{rCl}
- w_t(\lambda_2)^{(i)} & = & w_t(\lambda_1)^{(i)} \frac{ p(y_t | x_t^{(i)}(\lambda_2))^{\lambda_2} p(x_t^{(i)}(\lambda_2) | x_{t-1}^{(i)}) }{ p(y_t | x_t^{(i)}(\lambda_1))^{\lambda_1} p(x_t^{(i)}(\lambda_1) | x_{t-1}^{(i)}) }     .
+ w(\lambda+\delta\lambda) & = & \frac{ d\pildl(\xldl) d\rho(\xztldl | \xldl) }{ d\pilam(\xlam) d\rho(\xztl | \xlam) d q(\xldl | \xlam) } \nonumber \\
+                          & = & \frac{ d\pildl(\xldl) d\rho(\xlam | \xldl) }{ d\pilam(\xlam) d q(\xldl | \xlam) } \nonumber \\
+                          & = & \frac{ \pildl(\xldl) \rho(\xlam | \xldl) }{ \pilam(\xlam) q(\xldl | \xlam) } \nonumber
 \end{IEEEeqnarray}
+%
+where $q(\xldl | \xlam) = \mathcal{N}(\xldl|\xlam+\flam(\xlam)\delta\lambda,\delta\lambda)$. Assuming a linear flow, $\flam(\xlam) = A_{D,\lambda} x + b_{D,\lambda}$, we can show that,
+%
+\begin{IEEEeqnarray}{rCl}
+ \xlam+\flam(\xlam)\delta\lambda & = & \left[ I + \delta\lambda A_{D,\lambda} \right] \xlam + \delta\lambda b_{D,\lambda} \nonumber \\
+\end{IEEEeqnarray}
+\begin{IEEEeqnarray}{rCl}
+ \IEEEeqnarraymulticol{3}{l}{ \mathcal{N}(\xldl|\xlam+\flam(\xlam)\delta\lambda,\delta\lambda) } \nonumber \\
+ \qquad & = & \mathcal{N}(\xldl|\left[ I + \delta\lambda A_{D,\lambda} \right] \xlam + \delta\lambda b_{D,\lambda},\delta\lambda) \nonumber \\
+        & = & \left| I + \delta\lambda A_{D,\lambda} \right|^{-1} \mathcal{N}(\xlam|\left[ I + \delta\lambda A_{D,\lambda} \right]^{-1} \left(\xldl-\delta\lambda b_{D,\lambda}\right),\delta\lambda)       . \nonumber \\
+\end{IEEEeqnarray}
+%
+Hence by choosing,
+%
+\begin{IEEEeqnarray}{rCl}
+ \rho(\xlam | \xldl) & = & \mathcal{N}(\xlam|\left[ I + \delta\lambda A_{D,\lambda} \right]^{-1} \left(\xldl-\delta\lambda b_{D,\lambda}\right),\delta\lambda)     ,
+\end{IEEEeqnarray}
+%
+we obtain the weight update formula,
+%
+\begin{IEEEeqnarray}{rCl}
+ w(\lambda+\delta\lambda) & = & \frac{ \pildl(\xldl) }{ \pilam(\xlam) } \left| I + \delta\lambda A_{D,\lambda} \right| \nonumber       ,
+\end{IEEEeqnarray}
+%
+or if the particles are already weighted,
+%
+\begin{IEEEeqnarray}{rCl}
+ w(\lambda+\delta\lambda) & = & w(\lambda) \frac{ \pildl(\xldl) }{ \pilam(\xlam) } \left| I + \delta\lambda A_{D,\lambda} \right|       ,
+\end{IEEEeqnarray}
+%
+which is the same as that used previously for the deterministic flow.
+
+%We now turn to the problem of weighting particles generated by simulating the SDE. This time we consider the joint distribution over $\tilde{x}_t$, an intermediate state sampled from the prior, and $x_t(\lambda)$, the state at artificial time $\lambda$. We use the extended target distribution is $\pi(x_t(\lambda), \lambda) \rho(\tilde{x}_t | x_t(\lambda))$, and the proposal $p(\tilde{x}_t | x_{t-1}) q(x_t(\lambda) | \tilde{x}_t)$. $q(x_t(\lambda) | \tilde{x}_t)$ is the distribution of a particle sampled by simulating the SDE. We remove this term by selecting the artificial conditional, $\rho(\tilde{x}_t | x_t(\lambda))$, such that the two cancel out, i.e.
+%%
+%\begin{IEEEeqnarray}{rCl}
+% \frac{\rho(\tilde{x}_t | x_t(\lambda))}{q(x_t(\lambda) | \tilde{x}_t)} & \propto & 1
+%\end{IEEEeqnarray}
+%%
+%where the proportionality is with respect to $x_t(\lambda)$ and $\tilde{x}_t$. This requires that such a density exists, and this needs some thought, but we do not need to know what it is. {\meta Actually, I think we need to include the entire continuous trajectory as an (infinite dimensional) auxiliary variable. Then I think its always possible to make this cancellation.} The weights then simplify to,
+%%
+%\begin{IEEEeqnarray}{rCl}
+% w_t(\lambda)^{(i)} & = & \frac{ p(y_t | x_t^{(i)}(\lambda))^\lambda p(x_t^{(i)}(\lambda) | x_{t-1}^{(i)}) }{ p(\tilde{x}_t^{(i)} | x_{t-1}^{(i)}) }     .
+%\end{IEEEeqnarray}
+%
+%If we know the weights at an earlier time, $\lambda_1$, and we want to calculate them at a later time, $\lambda_2$, then we can write the weight update as,
+%%
+%\begin{IEEEeqnarray}{rCl}
+% w_t(\lambda_2)^{(i)} & = & w_t(\lambda_1)^{(i)} \frac{ p(y_t | x_t^{(i)}(\lambda_2))^{\lambda_2} p(x_t^{(i)}(\lambda_2) | x_{t-1}^{(i)}) }{ p(y_t | x_t^{(i)}(\lambda_1))^{\lambda_1} p(x_t^{(i)}(\lambda_1) | x_{t-1}^{(i)}) }     .
+%\end{IEEEeqnarray}
 
 Now we have a collection of weighted particles evolving stochastically in continuous time which initially approximate the prior density and finally approximate the posterior. We can resample these in the same manner as a continuous time particle filter, either on a fixed schedule or when the effective sample size falls below a threshold. In this way, we ensure that a diverse particle collection is maintained
 
@@ -561,7 +701,6 @@ The final consideration is how to choose the diffusion matrix, $g(\lambda)$ for 
 \section{Outstanding Questions \& Further Possibilities}
 
 \begin{itemize}
-  \item Is the weight cancellation valid. Does the required ``density'' exist?
   \item Can we handle heavy tails, either by gradient-matching or using scale mixtures?
   \item Can we include discrete variables, by calculating an appropriate state transition matrix?
 \end{itemize}
