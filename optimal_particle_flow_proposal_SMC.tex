@@ -31,6 +31,7 @@
 \newcommand{\xztldl}{x_{0:\lambda+\delta\lambda}}
 \newcommand{\flam}{f_{\lambda}}
 \newcommand{\xtraj}{\tilde{x}_{0:\lambda}}
+\newcommand{\W}{\mathbf{W}}
 
 
 
@@ -482,7 +483,7 @@ For the Gaussian flow, the only source of error (besides the usual Monte Carlo e
 
 \section{All Other Models}
 
-We will use the exact flow solution for the Gaussian model as a tool to generate an approximate solution for any other model. For a particle at pseudo-time $\lambda$ and state $\xlam$, we find values of $m$, $Q$, $H$ and $R$, such that the transition and observation densities are locally approximated by two Gaussians. we then calculate $\flam(\xlam) = A_{\lambda} \xlam + b_{\lambda}$ assuming these matrixes are fixed for the whole state space, and use this for the current step of the numerical integration. Weights are updated incrementally using the same equation as before. However, since $A$ is different for every particle, the determinant term may not be neglected. Such a weight is still ``exact''. The only error is introduced by the numerical integration still.
+We will use the exact flow solution for the Gaussian model as a tool to generate an approximate solution for any other model. For a particle at pseudo-time $\lambda$ and state $\xlam$, we find values of $m$, $Q$, $H$, $R$ and $y$, such that the transition and observation densities are locally approximated by two Gaussians. we then calculate $\flam(\xlam) = A_{\lambda} \xlam + b_{\lambda}$ assuming these matrixes are fixed for the whole state space, and use this for the current step of the numerical integration. Weights are updated incrementally using the same equation as before. However, since $A$ is different for every particle, the determinant term may not be neglected. Such a weight is still ``exact''. The only error is introduced by the numerical integration still.
 
 The flow produced in this manner approximates the optimal one with a series of linear sections.
 
@@ -504,7 +505,55 @@ If the densities are Gaussian but the observation model is nonlinear, we can lin
 
 \subsection{Matching}
 
-If the transition or observation density is not Gaussian, we can use a further approximation. A Gaussian is selected which is in some sense the ``closest'' to the true density at the current state. This can be achieved by setting the mean and covariance so as to match the value and gradient of the exact and approximate densities. More crudely, we could simply moment match.
+If the transition or observation density is not Gaussian, we can use a more drastic approximation. A Gaussian is selected which is in some sense the ``closest'' to the true density at the current state. This can be achieved by setting the mean and covariance so as to match the value and gradient of the exact and approximate densities.
+
+To match the transition density, we calculate $\alpha(x^*)$ and $\Delta := \frac{\left. \nabla_x \alpha \right|_{x^*}}{\alpha(x^*)}$ at the current state, $x_{\lambda}$. Denoting the matched Gaussian density and its parameters with tildes, we can write the following,
+%
+\begin{IEEEeqnarray}{rCl}
+ \tilde{\alpha}(x) & := & \left| 2 \pi \tilde{Q} \right|^{-\frac{1}{2}} \exp\left\{ -\frac{1}{2} (x-\tilde{m})^T \tilde{Q}^{-1} (x-\tilde{m}) \right\} \nonumber \\
+                   & = & \left| 2 \pi \tilde{Q} \right|^{-\frac{1}{2}} \exp\left\{ -\frac{1}{2} \tilde{\Delta}^T \tilde{Q} \tilde{\Delta} \right\} \nonumber \\
+ \tilde{\Delta} := \frac{\left.\nabla_x \tilde{\alpha}(x)\right|_{x_{\lambda}}}{\tilde{\alpha}(x)} & = & - \tilde{Q}^{-1} (x-\tilde{m}) \nonumber      .
+\end{IEEEeqnarray}
+%
+Now equating $\alpha(x_{\lambda})=\tilde{\alpha}(x_{\lambda})$ and $\Delta=\tilde{\Delta}$, and selecting $\tilde{Q} = \tilde{\sigma}_P^2 I$, we have,
+%
+\begin{IEEEeqnarray}{rCl}
+ \alpha(x_{\lambda}) & = & (2 \pi \tilde{\sigma}_P^2)^{\frac{-d_S}{2}} \exp \left\{ -\frac{1}{2} \left|\Delta\right|^2 \tilde{\sigma}_P^2 \right\} \nonumber \\
+ \tilde{\sigma}_P^2 & = & \frac{d_S}{\left|\Delta\right|^2} \W\left[ \frac{\left|\Delta\right|^2}{2 \pi d_S} \alpha(x_{\lambda})^{-\frac{2}{d_S}} \right] \\
+ \tilde{m} & = & x_{\lambda} + \tilde{\sigma}_P^2 \Delta
+\end{IEEEeqnarray}
+%
+where $\W$ is the Lambert-W or log-product function and $d_S$ is the number of state dimensions.
+
+The procedure is very similar for the observation density. This time we calculate $\beta(x_{\lambda})$ and $\Delta := \frac{\left. \nabla_x \beta \right|_{x_{\lambda}}}{\beta(x_{\lambda})}$ at the current state, $x_{\lambda}$, and write,
+%
+\begin{IEEEeqnarray}{rCl}
+ \tilde{\beta}(x) & := & \left| 2 \pi \tilde{R} \right|^{-\frac{1}{2}} \exp\left\{ -\frac{1}{2} (\tilde{y}-\tilde{H}x)^T \tilde{R}^{-1} (\tilde{y}-\tilde{H}x) \right\} \nonumber \\
+ \tilde{\Delta} := \frac{\left.\nabla_x \tilde{\beta}(x)\right|_{x_{\lambda}}}{\tilde{\beta}(x)} & = & \tilde{R}^{-1} (\tilde{y}-\tilde{H}x) \nonumber      .
+\end{IEEEeqnarray}
+%
+Now equating $\beta(x_{\lambda})=\tilde{\beta}(x_{\lambda})$ and $\Delta=\tilde{\Delta}$, and selecting $\tilde{R} = \tilde{\sigma}_L^2 I$ and $\tilde{H} = I$, we have,
+%
+\begin{IEEEeqnarray}{rCl}
+ \beta(x_{\lambda}) & = & (2 \pi \tilde{\sigma}_L^2)^{\frac{-d_S}{2}} \exp \left\{ -\frac{1}{2} \left|\Delta\right|^2 \tilde{\sigma}_L^2 \right\} \nonumber \\
+ \tilde{\sigma}_L^2 & = & \frac{d_S}{\left|\Delta\right|^2} \W\left[ \frac{\left|\Delta\right|^2}{2 \pi d_S} \beta(x_{\lambda})^{-\frac{2}{d_S}} \right] \\
+ \tilde{y} & = & x_{\lambda} + \tilde{\sigma}_L^2 \Delta     .
+\end{IEEEeqnarray}
+
+As an example, if we had a multivariate student-t observation density, then we would calculate $\beta(x_{\lambda})$ and $\Delta$ using the following formulas,
+%
+\begin{IEEEeqnarray}{rCl}
+ \beta{x_{\lambda}} & = & \frac{ \Gamma(\frac{\nu+1}{2}) }{ \Gamma(\frac{\nu}{2}) } \left|\nu \pi R\right|^{-\frac{1}{2}} \left[ 1+\frac{1}{\nu} (y-h(x_{\lambda}))^T R^{-1} (y-h(x_{\lambda})) \right]^{-\frac{1}{2}(\nu+d_O)} \\
+ \left.\nabla_x \tilde{\beta}(x)\right|_{x_{\lambda}} & = & -\frac{1}{2}(\nu+d_O) \frac{ \Gamma(\frac{\nu+1}{2}) }{ \Gamma(\frac{\nu}{2}) } \left|\nu \pi R\right|^{-\frac{1}{2}} \left[ 1+\frac{1}{\nu} (y-h(x_{\lambda}))^T R^{-1} (y-h(x_{\lambda})) \right]^{-\frac{1}{2}(\nu+d_O)-1} \nonumber \\
+ &   & \qquad \times \left[ -\frac{2}{\nu} H^T R^{-1} (y-h(x_{\lambda})) \right] \nonumber \\
+ \Delta & = & -\frac{1}{2}(\nu+d_O) \left[ 1+\frac{1}{\nu} (y-h(x_{\lambda}))^T R^{-1} (y-h(x_{\lambda})) \right]^{-1} \left[ -\frac{2}{\nu} H^T R^{-1} (y-h(x_{\lambda})) \right] \nonumber \\
+        & = & \frac{ (\nu+d_O) H^T R^{-1} (y-h(x_{\lambda})) }{ \nu + (y-h(x_{\lambda}))^T R^{-1} (y-h(x_{\lambda})) } \\
+ H & := & \left.\frac{\partial h}{\partial x}\right|_{x_{\lambda}}
+\end{IEEEeqnarray}
+
+
+
+More crudely, we could simply moment match.
 
 \subsection{Scale Mixtures}
 
