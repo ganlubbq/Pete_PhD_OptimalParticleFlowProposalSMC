@@ -115,7 +115,10 @@ for kk = 2:model.K
         
     end
     
-    assert(~all(isinf(pf(kk).weight)));
+    if all(isinf(pf(kk).weight))
+        pf(kk).weight = zeros(size(pf(kk).weight));
+    end
+%     assert(~all(isinf(pf(kk).weight)));
     assert(all(isreal(pf(kk).weight)));
     
     ess(kk) = calc_ESS(pf(kk).weight);

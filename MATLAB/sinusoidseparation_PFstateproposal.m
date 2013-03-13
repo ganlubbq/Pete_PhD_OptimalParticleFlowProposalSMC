@@ -56,38 +56,38 @@ else
 %     xi = exprnd(ppsl_rate);
 %     prob = prob + log(gampdf(xi,2,2))-log(exppdf(xi,ppsl_rate));
     
-    % Sample a mixing variable
-    xi = chi2rnd(model.dfy);
-    aug_state = [con_state; xi];
-    
-    lam_rng = [0:1E-5:1E-4 2E-4:1E-4:1E-3 2E-3:1E-3:1E-2 2E-2:1E-2:1E-1 2E-1:1E-1:9E-1 9.1E-1:1E-2:1];
-    L = length(lam_rng);
-    x = aug_state;
-    
-    for ll = 1:L-1
-        
-        lam = lam_rng(ll);
-        dl = lam_rng(ll+1)-lam_rng(ll);
-        
-        v = calc_SMoN_particle_velocity(model, lam, x, observ, prior_mn, dis_state);
-        
-        x = v*dl;
-        
-        if x(end) < 0
-            x(end) = 1E-5;
-        end
-        
-%         figure(1), plot(lam, x(end), 'x');
-        
-    end
+%     % Sample a mixing variable
+%     xi = chi2rnd(model.dfy);
+%     aug_state = [con_state; xi];
+%     
+%     lam_rng = [0:1E-5:1E-4 2E-4:1E-4:1E-3 2E-3:1E-3:1E-2 2E-2:1E-2:1E-1 2E-1:1E-1:9E-1 9.1E-1:1E-2:1];
+%     L = length(lam_rng);
+%     x = aug_state;
+%     
+%     for ll = 1:L-1
+%         
+%         lam = lam_rng(ll);
+%         dl = lam_rng(ll+1)-lam_rng(ll);
+%         
+%         v = calc_SMoN_particle_velocity(model, lam, x, observ, prior_mn, dis_state);
+%         
+%         x = v*dl;
+%         
+%         if x(end) < 0
+%             x(end) = 1E-5;
+%         end
+%         
+% %         figure(1), plot(lam, x(end), 'x');
+%         
+%     end
     
 %     options = [];
 %     [lam, x] = ode15s(@(lam_in, x_in) calc_SMoN_particle_velocity(model, lam_in, x_in, observ, prior_mn, dis_state), lam_rng, aug_state, options);
 %     con_state = x(end,1:end-1)';
     
-%     options = [];
-%     [lam, x] = ode15s(@(lam_in, x_in) calc_particle_velocity(model, lam_in, x_in, observ, prior_mn, dis_state), lam_rng, con_state, options);
-%     con_state = x(end,:)';
+    options = [];
+    [lam, x] = ode45(@(lam_in, x_in) calc_particle_velocity(model, lam_in, x_in, observ, prior_mn, dis_state), lam_rng, con_state, options);
+    con_state = x(end,:)';
     
 %     if prev_kk > 0
 %         figure(1), plot(x(:,1), x(:,2)), plot(x(end,1), x(end,2), 'bo')
@@ -159,26 +159,45 @@ do = model.do;
 
 % Linearise
 H = sinusoidseparation_obsjacobian(model, x, dis_state);
+my = sinusoidseparation_h(model, x, dis_state);
 
 if dis_state(end) == 0
 
     % Find particle velocity using Gaussian approximation
-    y_mod = y - sinusoidseparation_h(model, x, dis_state) + H*x;
+    y_mod = y - my + H*x;
     A = -0.5*Q*H'*((R+lam*H*Q*H')\H);
     b = (eye(ds)+2*lam*A)*((eye(ds)+lam*A)*Q*H'*(R\y_mod)+A*m);
     v = A*x+b;
 
 elseif dis_state(end) == 1
     
-    % Find particle velocity using incompressible flow FOR MV CAUCHY NOISE
-    y_mn = sinusoidseparation_h(model, x, dis_state);
-    dlogh_dx = (1+do)*H'*(R\(y-y_mn))/(1+(y-y_mn)'*(R\(y-y_mn)));
-    dlogp_dx = lam*dlogh_dx - Q\(x-m);
-    loglhood = log(mvcauchypdf(y', y_mn', R));
-    norm_const = 0.01*ds + (dlogp_dx'*dlogp_dx);
-%     corr_mat = eye(ds) - dlogp_dx*dlogp_dx'/norm_const;
-    v = -loglhood*dlogp_dx/norm_const;% - corr_mat*x;
+%     % Find particle velocity using incompressible flow FOR MV CAUCHY NOISE
+%     y_mn = sinusoidseparation_h(model, x, dis_state);
+%     dlogh_dx = (1+do)*H'*(R\(y-y_mn))/(1+(y-y_mn)'*(R\(y-y_mn)));
+%     dlogp_dx = lam*dlogh_dx - Q\(x-m);
+%     loglhood = log(mvcauchypdf(y', y_mn', R));
+%     norm_const = 0.01*ds + (dlogp_dx'*dlogp_dx);
+% %     corr_mat = eye(ds) - dlogp_dx*dlogp_dx'/norm_const;
+%     v = -loglhood*dlogp_dx/norm_const;% - corr_mat*x;
 
+    % Approximate to nearest Gaussian and use the Gaussian flow
+    
+    dfy = model.dfy;
+    
+    p0 = mvtpdf(y-my, R, dfy);
+    Del = (dfy+do)*(H'/R)*(y-my)/(dfy + (y-my)'*(R\(y-my)));
+    DelDel = Del'*Del;
+    
+    H_match = eye(ds);
+    sig_match = ds*lambertw_ex(DelDel*p0^(-2/ds)/(2*pi*ds))/DelDel;
+    R_match = sig_match*eye(ds);
+    y_match = x + sig_match*Del;
+    
+    % Find particle velocity using Gaussian approximation
+    A = -0.5*Q*H_match'*((R_match+lam*H_match*Q*H_match')\H_match);
+    b = (eye(ds)+2*lam*A)*((eye(ds)+lam*A)*Q*H_match'*(R_match\y_match)+A*m);
+    v = A*x+b;
+    
 end
 
 % if lam > 0
