@@ -35,7 +35,7 @@
 
 
 
-\title{Optimal Proposals Using Particle Flow for SMC Samplers}
+\title{The Smooth Update Particle Filter}
 \author{Pete Bunch}
 \date{January 2012}
 
@@ -45,29 +45,29 @@
 
 \section{Introduction}
 
-A particle filter is an algorithm used for sequential estimation of a filtering distribution in a state-space model. For a comprehensive introduction, see for example \cite{Cappe2007,Doucet2009}. Here we consider the use of particle filters for inference with a standard discrete-time hidden Markov model (HMM).
+A particle filter is an algorithm used for sequential estimation of a filtering distribution in a state-space model. For a comprehensive introduction, see for example \cite{Cappe2007,Doucet2009}. In this paper we consider the use of particle filters for inference with a standard discrete-time hidden Markov model (HMM).
 
-The particle filter advances a set of samples through time, drawn approximately from the filtering distribution. This is achieved by sampling at each time step from an importance distribution and then weighting the particles to account for the discrepancy between target and importance densities.
+The particle filter advances a set of samples through time, drawn approximately from the filtering distribution. This is achieved by sampling at each time step from an importance distribution and then weighting the particles to account for the discrepancy between target and importance distributions.
 
-One of the principal difficulties when designing a particle filter is the selection of the importance distribution. The easiest choice is to sample from the transition density, which leads to a simplification in the weight formula. The resulting algorithm is the ``bootstrap filter'' of \cite{Gordon1993}. In many cases, such bootstrap proposals result in poor filter performance due to a mismatch in the areas of high probability in the transition and observation densities.
+One of the principal difficulties when designing a particle filter is the selection of the importance distribution. The easiest choice is to sample from the transition model, which leads to a simplification in the weight formula. The resulting algorithm is the ``bootstrap filter'' of \cite{Gordon1993}. In many cases, such bootstrap proposals result in poor filter performance due to a mismatch in the areas of high probability in the transition and observation distributions.
 
-Amongst others, \cite{Doucet2000a} demonstrated that the ideal choice of importance density is the conditional posterior given both the previous state and the new observation, dubbed the ``optimal importance distribution'' (OID). In all but a few cases, this cannot be calculated analytically. A popular solution is to use an extended (EKF) or unscented (UKF) Kalman filter to select a Gaussian importance distribution. However, such schemes can fail when the model is highly nonlinear or non-Gaussian, as the approximation is poor.
+Amongst others, \cite{Doucet2000a} demonstrated that the ideal choice of importance distribution is the conditional posterior given both the previous state and the new observation, dubbed the ``optimal importance distribution'' (OID). In all but a few cases, this cannot be calculated analytically. When the state variables are continuous, a popular solution is to use an extended (EKF) or unscented (UKF) Kalman filter to select a Gaussian importance distribution. However, such schemes can fail when the model is highly nonlinear or non-Gaussian, as the approximation is poor.
 
 The effect of using a poor importance distribution (i.e. one which is not ``close'' to the OID) is that the variance of the importance weights is increased, resulting in a degeneracy of the filter. In the worst cases, there may be no particles proposed in regions of high posterior probability, causing the filter to diverge.
 
-The problems of particle degeneracy can be somewhat mitigated by introducing the observation likelihood gradually, so that particles are progressively drawn towards the peaks in the likelihood. The idea of using a discrete set of bridging distributions between the prior and the posterior has appeared, for example, in \cite{Godsill2001b}. It is, furthermore, possible to consider a continuous homotopy of distributions between the prior and the posterior, and to move the particles accordingly. Methods based on this idea of particle flow or transport have been developed independently by \cite{Daum2008,Daum2011d} and \cite{Reich2011}.
+Many solutions to the problem of particle filter degeneracy have been proposed, including the addition of Markov Chain Monte Carlo (MCMC) steps to regenerate a particle approximation \cite{Gilks2001} or the marginalisation of variables which can be filtered analytically, a process known as ``Rao-Blackwellisation'' \cite{Casella1996,Doucet2000}. Degeneracy can also be mitigated by introducing the effect of each observation gradually, so that particles are progressively drawn towards peaks in the likelihood. The idea of using a discrete set of bridging distributions between the prior and the posterior has appeared, for example, in \cite{Godsill2001b}.
 
-The algorithms presented by \cite{Daum2008,Daum2011d,Reich2011} have the attractive property that the particles are equally weighted throughout. However, this comes at a price. They are restricted to a certain class of state spaces (The state must be a vector of continuous variables with the filtering distribution nowhere vanishing in $\mathbb{R}^d$.), and the in all but the simplest cases, multiple functional or numerical approximations must be used in the calculation of the particle flows. Here we modify these methods in order to use them for sampling particles from the optimal importance density. Hence, they can be used with mixed continuous-discrete states and for continuous states with known boundaries. Moreover, since the approximations are moved into the proposal step, they are accounted for in the importance weights.
+More recently, methods have been proposed which define a continuous sequence of distributions between the prior and the posterior. The set of particles is then moved deterministically so that they are always distributed accordingly. Algorithms based on this idea of particle flow or transport have been developed independently by \cite{Daum2008,Daum2011d} and \cite{Reich2011}.
 
-%This relies on two recent advances in particle filter research. The first is the concept of an augmented target distribution, introduced in the context of sequential Monte Carlo (SMC) samplers in \cite{DelMoral2006}. By extending the space spanned by the target distribution using an artificial extension, intractable weight calculations can be avoided. The second idea we use  In these papers, schemes are developed for deterministically moving particles according to a homotopy or transport map such that they represent the required posterior distribution.
+The algorithms presented by \cite{Daum2008,Daum2011d,Reich2011} have the attractive property that the particles are equally weighted throughout. However, this comes at a price. First, they are restricted to a certain class of state spaces; the state must be a vector of continuous variables with the filtering distribution nowhere vanishing in $\mathbb{R}^d$. Second, in all but the simplest cases, multiple functional or numerical approximations must be used in the calculation of the particle flows.
 
-
+In this paper, we devise a new ``smooth update'' particle filter which builds upon the ideas of particle flow. Starting with the standard particle filter framework, we target an artificial distribution over a space of continuous trajectories between prior and posterior locations. This admits the filtering distribution as a marginal and validates the use of a deterministic and stochastic flows for the particle filter update. Next we show how particle weights can be calculated exactly for an important class of flows. These flows arise from OID proposals in linear-Gaussian models, but can also be used to propose particles from an approximation to the OID in nonlinear, non-Gaussian models. All the algorithms are validated through numerical simulations.
 
 
 
 \section{Particle Filter Basics}
 
-We consider a standard discrete-time HMM,
+We consider a standard discrete-time HMM in which the transition, observation and prior models have closed-form densities,
 %
 \begin{IEEEeqnarray}{rCl}
  x_t & \sim & p(x_t | x_{t-1}) \label{eq:td} \\
@@ -75,9 +75,13 @@ We consider a standard discrete-time HMM,
  x_0 & \sim & p(x_0 )          \label{eq:pd}      ,
 \end{IEEEeqnarray}
 %
-where $x_t$ is the time-evolving hidden state of a system, and $y_t$ is an incomplete, noisy observation. We assume here that the transition \eqref{eq:td}, observation \eqref{eq:od} and prior \eqref{eq:pd} densities may be evaluated and that the prior and transition densities may be sampled. The task of filtering is to estimate the distribution of each state in turn given the observations up to the current time, referred to as the filtering distribution, $p(x_t | y_{1:t})$.
+where $x_t$ is the time-evolving hidden state of a system, and $y_t$ is an incomplete, noisy observation. We assume here that the transition \eqref{eq:td}, observation \eqref{eq:od} and prior \eqref{eq:pd} densities may be evaluated and that the prior and transition densities may be sampled. The task of filtering is to estimate the distribution of each state in turn given the observations up to the current time, referred to as the filtering distribution,
+%
+\begin{IEEEeqnarray}{rCl}
+ p(x_t | y_{1:t}) & = & \frac{ \int p(x_0) \prod_{k=1}^{t} p(y_k|x_k) p(x_k|x_{k-1}) dx_{1:t-1} }{ \int p(x_0) \prod_{k=1}^{t} p(y_k|x_k) p(x_k|x_{k-1}) dx_{1:t} }   .
+\end{IEEEeqnarray}
 
-If the model densities are all Gaussian, with the transition density mean only linearly dependent on the previous state and the observation density mean only linearly dependent on the current state, then a recursion for the filtering density is given by the Kalman filter \cite{Grewal2002}. If the dependence is nonlinear then approximations such as the EKF or UKF may be used. However, these are only reliable for weak nonlinearity.
+If the model densities are all Gaussian, the transition density mean is only linearly dependent on the previous state, and the observation density mean is only linearly dependent on the current state, then a recursion for the filtering density is given by the Kalman filter \cite{Grewal2002}. If the dependence is nonlinear then approximations such as the EKF or UKF may be used. However, these are only reliable for weak nonlinearity.
 
 Particle filters may be used even when the model densities are nonlinear and non-Gaussian. The filtering density is represented by a set of weighted particles drawn approximately from it using sequential importance sampling,
 %
@@ -123,6 +127,26 @@ resulting in the following weight formula,
 \end{IEEEeqnarray}
 %
 This choice is thus known as the ``optimal importance density'' (OID). It may be sampled from, and the weights calculated in closed form, when the observation density is linearly dependent on the state and both transition and observation densities are Gaussian. (The state need not be linearly dependent on the previous state.) However, for most models this density can be neither calculated, nor efficiently sampled from. Thus, it is common to use the same Gaussian approximations to estimate and sample from the OID as were used in the formulation of the EKF and UKF \cite{Doucet2000a,Merwe2000}. These work well when the OID is unimodal, and the observation nonlinearity is weak, but can otherwise perform worse even than the bootstrap filter.
+
+
+
+\section{A Framework for the Smooth Update}
+\section{The Deterministic Smooth Update}
+\subsection{An Equation for the Flow}
+\subsection{Weight Calculations for a Linear Flow}
+\subsection{Flow Solution for the Linear Gaussian Case}
+\subsection{Piecewise Linear Flows}
+\section{The Stochastic Smooth Update}
+\subsection{An Equation for the Flow}
+\subsection{Weight Calculations for a Linear Flow}
+\subsection{Flow Solution for the Linear Gaussian Case}
+\section{Numerical Demonstrations}
+\section{Conclusions}
+
+
+
+
+
 
 
 
@@ -750,8 +774,8 @@ The final consideration is how to choose the diffusion matrix, $g(\lambda)$ for 
 \section{Outstanding Questions \& Further Possibilities}
 
 \begin{itemize}
-  \item Can we handle heavy tails, either by gradient-matching or using scale mixtures?
   \item Can we include discrete variables, by calculating an appropriate state transition matrix?
+  \item Can we prove that results are better than a single linearisation? Either rigorously or intuitively?
 \end{itemize}
 
 
