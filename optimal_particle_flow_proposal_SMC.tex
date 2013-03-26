@@ -17,14 +17,22 @@
 
 \graphicspath{{./}}
 
+% My environments
 \newenvironment{meta}[0]{\color{red} \em}{}
+
+% Notational shortcut macros
+\newcommand{\pitlam}{\pi_{t,\lambda}}
+\newcommand{\xtlam}{x_{t,\lambda}}
+\newcommand{\xtztl}{x_{t,0:\lambda}}
 
 \newcommand{\xtl}{x_{t,\lambda}}
 \newcommand{\xtldl}{x_{t,\lambda+\delta\lambda}}
+
 \newcommand{\pilam}{\pi_{\lambda}}
 \newcommand{\pildl}{\pi_{\lambda+\delta\lambda}}
 \newcommand{\piztl}{\pi_{0:\lambda}}
 \newcommand{\piztldl}{\pi_{0:\lambda+\delta\lambda}}
+
 \newcommand{\xlam}{x_{\lambda}}
 \newcommand{\xldl}{x_{\lambda+\delta\lambda}}
 \newcommand{\xztl}{x_{0:\lambda}}
@@ -49,19 +57,19 @@ A particle filter is an algorithm used for sequential estimation of a filtering 
 
 The particle filter advances a set of samples through time, drawn approximately from the filtering distribution. This is achieved by sampling at each time step from an importance distribution and then weighting the particles to account for the discrepancy between target and importance distributions.
 
-One of the principal difficulties when designing a particle filter is the selection of the importance distribution. The easiest choice is to sample from the transition model, which leads to a simplification in the weight formula. The resulting algorithm is the ``bootstrap filter'' of \cite{Gordon1993}. In many cases, such bootstrap proposals result in poor filter performance due to a mismatch in the areas of high probability in the transition and observation distributions.
+One of the principal difficulties when designing a particle filter is the selection of the importance distribution. The easiest choice is often to sample from the transition model, which leads to a simplification in the weight formula. The resulting algorithm is the ``bootstrap filter'' of \cite{Gordon1993}. In many cases, such bootstrap proposals result in poor filter performance due to a mismatch in the areas of high probability in the transition and observation distributions.
 
 Amongst others, \cite{Doucet2000a} demonstrated that the ideal choice of importance distribution is the conditional posterior given both the previous state and the new observation, dubbed the ``optimal importance distribution'' (OID). In all but a few cases, this cannot be calculated analytically. When the state variables are continuous, a popular solution is to use an extended (EKF) or unscented (UKF) Kalman filter to select a Gaussian importance distribution. However, such schemes can fail when the model is highly nonlinear or non-Gaussian, as the approximation is poor.
 
 The effect of using a poor importance distribution (i.e. one which is not ``close'' to the OID) is that the variance of the importance weights is increased, resulting in a degeneracy of the filter. In the worst cases, there may be no particles proposed in regions of high posterior probability, causing the filter to diverge.
 
-Many solutions to the problem of particle filter degeneracy have been proposed, including the addition of Markov Chain Monte Carlo (MCMC) steps to regenerate a particle approximation \cite{Gilks2001} or the marginalisation of variables which can be filtered analytically, a process known as ``Rao-Blackwellisation'' \cite{Casella1996,Doucet2000}. Degeneracy can also be mitigated by introducing the effect of each observation gradually, so that particles are progressively drawn towards peaks in the likelihood. The idea of using a discrete set of bridging distributions between the prior and the posterior has appeared, for example, in \cite{Godsill2001b}.
+Many solutions to the problem of particle filter degeneracy have been proposed, including the addition of Markov Chain Monte Carlo (MCMC) steps to regenerate a particle approximation \cite{Gilks2001} and the marginalisation of variables which can be filtered analytically, a process known as ``Rao-Blackwellisation'' \cite{Casella1996,Doucet2000}. Degeneracy can also be mitigated by introducing the effect of each observation gradually, so that particles are progressively drawn towards peaks in the likelihood. The idea of using a discrete set of bridging distributions between the prior and the posterior has appeared, for example, in \cite{Godsill2001b}.
 
 More recently, methods have been proposed which define a continuous sequence of distributions between the prior and the posterior. The set of particles is then moved deterministically so that they are always distributed accordingly. Algorithms based on this idea of particle flow or transport have been developed independently by \cite{Daum2008,Daum2011d} and \cite{Reich2011}.
 
-The algorithms presented by \cite{Daum2008,Daum2011d,Reich2011} have the attractive property that the particles are equally weighted throughout. However, this comes at a price. First, they are restricted to a certain class of state spaces; the state must be a vector of continuous variables with the filtering distribution nowhere vanishing in $\mathbb{R}^d$. Second, in all but the simplest cases, multiple functional or numerical approximations must be used in the calculation of the particle flows.
+The algorithms presented by \cite{Daum2008,Daum2011d,Reich2011} have the attractive property that the particles are equally weighted throughout. However, this comes at a price. First, they are restricted to a certain class of state spaces; the state must be a $d$-dimensional vector of continuous variables with the filtering distribution nowhere vanishing in $\mathbb{R}^d$. Second, in all but the simplest case (i.e. linear and Gaussian), multiple functional or numerical approximations must be used in the calculation of the particle flows. For example, in \cite{Reich2011}, a Gaussian-mixure approximation to the filtering distribution is used, while in \cite{Daum2009a} interpolation is used to estimate the filtering density and its gradient at arbitrary points. The effect of such approximations is that the algorithms lose the exactness characteristic of particle filters --- that as the number of particles tends to infinite, expectations of test functions tend to the correct value. In fact, the degree of inaccuracy introduced will be very hard to quanity.
 
-In this paper, we devise a new ``smooth update'' particle filter which builds upon the ideas of particle flow. Starting with the standard particle filter framework, we target an artificial distribution over a space of continuous trajectories between prior and posterior locations. This admits the filtering distribution as a marginal and validates the use of a deterministic and stochastic flows for the particle filter update. Next we show how particle weights can be calculated exactly for an important class of flows. These flows arise from OID proposals in linear-Gaussian models, but can also be used to propose particles from an approximation to the OID in nonlinear, non-Gaussian models. All the algorithms are validated through numerical simulations.
+In this paper, we devise a new ``smooth update'' particle filter which builds upon the ideas of particle flow. Starting with the standard particle filter framework, we target an artificial distribution over a space of continuous trajectories between prior and posterior locations. This admits the filtering distribution as a marginal and validates the use of a deterministic and stochastic flows for the particle filter update step. Next we show how particle weights can be calculated exactly for an important class of flows. These flows arise from OID proposals in linear-Gaussian models, but can also be used to propose particles from an approximation to the OID in nonlinear, non-Gaussian models. All the algorithms are validated through numerical simulations.
 
 
 
@@ -70,15 +78,15 @@ In this paper, we devise a new ``smooth update'' particle filter which builds up
 We consider a standard discrete-time HMM in which the transition, observation and prior models have closed-form densities,
 %
 \begin{IEEEeqnarray}{rCl}
- x_t & \sim & p(x_t | x_{t-1}) \label{eq:td} \\
- y_t & \sim & p(y_t | x_{t-1}) \label{eq:od} \\
- x_0 & \sim & p(x_0 )          \label{eq:pd}      ,
+ X_t & \sim & p(x_t | x_{t-1}) \label{eq:td} \\
+ Y_t & \sim & p(y_t | x_{t})   \label{eq:od} \\
+ X_0 & \sim & p(x_0 )          \label{eq:pd}      ,
 \end{IEEEeqnarray}
 %
-where $x_t$ is the time-evolving hidden state of a system, and $y_t$ is an incomplete, noisy observation. We assume here that the transition \eqref{eq:td}, observation \eqref{eq:od} and prior \eqref{eq:pd} densities may be evaluated and that the prior and transition densities may be sampled. The task of filtering is to estimate the distribution of each state in turn given the observations up to the current time, referred to as the filtering distribution,
+where the random variable $X_t$ is the time-evolving hidden state of a system, and $Y_t$ is an incomplete, noisy observation. We assume here that the transition, observation and prior densities may be evaluated and that the prior and transition densities may be sampled. The task of filtering is to estimate the distribution of each state in turn given the observations up to the current time, referred to as the filtering distribution, which has the following density,
 %
 \begin{IEEEeqnarray}{rCl}
- p(x_t | y_{1:t}) & = & \frac{ \int p(x_0) \prod_{k=1}^{t} p(y_k|x_k) p(x_k|x_{k-1}) dx_{1:t-1} }{ \int p(x_0) \prod_{k=1}^{t} p(y_k|x_k) p(x_k|x_{k-1}) dx_{1:t} }   .
+ p(x_t | y_{1:t}) & = & \frac{ \int p(x_0) \prod_{k=1}^{t} p(y_k|x_k) p(x_k|x_{k-1}) dx_{1:t-1} }{ \int p(x_0) \prod_{k=1}^{t} p(y_k|x_k) p(x_k|x_{k-1}) dx_{1:t} }     .
 \end{IEEEeqnarray}
 
 If the model densities are all Gaussian, the transition density mean is only linearly dependent on the previous state, and the observation density mean is only linearly dependent on the current state, then a recursion for the filtering density is given by the Kalman filter \cite{Grewal2002}. If the dependence is nonlinear then approximations such as the EKF or UKF may be used. However, these are only reliable for weak nonlinearity.
@@ -86,14 +94,16 @@ If the model densities are all Gaussian, the transition density mean is only lin
 Particle filters may be used even when the model densities are nonlinear and non-Gaussian. The filtering density is represented by a set of weighted particles drawn approximately from it using sequential importance sampling,
 %
 \begin{IEEEeqnarray}{rCl}
- p(x_t | y_{1:t}) & = & \sum_i w_t^{(i)} \delta_{x_{t}^{(i)}}(x_t)     .
+ p(x_t | y_{1:t}) & = & \sum_i w_t^{(i)} \delta_{x_{t}^{(i)}}(x_t)     ,
 \end{IEEEeqnarray}
 %
-Particles are generated by first sampling $x_{t-1}^{(i)}$ from the previous time's filtering approximation, and then proposing a new state $x_t^{(i)}$ from an importance density, $q(x_t | x_{t-1}^{(i)}, y_t)$. Finally, an importance weight is assigned to the particle,
+where $\delta_{x_{t}^{(i)}}(x_t)$ denotes a unit probability mass at the point $x_{t}^{(i)}$. (To be precise, the associated probability measure consists of a sum of weighted indicator functions at these points.)
+
+Particles are generated by first setting $X_{t-1}=x_{t-1}^{(i)}$ with probability $v_{t-1}^{(i)}$, and then proposing a new state $X_t$ from an importance density, $q(x_t | X_{t-1}, y_t)$. Finally, an importance weight is assigned to the particle,
 %
 \begin{IEEEeqnarray}{rCl}
  w_t^{(i)} & = & \frac{ p(x_{t}^{(i)}, x_{t-1}^{(i)} | y_{1:t}) }{ p(x_{t-1}^{(i)} | y_{1:-1}) q(x_t^{(i)} | x_{t-1}^{(i)}, y_t) } \nonumber \\
- & \propto & \frac{ p(y_t | x_t^{(i)}) p(x_t^{(i)} | x_{t-1}^{(i)}) }{ q(x_t^{(i)} | x_{t-1}^{(i)}, y_t) }     .
+ & \propto & \frac{w_{t-1}^{(i)}}{v_{t-1}^{(i)}} \times \frac{ p(y_t | x_t^{(i)}) p(x_t^{(i)} | x_{t-1}^{(i)}) }{ q(x_t^{(i)} | x_{t-1}^{(i)}, y_t) }     .
 \end{IEEEeqnarray}
 
 Unlike the EKF and UKF, particle filters are ``exact'', in the sense that as the number of particles tends to infinite, integrals over the density converge to the true value.
@@ -109,7 +119,7 @@ This quantity takes a value between $1$ (bad) and $N_F$ (good), the number of fi
 The simplest choice of importance density is the transition density,
 %
 \begin{IEEEeqnarray}{rCl}
- q(x_t | x_{t-1}^{(i)}, y_t) = p(x_t^{(i)} | x_{t-1}^{(i)})     .
+ q(x_t | x_{t-1}^{(i)}, y_t) = p(x_t | x_{t-1}^{(i)})     .
 \end{IEEEeqnarray}
 %
 This results in the ``bootstrap filter'' of \cite{Gordon1993}. Often this is inefficient, especially when the variance of the transition density is greater than that of the observation density. In this situation, the samples are widely spread over the state space, and only a few fall in the region of high likelihood. This results in a large weight variance and poor filter performance.
@@ -117,13 +127,14 @@ This results in the ``bootstrap filter'' of \cite{Gordon1993}. Often this is ine
 It was shown in \cite{Doucet2000a}, and references therein, that the weight variance is minimised by using the conditional posterior as the importance distribution,
 %
 \begin{IEEEeqnarray}{rCl}
- q(x_t | x_{t-1}^{(i)}, y_t) & = & p(x_t | x_{t-1}^{(i)}, y_t)     ,
+ q(x_t | x_{t-1}^{(i)}, y_t) & = & p(x_t | x_{t-1}^{(i)}, y_t)      ,
 \end{IEEEeqnarray}
 %
 resulting in the following weight formula,
 %
 \begin{IEEEeqnarray}{rCl}
- w_t^{(i)} & \propto & p(y_t | x_{t-1}^{(i)})      .
+ w_t^{(i)} & \propto & p(y_t | x_{t-1}^{(i)}) \nonumber \\
+           & \propto & \int p(y_t | x_t) p(x_t | x_{t-1}^{(i)}) dx_t      .
 \end{IEEEeqnarray}
 %
 This choice is thus known as the ``optimal importance density'' (OID). It may be sampled from, and the weights calculated in closed form, when the observation density is linearly dependent on the state and both transition and observation densities are Gaussian. (The state need not be linearly dependent on the previous state.) However, for most models this density can be neither calculated, nor efficiently sampled from. Thus, it is common to use the same Gaussian approximations to estimate and sample from the OID as were used in the formulation of the EKF and UKF \cite{Doucet2000a,Merwe2000}. These work well when the OID is unimodal, and the observation nonlinearity is weak, but can otherwise perform worse even than the bootstrap filter.
@@ -131,9 +142,111 @@ This choice is thus known as the ``optimal importance density'' (OID). It may be
 
 
 \section{A Framework for the Smooth Update}
+
+In this section, we introduce a framework for a new method of particle filtering designed to alleviate the problem of particle degeneracy. This is achieved by introducing a continuous sequence of distributions between the prior (predictive) and posterior (filtering) distributions at each time step, and then moving the particles either deterministically of stochastically so that they are distributed accordingly. Since this allows a smooth introduction of the observation, we refer to it as the Smooth Update Particle Filter (SUPF).
+
+First, a variable $\lambda \in [0,1]$ is introduced. Intuitively, this is a stretch of ``pseudo-time'' between the predictive and filtering distributions, allowing the effect of the observation to be introduced gradually. Define $X_{t,\lambda}$ as the state at time $t$ and pseudo-time $\lambda$, and the following sequence of densities,
+%
+\begin{IEEEeqnarray}{rCl}
+ \pitlam(\xtlam | x_{t-1}) & = & \frac{ p(y_t | \xtlam)^{\lambda} p(\xtlam | x_{t-1}) }{ K_{\lambda}(x_{t-1}) } \nonumber \\
+ K_{\lambda}(x_{t-1}) & = & \int p(y_t | \xtlam)^{\lambda} p(\xtlam | x_{t-1}) \xtlam      .
+\end{IEEEeqnarray}
+%
+For the $(i)$th particle, $\pitlam(\xtlam | x_{t-1}^{(i)})$ is the transition density when $\lambda=0$ and the OID when $\lambda=1$.
+
+Further, let $X_{t,0:\lambda}$ be the continuous state trajectory over the interval $[0,\lambda)$. The target distribution for the SUPF is then chosen to be,
+%
+\begin{IEEEeqnarray}{rCl}
+ dp(x_{t-1} | y_{1:t-1}) d\pitlam(\xtlam|x_{t-1}) d\rho(\xtztl | \xtlam)     ,
+\end{IEEEeqnarray}
+%
+where $d\rho$ is an artificial extension to the distribution and can be chosen as a design parameter --- ultimately we only care about the distribution of the final states. Note that the target distribution is specified in terms of measures rather than densities due the fact that $d\rho$ will be chosen so as not to admit a valid density in the case of the deterministic update.
+
+At pseudo-time $\lambda=1$, this target distribution clearly has the filtering distribution as a marginal. Once particles have been sampled from the target, we can simply discard the pseudo-time trajectories (and, if not desired, the $t-1$ states as well) to leave samples from the filtering distribution.
+
+In the following sections, we explore methods for sampling from this target distribution and for weighting the particles appropriately.
+
+
+
 \section{The Deterministic Smooth Update}
+
+The deterministic SUPF (DSUPF) uses a non-random time-varying flow field to move each particle around the state space. The field is chosen so that the distribution of the particle, $X_{t,\lambda}^{(i)}$ is exactly or approximately equal to $\pitlam(\xtlam | x_{t-1}^{(i)})$, meaning that the variance of the weights is minimised.
+
+
+
 \subsection{An Equation for the Flow}
+
+We first consider how such an ``optimal flow'' could be derived. This is based closely on the exposition of \cite{Daum2008}, but we consider sampling from the OID rather than directly from the posterior.
+
+Since we need consider only a single step and a single particle, we omit the time subscripts and the dependence on $x_{t-1}$ for clarity in the following derivations. In addition, the transition and observation densities are written as,
+%
+\begin{IEEEeqnarray}{rCl}
+ \alpha(x) & = & p(x|x_{t-1}) \nonumber \\
+ \beta(x) & = & p(y_t|x) \nonumber      .
+\end{IEEEeqnarray}
+
+An equation for the optimal flow may be derived by considering our sequence of densities,
+%
+\begin{IEEEeqnarray}{rCl}
+ \pilam(\xlam) & = & \frac{ \alpha(\xlam) \beta(\xlam)^\lambda }{ K_{\lambda} }      .
+\end{IEEEeqnarray}
+%
+Taking the log and differentiating with respect to $\lambda$ and $\xlam$,
+%
+\begin{IEEEeqnarray}{rCl}
+ \log\left( \pilam(\xlam) \right) & = & \log\left( \alpha(\xlam) \right) + \lambda \log\left( \beta(\xlam) \right) - \log\left(K_{\lambda}\right)     ,
+\end{IEEEeqnarray}
+%
+\begin{IEEEeqnarray}{rCl}
+ \frac{\partial}{\partial \lambda} \log\left( \pilam(\xlam) \right) & = & \frac{ 1 }{ \pilam(\xlam) } \frac{\partial \pilam}{\partial \lambda} \nonumber \\
+  & = & \log\left(\beta(\xlam)\right) - \frac{d}{d\lambda}\log\left(K_{\lambda}\right) \label{eq:dpi-dlam}     ,
+\end{IEEEeqnarray}
+%
+\begin{IEEEeqnarray}{rCl}
+ \nabla \log\left( \pilam(\xlam) \right) & = & \frac{ 1 }{ \pilam(\xlam) } \nabla \pilam(\xlam) \label{eq:dpi-dx}     .
+\end{IEEEeqnarray}
+%
+The Fokker-Planck equation relates the flow of a particle with the flow of the density for its position. If we assume that the particles move deterministically according to,
+%
+\begin{IEEEeqnarray}{rCl}
+ \frac{d\xlam}{d\lambda} & = & \flam(\xlam)     ,
+\end{IEEEeqnarray}
+%
+then from Fokker-Planck, \eqref{eq:dpi-dlam} and \eqref{eq:dpi-dx}, we have,
+%
+\begin{IEEEeqnarray}{rCl}
+ \frac{\partial \pilam}{\partial \lambda} & = & -\nabla \cdot \left[ \flam(\xlam) \pilam(\xlam) \right]     \nonumber \\
+ \pilam(\xlam) \left[ \log\left(\beta(\xlam)\right) - \frac{d}{d\lambda}\log\left(K_{\lambda}\right) \right] & = & -\nabla\cdot \flam(\xlam) \pilam(\xlam) - \flam(\xlam) \cdot \nabla \pilam(\xlam) \nonumber \\
+ \left[ \log\left(\beta(\xlam)\right) - \frac{d}{d\lambda}\log\left(K_{\lambda}\right) \right] & = & -\nabla\cdot \flam(\xlam) - \flam(\xlam) \cdot \nabla \log\left( \pilam(\xlam) \right)      .
+\end{IEEEeqnarray}
+%
+where in the last step we have divided through by $\pilam$. This requires the density to be nowhere vanishing. Finally consider the normalising constant,
+%
+\begin{IEEEeqnarray}{rCl}
+ \frac{d}{d\lambda}\log\left(K_{\lambda}\right) & = & \frac{\frac{dK}{d\lambda}}{K_{\lambda}} \nonumber \\
+                                               & = & \frac{ \int \alpha(\xlam) \beta(\xlam)^\lambda \log\left(\beta(\xlam)\right) dx_t }{ \int \alpha(\xlam) \beta(\xlam)^\lambda d\xlam } \nonumber \\
+                                               & = & \mathbb{E}_{\pilam}\left[ \log\left(\beta(\xlam)\right) \right]     .
+\end{IEEEeqnarray}
+%
+Thus,
+%
+\begin{IEEEeqnarray}{rCl}
+ \log\left(\beta(\xlam)\right) - \mathbb{E}_{\pilam}\left[ \log\left(\beta(\xlam)\right) \right] & = & -\nabla\cdot \flam(\xlam) - \flam(\xlam) \cdot \nabla \log\left( \pilam(\xlam) \right)      .
+\end{IEEEeqnarray}
+
+The result is a highly under-determined partial differential equation (PDE), for which any solution, $\flam(\xlam)$, will result in a flow which maps particles sampled from the prior (i.e. the transition density) to new locations distributed according to the posterior (i.e. the OID). This is achieved by numerically integrating $\flam(\xlam)$ along the particle trajectory over the range $\lambda \in [0, 1]$. We will write the map generating by integrating the flow as,
+%
+\begin{IEEEeqnarray}{rCcCl}
+ x_{\lambda_2} & = & \phi_{\lambda_1,\lambda_2}(x_{\lambda_1}) & = & x_{\lambda_1} + \int_{x_{\lambda_1}}^{\lambda_2} f_{l}(x_{l}) dl     .
+\end{IEEEeqnarray}
+
+
+
 \subsection{Weight Calculations for a Linear Flow}
+
+
+
+
 \subsection{Flow Solution for the Linear Gaussian Case}
 \subsection{Piecewise Linear Flows}
 \section{The Stochastic Smooth Update}
@@ -209,18 +322,18 @@ Since we need consider only a single step and a single particle, we omit the tim
 The sampling procedure is derived by considering the following homotopy between the prior density and the posterior,
 %
 \begin{IEEEeqnarray}{rCl}
- \pilam(\xlam) & = & \frac{ \alpha(\xlam) \beta(\xlam)^\lambda }{ K(\lambda) }      .
+ \pilam(\xlam) & = & \frac{ \alpha(\xlam) \beta(\xlam)^\lambda }{ K_{\lambda} }      .
 \end{IEEEeqnarray}
 %
 where $\lambda \in [0,1]$ may be considered as a stretch of pseudo-time, and $\xlam$ is the state at pseudo-time $\lambda$. When $\lambda=0$, we have the prior distribution, and when $\lambda=1$, the posterior. Taking the log and differentiating with respect to $\lambda$ and $\xlam$,
 %
 \begin{IEEEeqnarray}{rCl}
- \log\left( \pilam(\xlam) \right) & = & \log\left( \alpha(\xlam) \right) + \lambda \log\left( \beta(\xlam) \right) - \log\left(K(\lambda)\right)     ,
+ \log\left( \pilam(\xlam) \right) & = & \log\left( \alpha(\xlam) \right) + \lambda \log\left( \beta(\xlam) \right) - \log\left(K_{\lambda}\right)     ,
 \end{IEEEeqnarray}
 %
 \begin{IEEEeqnarray}{rCl}
  \frac{\partial}{\partial \lambda} \log\left( \pilam(\xlam) \right) & = & \frac{ 1 }{ \pilam(\xlam) } \frac{\partial \pilam}{\partial \lambda} \nonumber \\
-  & = & \log\left(\beta(\xlam)\right) - \frac{d}{d\lambda}\log\left(K(\lambda)\right) \label{eq:dpi-dlam}     ,
+  & = & \log\left(\beta(\xlam)\right) - \frac{d}{d\lambda}\log\left(K_{\lambda}\right) \label{eq:dpi-dlam}     ,
 \end{IEEEeqnarray}
 %
 \begin{IEEEeqnarray}{rCl}
@@ -237,14 +350,14 @@ then from Fokker-Planck, \eqref{eq:dpi-dlam} and \eqref{eq:dpi-dx}, we have,
 %
 \begin{IEEEeqnarray}{rCl}
  \frac{\partial \pilam}{\partial \lambda} & = & -\nabla \cdot \left[ \flam(\xlam) \pilam(\xlam) \right]     \nonumber \\
- \pilam(\xlam) \left[ \log\left(\beta(\xlam)\right) - \frac{d}{d\lambda}\log\left(K(\lambda)\right) \right] & = & -\nabla\cdot \flam(\xlam) \pilam(\xlam) - \flam(\xlam) \cdot \nabla \pilam(\xlam) \nonumber \\
- \left[ \log\left(\beta(\xlam)\right) - \frac{d}{d\lambda}\log\left(K(\lambda)\right) \right] & = & -\nabla\cdot \flam(\xlam) - \flam(\xlam) \cdot \nabla \log\left( \pilam(\xlam) \right)      .
+ \pilam(\xlam) \left[ \log\left(\beta(\xlam)\right) - \frac{d}{d\lambda}\log\left(K_{\lambda}\right) \right] & = & -\nabla\cdot \flam(\xlam) \pilam(\xlam) - \flam(\xlam) \cdot \nabla \pilam(\xlam) \nonumber \\
+ \left[ \log\left(\beta(\xlam)\right) - \frac{d}{d\lambda}\log\left(K_{\lambda}\right) \right] & = & -\nabla\cdot \flam(\xlam) - \flam(\xlam) \cdot \nabla \log\left( \pilam(\xlam) \right)      .
 \end{IEEEeqnarray}
 %
 where in the last step we have divided through by $\pilam$. This requires the density to be nowhere vanishing. Finally consider the normalising constant,
 %
 \begin{IEEEeqnarray}{rCl}
- \frac{d}{d\lambda}\log\left(K(\lambda)\right) & = & \frac{\frac{dK}{d\lambda}}{K(\lambda)} \nonumber \\
+ \frac{d}{d\lambda}\log\left(K_{\lambda}\right) & = & \frac{\frac{dK}{d\lambda}}{K_{\lambda}} \nonumber \\
                                                & = & \frac{ \int \alpha(\xlam) \beta(\xlam)^\lambda \log\left(\beta(\xlam)\right) dx_t }{ \int \alpha(\xlam) \beta(\xlam)^\lambda d\xlam } \nonumber \\
                                                & = & \mathbb{E}_{\pilam}\left[ \log\left(\beta(\xlam)\right) \right]     .
 \end{IEEEeqnarray}
@@ -475,16 +588,16 @@ For the weight calculation, we note that,
 Hence the integral in the total weight expression is given by
 %
 \begin{IEEEeqnarray}{rCl}
- \int_{0}^{\lambda} \mathcal{TR}\left[ \left.\frac{\partial f_{\nu}}{\partial x_{\nu}}\right|_{l,x_l} \right] dl & = & -\frac{1}{2} \int_{0}^{\lambda} \mathcal{TR}\left[ Q H^T \left(R + \lambda H Q H^T \right)^{-1} H \right] dl \nonumber \\
- & = & -\frac{1}{2} \int_{0}^{\lambda} \mathcal{TR}\left[ H Q H^T \left(R + \lambda H Q H^T \right)^{-1} \right] dl \nonumber \\
- & = & -\frac{1}{2} \mathcal{TR}\left[ \int_{0}^{\lambda} H Q H^T \left(R + \lambda H Q H^T \right)^{-1} dl \right] \nonumber \\
- & = & -\frac{1}{2} \mathcal{TR}\left[ \log \left(R + \lambda H Q H^T \right) \right]      ,
+ \int_{0}^{\lambda} \mathcal{TR}\left[ \left.\frac{\partial f_{\nu}}{\partial x_{\nu}}\right|_{l,x_l} \right] dl & = & -\frac{1}{2} \int_{0}^{\lambda} \mathcal{TR}\left[ Q H^T \left(R + l H Q H^T \right)^{-1} H \right] dl \nonumber \\
+ & = & -\frac{1}{2} \int_{0}^{\lambda} \mathcal{TR}\left[ H Q H^T \left(R + l H Q H^T \right)^{-1} \right] dl \nonumber \\
+ & = & -\frac{1}{2} \mathcal{TR}\left[ \int_{0}^{\lambda} H Q H^T \left(R + l H Q H^T \right)^{-1} dl \right] \nonumber \\
+ & = & -\frac{1}{2} \mathcal{TR}\left[ \log \left(R + \lambda H Q H^T \right) - \log(R) \right]      ,
 \end{IEEEeqnarray}
 %
 using the basic properties of the matrix log. The weights are then given exactly by,
 %
 \begin{IEEEeqnarray}{rCl}
- w(\lambda) & = & w(0) \frac{ \pildl(\xldl) }{ \pi_{0}(x_0) } \left[ 1 - \frac{1}{2} \mathcal{TR}\left[ \log \left(R + \lambda H Q H^T \right) \right] \right]    .
+ w(\lambda) & = & w(0) \frac{ \pilam(\xlam) }{ \pi_{0}(x_0) } \left[ 1 - \frac{1}{2} \mathcal{TR}\left[ \log \left(R + \lambda H Q H^T \right) - \log\left(R\right) \right] \right]    .
 \end{IEEEeqnarray}
 %
 Since $A_\lambda$ is independent of $\xlam$ and will be the same for all particles, the matrix log term need not actually be calculated, since it will disappear in the normalisation.
@@ -838,6 +951,7 @@ The final consideration is how to choose the diffusion matrix, $g(\lambda)$ for 
 
 
 \bibliographystyle{plain}
-\bibliography{D:/pb404/Dropbox/PhD/OTbib}
+%\bibliography{D:/pb404/Dropbox/PhD/OTbib}
+\bibliography{/home/pete/Dropbox/PhD/OTbib.bib}
 
 \end{document} 
