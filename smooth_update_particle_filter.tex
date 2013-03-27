@@ -1,0 +1,228 @@
+\documentclass[a4paper,10pt]{article}
+\usepackage[utf8x]{inputenc}
+
+%%% PACKAGES %%%
+% Graphics
+\usepackage[pdftex]{graphicx}
+\usepackage[caption=false,font=footnotesize]{subfig}
+% Formatting
+\usepackage{color}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{bbm}
+% Environments
+\usepackage{IEEEtrantools}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+% References
+%\usepackage{harvard}
+
+\graphicspath{{./}}
+
+% My environments
+\newenvironment{meta}[0]{\color{red} \em}{}
+
+% Notational shortcuts
+\newcommand{\tilpitlam}{\tilde{\pi}_{t,\lambda}}
+\newcommand{\pitlam}{\pi_{t,\lambda}}
+\newcommand{\xtlam}{x_{t,\lambda}}
+\newcommand{\xtztl}{x_{t,0:\lambda}}
+
+\newcommand{\xtl}{x_{t,\lambda}}
+\newcommand{\xtldl}{x_{t,\lambda+\delta\lambda}}
+
+\newcommand{\pilam}{\pi_{\lambda}}
+\newcommand{\pildl}{\pi_{\lambda+\delta\lambda}}
+\newcommand{\piztl}{\pi_{0:\lambda}}
+\newcommand{\piztldl}{\pi_{0:\lambda+\delta\lambda}}
+
+\newcommand{\xlam}{x_{\lambda}}
+\newcommand{\xldl}{x_{\lambda+\delta\lambda}}
+\newcommand{\xztl}{x_{0:\lambda}}
+\newcommand{\xztldl}{x_{0:\lambda+\delta\lambda}}
+\newcommand{\flam}{f_{\lambda}}
+\newcommand{\xtraj}{\tilde{x}_{0:\lambda}}
+\newcommand{\W}{\mathbf{W}}
+
+%opening
+\title{The Smooth Update Particle Filter}
+\author{Pete Bunch}
+\date{March 2013}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+\end{abstract}
+
+\section{Introduction}
+
+A particle filter is an algorithm used for sequential estimation of a filtering distribution for a state-space model. For a comprehensive introduction, see for example \cite{Cappe2007,Doucet2009}. In this paper we consider the use of particle filters for inference with a standard discrete-time hidden Markov model (HMM).
+
+The particle filter advances a set of samples through time, drawn approximately from the filtering distribution. This is achieved by sampling at each time step from an importance distribution and then weighting the particles to account for the discrepancy between target and importance distributions.
+
+One of the principal difficulties when designing a particle filter is the selection of the importance distribution. The easiest choice is often to sample from the transition model, which leads to a simplification in the weight formula. The resulting algorithm is the ``bootstrap filter'' of \cite{Gordon1993}. In many cases, such bootstrap proposals result in poor filter performance due to a mismatch in the areas of high probability in the transition and observation distributions.
+
+Amongst others, \cite{Doucet2000a} demonstrated that the ideal choice of importance distribution is the conditional posterior given both the previous state and the new observation, dubbed the ``optimal importance distribution'' (OID). In all but a few cases, this cannot be calculated analytically. When the state variables are continuous, a popular solution is to use an extended (EKF) or unscented (UKF) Kalman filter to select a Gaussian importance distribution. However, such schemes can fail when the model is highly nonlinear or non-Gaussian, as the approximation is poor.
+
+The effect of using a poor importance distribution (i.e. one which is not ``close'' to the OID) is that the variance of the importance weights is increased, resulting in a degeneracy of the filter. In the worst cases, there may be no particles proposed in regions of high posterior probability, causing the filter to diverge.
+
+Many solutions to the problem of particle filter degeneracy have been proposed, including the addition of Markov Chain Monte Carlo (MCMC) steps to regenerate a particle approximation \cite{Gilks2001} and the marginalisation of variables which can be filtered analytically, a process known as ``Rao-Blackwellisation'' \cite{Casella1996,Doucet2000}. Degeneracy can also be mitigated by introducing the effect of each observation gradually, so that particles are progressively drawn towards peaks in the likelihood. The idea of using a discrete set of bridging distributions between the prior and the posterior has appeared, for example, in \cite{Godsill2001b}.
+
+More recently, methods have been proposed which define a continuous sequence of distributions between the prior and the posterior. The set of particles is then moved deterministically so that they are always distributed accordingly. Filtering algorithms based on this idea of particle flow or transport have been developed independently by \cite{Daum2008,Daum2011d} and \cite{Reich2011}, and for static state spaces by \cite{Moselhy2012}.
+
+The algorithms presented by \cite{Daum2008,Daum2011d,Reich2011} have the attractive property that the particles are equally weighted throughout. However, this comes at a price. First, they are restricted to a certain class of state spaces; the state must be a $d$-dimensional vector of continuous variables with the filtering distribution nowhere vanishing in $\mathbb{R}^d$. Second, in all but the simplest case (i.e. linear-Gaussian models), multiple functional or numerical approximations must be used in the calculation of the particle flows. For example, in \cite{Reich2011}, a Gaussian-mixture approximation to the filtering distribution is used, while in \cite{Daum2009a} interpolation is used to estimate the filtering density and its gradient at arbitrary points. The effect of such approximations is that the algorithms lose the consistency characteristic of particle filters --- that as the number of particles tends to infinite, expectations of test functions tend to the correct value. In fact, the degree of inaccuracy introduced will be very hard to quantify.
+
+In this paper, we devise a new ``smooth update'' particle filter which builds upon the ideas of particle flow. Starting with the standard particle filter framework, we target an artificial distribution over a space of continuous trajectories between prior and posterior locations. This admits the filtering distribution as a marginal and validates the use of a deterministic and stochastic flows for the particle filter update step. Next we show how particle weights can be calculated exactly for an important class of flows. These flows arise from OID proposals in linear-Gaussian models, but can also be used to propose particles from an approximation to the OID in nonlinear, non-Gaussian models. All the algorithms are validated through numerical simulations.
+
+
+
+\section{Particle Filter Basics}
+
+We consider a standard discrete-time HMM in which the transition, observation and prior models have closed-form densities,
+%
+\begin{IEEEeqnarray}{rCl}
+ x_t & \sim & p(x_t | x_{t-1}) \label{eq:td} \\
+ y_t & \sim & p(y_t | x_{t})   \label{eq:od} \\
+ x_0 & \sim & p(x_0 )          \label{eq:pd}      ,
+\end{IEEEeqnarray}
+%
+where the random variable $x_t$ is the hidden state of a system at time $t$, and $y_t$ is an incomplete, noisy observation. We assume here that the transition, observation and prior densities may be evaluated and that the prior and transition densities may be sampled.
+
+A particle filter is used to estimate the distribution over the path of the state variables, $x_{1:t}=\{x_1, \dots, x_t\}$, (we will refer to this as the ``filtering distribution'', although this term more conventionally refers to the distribution of the latest state only, not the entire path) which has the following density,
+%
+\begin{IEEEeqnarray}{rCl}
+ p(x_{1:t} | y_{1:t}) & = & \frac{ p(x_0) \prod_{k=1}^{t} p(y_k|x_k) p(x_k|x_{k-1}) }{ \int p(x_0) \prod_{k=1}^{t} p(y_k|x_k) p(x_k|x_{k-1}) dx_{1:t} }     .
+\end{IEEEeqnarray}
+
+A particle filter approximates the filtering density with a set of weighted particles drawn approximately from it using sequential importance sampling,
+%
+\begin{IEEEeqnarray}{rCl}
+ p(x_{1:t} | y_{1:t}) & = & \sum_i \bar{w}_t^{(i)} \delta_{x_{1:t}^{(i)}}(x_{1:t})     ,
+\end{IEEEeqnarray}
+%
+where $\delta_{x_{1:t}^{(i)}}(x_{1:t})$ denotes a unit probability mass at the point $x_{1:t}^{(i)}$. (To be precise, the associated probability measure consists of a sum of weighted indicator functions at these points.)
+
+A particle is generated at time $t$ by first selecting a parent from amongst the $t-1$ particles; an index, $a_j$, is chosen with probability (or ``auxiliary weight'') $\bar{v}_{t-1}^{(j)}$. Next, a new state $x_t^{(j)}$ is sampled from an importance density, $q(x_t | x_{t-1}^{(a_j)}, y_t)$, and concatenated to the parent path to form the new particle,
+%
+\begin{IEEEeqnarray}{rCl}
+ x_{1:t}^{(j)} \leftarrow \left\{ x_{1:t-1}^{(a_j)},  x_{t}^{(j)} \right\}     .
+\end{IEEEeqnarray}
+%
+Finally, an importance weight is assigned to the particle to account for the discrepancy between importance and target distributions,
+%
+\begin{IEEEeqnarray}{rCl}
+ w_t^{(j)} & = & \frac{ p(x_{1:t}^{(j)} | y_{1:t}) }{ p(x_{1:t-1}^{(a_j)} | y_{1:-1}) q(x_t^{(j)} | x_{t-1}^{(a_j)}, y_t) } \nonumber \\
+ & \propto & \frac{\bar{w}_{t-1}^{(j)}}{\bar{v}_{t-1}^{(j)}} \times \frac{ p(y_t | x_t^{(j)}) p(x_t^{(j)} | x_{t-1}^{(a_j)}) }{ q(x_t^{(j)} | x_{t-1}^{(a_j)}, y_t) }     ,
+\end{IEEEeqnarray}
+%
+and the weights are normalised,
+%
+\begin{IEEEeqnarray}{rCl}
+ \bar{w}_t & = & \frac{ w_t^{(j)} }{ \sum_i w_t^{(i)} }      .
+\end{IEEEeqnarray}
+
+Particle filters are ``exact'' in the sense that as the number of particles tends to infinite, integrals over the density converge to the true value.
+
+The practical performance of the particle filter is determined by the variance of the weights. If this is high, then only a small proportion of the particles (perhaps only one) will be significant, and only these will be taken forward to the next filtering step. Clearly, a lower number of significant particles leads to a poorer representation of the distribution, resulting in an increased estimator variance and propensity for the filter to diverge or ``lose track''. The particle weight variance may be measured using the effective sample size (ESS), defined as,
+%
+\begin{IEEEeqnarray}{rCl}
+ N_{E,t} & = & \frac{ 1 }{ \sum_i \bar{w}_t^{(i)2} }     ,
+\end{IEEEeqnarray}
+%
+This quantity takes a value between $1$ (bad) and the number of filtering particles, $N_F$ (good).
+
+The simplest choice of importance density is the transition density,
+%
+\begin{IEEEeqnarray}{rCl}
+ q(x_t | x_{t-1}^{(a_j)}, y_t) = p(x_t | x_{t-1}^{(a_j)})     .
+\end{IEEEeqnarray}
+%
+This results in the ``bootstrap filter'' of \cite{Gordon1993}. Often this is inefficient, especially when the variance of the transition density is greater than that of the observation density. In this situation, the samples are widely spread over the state space, and only a few fall in the region of high likelihood. This results in a large weight variance and poor filter performance.
+
+The bootstrap filter can be envisaged as a two step process; the state is first predicted by sampling from $p(x_t|x_{t-1}^{(a_j)})$, and then updated by modifying the weight, which accounts for the new information provided by the observation. Hence, the unweighted particle set forms an approximation to the predictive distribution, $p(x_{1:t}|y_{1:t-1})$.
+
+It was shown in \cite{Doucet2000a}, and references therein, that the weight variance is minimised by using the conditional posterior as the importance distribution,
+%
+\begin{IEEEeqnarray}{rCl}
+ q(x_t | x_{t-1}^{(a_j)}, y_t) & = & p(x_t | x_{t-1}^{(a_j)}, y_t)      ,
+\end{IEEEeqnarray}
+%
+resulting in the following weight formula,
+%
+\begin{IEEEeqnarray}{rCl}
+ w_t^{(j)} & \propto & \frac{\bar{w}_{t-1}^{(j)}}{\bar{v}_{t-1}^{(j)}} \times p(y_t | x_{t-1}^{(a_j)}) \nonumber \\
+           & \propto & \frac{\bar{w}_{t-1}^{(j)}}{\bar{v}_{t-1}^{(j)}} \times \int p(y_t | x_t) p(x_t | x_{t-1}^{(a_j)}) dx_t      .
+\end{IEEEeqnarray}
+%
+This choice is thus known as the ``optimal importance density'' (OID). It may be sampled from, and the weights calculated in closed form, when the observation density is linearly dependent on the state and both transition and observation densities are Gaussian. (The state need not be linearly dependent on the previous state.) However, for most models this density can be neither calculated, nor efficiently sampled from. Thus, it is common to use the same Gaussian approximations to estimate and sample from the OID as were used in the formulation of the EKF and UKF \cite{Doucet2000a,Merwe2000}. These work well when the OID is unimodal, and the observation nonlinearity is weak, but can otherwise perform worse even than the bootstrap filter.
+
+The final consideration for the basic particle filter is the choice of the auxiliary weights, $\{\bar{v}_{t-1}^{(i)}\}$ and the method for sampling parent indexes, which together constitute a ``resampling'' step. Considered in isolation (i.e. ignoring the effect of the new state), it is clear that the weight variance is minimised by choosing $\bar{v}_{t-1}^{(i)}=\bar{w}_{t-1}^{(i)}$. However, if the weights are not widely spread, it may be beneficial simply to keep the same set of particles as generated at the previous time. This corresponds to using $\bar{v}_{t-1}^{(i)}=1/N_F$.
+
+
+
+\section{An Outline of the Smooth Update Particle Filter}
+
+The algorithm presented in this paper arises as an extension to the particle flow methods devised by \cite{Daum2008,Daum2011d,Reich2011}. By embedding optimal or near-optimal flows within the framework of sequential Monte Carlo samplers \cite{DelMoral2006}, we obtain a particle filter which retains asymptotic consistency (in a sense) and yields larger effective sample sizes than other, less sophisticated methods. This, of course, comes at a price in computation per particle. Since the key to the better proposals comes in the gradual introduction of the effects of the observation, we refer to the new algorithm as the smooth update particle filter (SUPF).
+
+In this section, we briefly outline the motivation behind the SUPF and the steps in the following exposition, so that the path through the mathematical complexities should be lit by intuition.
+
+Take as a starting point the algorithm devised in \cite{Daum2008}. The leap of insight taken here, which lies at the heart of the SUPF, was to introduce a continuous series of densities between the predictive, $p(x_t|y_{1:t-1})$, and filtering, $p(x_t|y_{1:t})$, densities. By applying the Fokker-Planck equation, which relates the flow of densities to the corresponding flow of particles, it is possible to move the particles so they are distributed accordingly.
+
+Daum's algorithm suffered from the need to approximate the predictive density at any point, either numerically or functionally, leading to the loss of consistency. Our modification is have a different family of densities for each particle, between $p(x_t|x_{t-1}^{(a_j)})$ and $p(x_t|x_{t-1}^{(a_j)}, y_{t})$. This removes the need for approximations provided $p(x_t|x_{t-1}^{(a_j)})$ can be evaluated (and differentiated) analytically.
+
+A further headache in Daum's filter was the fact that the Fokker-Planck equation could rarely be solved analytically, meaning further approximations were required in calculation of the particle flow. Instead, we use only one flow --- a linear (or piecewise-linear) one --- which locally approximates the optimal flow. 
+
+The most significant addition for the SUPF is to place the particle flow methods into the SMC sampler framework. This means that we can maintain path history estimates, rather than simply the distribution of the latest state, and also allows principled weight calculations. Furthermore, we introduce the use of stochastic rather than merely deterministic flows, allowing particle diversity to be refreshed during the update steps, rather than only in between.
+
+The paper proceeds as follows. First we lay out the mathematical framework for the SUPF, including general formulas for the weight update. We then look at deterministic case, showing how weights can be updated for our workhorse --- the linear flow --- before then proving this to be optimal for the linear-Gaussian case. Next we discuss the optimal flow for any other model may be approximated using a piecewise-linear flow. Finally, we discuss the modifications required in order to use a stochastic particle flow.
+
+
+
+\section{A Framework for the Smooth Update}{\meta The mathematical setting including the particle SDE and general weight update formulas.}
+
+First, a variable $\lambda \in [0,1]$ is introduced. Intuitively, this is a stretch of ``pseudo-time'' between the predictive and filtering distributions, allowing the effect of the observation to be introduced gradually. Define $\xtlam$ as the state at time $t$ and pseudo-time $\lambda$.
+
+Now we define a continuous sequence of target densities,
+%
+\begin{IEEEeqnarray}{rCl}
+ \tilpitlam(x_{1:t-1}, \xtlam | x_{t-1}) & = & \frac{ p(y_t | \xtlam)^{\lambda} p(\xtlam | x_{t-1}) p(x_{1:t-1}|y_{1:t-1}) }{ \tilde{K}_{\lambda} } \nonumber \\
+ \tilde{K}_{\lambda} & = & \int p(y_t | \xtlam)^{\lambda} p(\xtlam | y_{1:t-1}) d\xtlam      .
+\end{IEEEeqnarray}
+%
+This is equal to the predictive density when $\lambda=0$ and the desired filtering density when $\lambda=1$.
+
+
+
+
+{\meta We don't need to introduce the proposal sequence to do the weight update. Do that first}
+
+
+
+
+
+This sequence of 
+%
+\begin{IEEEeqnarray}{rCl}
+ \pitlam(\xtlam | x_{t-1}) & = & \frac{ p(y_t | \xtlam)^{\lambda} p(\xtlam | x_{t-1}) }{ K_{\lambda}(x_{t-1}) } \nonumber \\
+ K_{\lambda}(x_{t-1}) & = & \int p(y_t | \xtlam)^{\lambda} p(\xtlam | x_{t-1}) d\xtlam      .
+\end{IEEEeqnarray}
+%
+For the $(j)$th particle, $\pitlam(\xtlam | x_{t-1}^{(a_j)})$ is the transition density when $\lambda=0$ and the OID when $\lambda=1$. Since we can therefore sample from $\pi_{t,0}$, the problem of producing a sample from the OID has been transformed into the dynamics problem of how to move $\xtlam$ such that it is distributed according to $\pitlam$ for all $\lambda$.
+
+
+\section{The Deterministic Smooth Update}{\meta PDE derivation and weight update.}
+\subsection{An Equation for the Optimal Particle Flow}
+\subsection{Linear Flows}
+\subsection{Linear Flows for Linear Gaussian Models}
+\subsection{Piecewise-Linear Flows for Everything Else}
+\section{The Stochastic Smooth Update}
+\section{Numerical Demonstrations}
+\section{Conclusions}
+
+\bibliographystyle{plain}
+%\bibliography{D:/pb404/Dropbox/PhD/OTbib}
+\bibliography{/home/pete/Dropbox/PhD/OTbib.bib}
+
+\end{document}
