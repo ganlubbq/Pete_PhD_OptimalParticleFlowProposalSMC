@@ -17,8 +17,9 @@ ratio = 1.05;
 num_steps = 200;
 scale_fact = (1-ratio)/(ratio*(1-ratio^num_steps));
 lam_rng = cumsum([0 scale_fact*ratio.^(1:num_steps)]);
-% lam_rng = [0:1E-5:1E-4 2E-4:1E-4:1E-3 2E-3:1E-3:1E-2 2E-2:1E-2:1E-1 2E-1:1E-1:9E-1 9.1E-1:1E-2:1];
 L = length(lam_rng);
+
+% State evolution array (in case we want to plot the trajectories)
 state_evolution = zeros(model.ds, algo.N, L);
 state_evolution(:,:,1) = state;
 
@@ -60,6 +61,11 @@ for ll = 1:L-1
         
         % Push forward
         x = x + v*dl;
+        
+        % Stochastic bit
+        if algo.flag_stochastic
+            x = mvnrnd(x', 2*dl*algo.D)';
+        end
         
         % Store state
         state(:,ii) = x;

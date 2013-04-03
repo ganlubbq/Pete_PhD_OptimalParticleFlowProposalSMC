@@ -20,9 +20,9 @@ if ~exist('test.flag_batch', 'var') || (~test.flag_batch)
     rand_seed = 0;
     
     % Which model?
-    model_flag = 1;     % 1 = linear Gaussian
-    % 2 = contrived nonlinear non-Gaussian
-    % 3 = heartbeat alignment
+    model_flag = 2;     % 1 = linear Gaussian
+                        % 2 = nonlinear non-Gaussian benchmark
+                        % 3 = heartbeat alignment
     
     %%%%%%%%%%%%%%%%
     
@@ -83,12 +83,12 @@ if ~exist('test.flag_batch', 'var') || (~test.flag_batch)
     display.plot_colours = {'k', 'b', 'c', 'm', 'g'};
     
     % Set test options
-    test.algs_to_run = [1,2,5];         % Vector of algorithm indexes to run
-    % 1 = bootstrap
-    % 2 = EKF proposal
-    % 3 = UKF proposal
-    % 4 = linearised OID proposal
-    % 5 = SUPF
+    test.algs_to_run = [1 2 5];         % Vector of algorithm indexes to run
+                                    % 1 = bootstrap
+                                    % 2 = EKF proposal
+                                    % 3 = UKF proposal
+                                    % 4 = linearised OID proposal
+                                    % 5 = SUPF
     test.num_filt_pts = 100*ones(5,1);      % Number of particles to use with each algorithm
     
     
@@ -108,6 +108,9 @@ diagnostics = cell(num_to_run,1);       % Array for diagnostics
 %% Run particle filters
 for aa = 1:num_to_run
     alg = test.algs_to_run(aa);
+    
+    % Reset random seed
+    rng(rand_seed);
     
     % Generate algorithm parameter
     [algo] = feval(fh.setalgo, test, alg);
@@ -131,9 +134,18 @@ for aa = 1:num_to_run
     nees{aa} = zeros(1,model.K);
     tnees{aa} = zeros(1,model.K);
     for kk = 1:model.K
-        rmse{aa}(kk) = sqrt(sum(diagnostics{aa}(kk).se.^2));
-        if det(pf{aa}(kk).vr) > 1E-10
-            nees{aa}(kk) = (diagnostics{aa}(kk).se'/pf{aa}(kk).vr)*diagnostics{aa}(kk).se;
+        
+        if model_flag == 1
+            se = diagnostics{aa}(kk).se;
+            vr = pf{aa}(kk).vr;
+        elseif model_flag == 2
+            se = diagnostics{aa}(kk).se(2:end);
+            vr = pf{aa}(kk).vr(2:end, 2:end);
+        end
+        
+        rmse{aa}(kk) = sqrt(sum(se.^2));
+        if det(vr) > 1E-8
+            nees{aa}(kk) = (se'/vr)*se;
             tnees{aa}(kk) = nees{aa}(kk)./(1+nees{aa}(kk));
         else
             nees{aa}(kk) = inf;
@@ -150,7 +162,7 @@ if display.text
     fprintf(1, 'Algorithm | Running Time (s) |  mean ESS  |  mean RMSE | mean TNEES \n');
     for aa = 1:num_to_run
         alg = test.algs_to_run(aa);
-        fprintf(1, '        %u |            %5.1f |      %5.1f |      %5.1f |      %5.1f \n', alg, sum([diagnostics{aa}.rt]), mean([diagnostics{aa}.ess]), mean(rmse{aa}), mean(tnees{aa}));
+        fprintf(1, '        %u |            %5.1f |      %5.1f |      %5.1f |      %5.3f \n', alg, sum([diagnostics{aa}.rt]), mean([diagnostics{aa}.ess]), mean(rmse{aa}), mean(tnees{aa}));
     end
     fprintf(1, '____________________________________________________________________\n');
     

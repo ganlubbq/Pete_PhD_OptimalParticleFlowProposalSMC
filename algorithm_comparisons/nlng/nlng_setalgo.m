@@ -1,4 +1,4 @@
-function algo = lg_setalgo(test, al)
+function algo = nlng_setalgo(test, al)
 
 % Algorithm parameters
 
