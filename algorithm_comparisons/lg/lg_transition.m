@@ -1,6 +1,6 @@
-function [ new_state, prob ] = linearGaussian_transition( model, kk, state, new_state )
-%NLBENCHMARK_TRANSITION Sample and/or calculate transition density for
-%2D tracking.
+function [ new_state, prob ] = lg_transition( model, state, new_state )
+%lg_transition Sample and/or evaluate observation density for a linear
+%Gaussian model.
 
 % prob is a log-probability.
 

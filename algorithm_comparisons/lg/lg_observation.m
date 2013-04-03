@@ -1,11 +1,11 @@
-function [ obs, prob ] = tracking_observation( model, state, obs )
-%NLBENCHMARK_OBSERVATION Sample and/or calculate observation density for
-%2D tracking.
+function [ obs, prob ] = lg_observation( model, state, obs )
+%lg_observation Sample and/or evaluate observation density for a linear
+%Gaussian model.
 
 % prob is a log-probability.
 
 % Calculate observation mean
-mn = tracking_h(model, state);
+mn = model.H * state;
 
 % Sample observation if not provided
 if (nargin<3)||isempty(obs)

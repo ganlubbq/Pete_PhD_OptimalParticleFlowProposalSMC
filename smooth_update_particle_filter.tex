@@ -45,6 +45,7 @@
 \newcommand{\xztldl}{x_{0:\lambda+\delta\lambda}}
 \newcommand{\flam}{f_{\lambda}}
 \newcommand{\glam}{g_{\lambda}}
+\newcommand{\Dlam}{D_{\lambda}}
 \newcommand{\xtraj}{\tilde{x}_{0:\lambda}}
 \newcommand{\W}{\mathbf{W}}
 
@@ -89,7 +90,7 @@ We consider a standard discrete-time HMM in which the transition, observation an
 \begin{IEEEeqnarray}{rCl}
  x_t & \sim & p(x_t | x_{t-1}) \label{eq:td} \\
  y_t & \sim & p(y_t | x_{t})   \label{eq:od} \\
- x_0 & \sim & p(x_0 )          \label{eq:pd}      ,
+ x_1 & \sim & p(x_1 )          \label{eq:pd}      ,
 \end{IEEEeqnarray}
 %
 where the random variable $x_t$ is the hidden state of a system at time $t$, and $y_t$ is an incomplete, noisy observation. We assume here that the transition, observation and prior densities may be evaluated and that the prior and transition densities may be sampled.
@@ -97,7 +98,7 @@ where the random variable $x_t$ is the hidden state of a system at time $t$, and
 A particle filter is used to estimate the distribution over the path of the state variables, $x_{1:t}=\{x_1, \dots, x_t\}$, (we will refer to this as the ``filtering distribution'', although this term more conventionally refers to the distribution of the latest state only, not the entire path) which has the following density,
 %
 \begin{IEEEeqnarray}{rCl}
- p(x_{1:t} | y_{1:t}) & = & \frac{ p(x_0) \prod_{k=1}^{t} p(y_k|x_k) p(x_k|x_{k-1}) }{ \int p(x_0) \prod_{k=1}^{t} p(y_k|x_k) p(x_k|x_{k-1}) dx_{1:t} }     .
+ p(x_{1:t} | y_{1:t}) & = & \frac{ p(x_1) \prod_{k=2}^{t} p(y_k|x_k) p(x_k|x_{k-1}) }{ \int p(x_0) \prod_{k=1}^{t} p(y_k|x_k) p(x_k|x_{k-1}) dx_{1:t} }     .
 \end{IEEEeqnarray}
 
 A particle filter approximates the filtering density with a set of weighted particles drawn approximately from it using sequential importance sampling,
@@ -182,7 +183,7 @@ Take as a starting point the algorithm devised in \cite{Daum2008}. The leap of i
 
 Daum's algorithm suffered from the need to approximate the predictive density at any point, either numerically or functionally, leading to the loss of consistency. Our modification is have a different family of densities for each particle, between $p(x_t|x_{t-1}^{(a_j)})$ and $p(x_t|x_{t-1}^{(a_j)}, y_{t})$. This removes the need for approximations provided $p(x_t|x_{t-1}^{(a_j)})$ can be evaluated (and differentiated) analytically.
 
-A further headache in Daum's filter was the fact that the Fokker-Planck equation could rarely be solved analytically, meaning further approximations were required in calculation of the particle flow. Instead, we use only one flow --- a linear (or piecewise-linear) one --- which locally approximates the optimal flow. 
+A further headache in Daum's filter was the fact that the Fokker-Planck equation could rarely be solved analytically, meaning further approximations were required in calculation of the particle flow. Instead, we use only one flow --- a linear (or piecewise-linear) one --- which locally approximates the optimal flow.
 
 The most significant addition for the SUPF is to place the particle flow methods into the SMC sampler framework. This means that we can maintain path history estimates, rather than simply the distribution of the latest state, and also allows principled weight calculations. Furthermore, we introduce the use of stochastic rather than merely deterministic flows, allowing particle diversity to be refreshed during the update steps, rather than only in between.
 
@@ -192,7 +193,7 @@ The paper proceeds as follows. First we lay out the mathematical framework for t
 
 \section{A Framework for the Smooth Update}
 
-In a similar manner to the bootstrap filter, we split each iteration of the particle filter into two steps: a prediction and an update. Prediction consists of a selection step and sampling from the transition density, (exactly the same as the bootstrap filter), and results in weighted set of particles approximating the predictive density, $p(x_{1:t}|y_{1:t-1})$. The novelty lies in the update step. 
+In a similar manner to the bootstrap filter, we split each iteration of the particle filter into two steps: a prediction and an update. Prediction consists of a selection step and sampling from the transition density, (exactly the same as the bootstrap filter), and results in weighted set of particles approximating the predictive density, $p(x_{1:t}|y_{1:t-1})$. The novelty lies in the update step.
 
 First, a variable $\lambda \in [0,1]$ is introduced. Intuitively, this is a stretch of ``pseudo-time'' between the predictive and filtering distributions, allowing the effect of the observation to be introduced gradually. Define $\xtlam$ as the state at time $t$ and pseudo-time $\lambda$.
 
@@ -210,7 +211,7 @@ This is equal to the predictive density when $\lambda=0$ and the desired filteri
 The variable over which we extend the target distribution is the continuous state trajectory over the pseudo-time interval $\left(0,\lambda\right)$, which we denote, $\xtztl$. The target distribution then chosen for the SUPF has the measure,
 %
 \begin{IEEEeqnarray}{rCl}
- d\tilpitlam d\rho(\xtztl | \xtlam)     ,
+ d\tilpitlam(x_{1:t-1}, \xtlam) d\rho(\xtztl | \xtlam)     ,
 \end{IEEEeqnarray}
 %
 where $d\rho$ is an artificial extension to the distribution and can be chosen as a design parameter --- ultimately we only care about the distribution of the final states. Note that the target distribution is specified in terms of infinitesimal measures rather than densities due the fact that $d\rho$ will be chosen so as not to have a valid density in the case of the deterministic update.
@@ -244,7 +245,7 @@ The Fokker-Planck equation relates the motion of a particle to the evolution of 
 
 \section{The Deterministic Smooth Update}
 
-
+Particle superscripts are omitted for clarity in this section. We first consider the case where $g_{\lambda}=0$, meaning that particles are moved deterministically as we move through the pseudo-time interval according to,
 %
 \begin{IEEEeqnarray}{rCl}
  \frac{d\xlam}{d\lambda} & = & \flam(\xlam)     .
@@ -260,7 +261,7 @@ By integrating the flow along the particle trajectory, a map is defined between 
 
 \subsection{Weight Evolution}
 
-As the particles move continuously through the state space, it is necessary to simultaneously adjust the weights. Denote the weight at pseudo-time $\lambda$ as $w_{\lambda}$. We assume that $\flam$ satisfies conditions which ensure $\phi_{\lambda_1}^{\lambda_2}$ is invertible. {\meta I think the required condition is simply that $\flam$ be continuous.}
+As the particles move continuously through the state space, it is necessary to simultaneously adjust the weights. Denote the weight at pseudo-time $\lambda$ as $w_{\lambda}$. We assume that $\flam$ satisfies conditions which ensure $\phi_{\lambda_1}^{\lambda_2}$ is invertible. {\meta I think the required condition is simply that $\flam$ be continuous. EDIT: No, its not. We could have a piecewise-linear approximation to $\flam$ which would still lead to an invertible $\phi$.}
 
 Suppose we have a set of correctly-weighted particles representing the target distribution at pseudo-time $\lambda$. The particles are then advanced to $\lambda+\delta\lambda$ deterministically and the weights updated using the standard SMC formula,
 %
@@ -303,15 +304,18 @@ Both the total and incremental weight formulas will prove useful.
 
 \subsection{Numerical Integration}
 
-In all but a few trivial cases, it will not be possible to evaluate the integrals required in the calculation of new particle locations and weights. Instead, numerical integration schemes must be used, for example, the Euler method,
+In all but a few trivial cases, it will not be possible to evaluate the integrals required in the calculation of new particle locations and weights. Instead, numerical integration schemes must be used in the calculation of both the particle trajectories and the associated weight. For example, using an Euler's method for numerical integration, state and weight updates are given by,
 %
 \begin{IEEEeqnarray}{rCl}
- \xldl & = & \xlam + \flam(\xlam) \delta\lambda     ,
+ \xldl & = & \xlam + \flam(\xlam) \delta\lambda \nonumber \\
+ w_{\lambda+\delta\lambda} & = & w_{\lambda} \frac{ \pildl(\xldl) }{ \pilam(\xlam) } \left| I + \delta\lambda \left.\frac{\partial\flam}{\partial\xlam}\right|_{\lambda,\xlam} \right|      .
 \end{IEEEeqnarray}
 %
-using some suitably chosen step size, $\delta\lambda$. The effect of such a numerical integration method is equivalent to replacing $\flam$ with a piecewise-constant approximation of itself. This in fact simplifies the weight calculations, since the integral term in the update formula is $0$ for constant $\flam$.
+using some suitably chosen step size, $\delta\lambda$. This numerical integration step is a source of additional error in the SUPF. Updates become exact as $\delta\lambda\rightarrow0$.
 
-{\meta There is an unresolved issue here. The piecewise-constant flow does not satisfy the requirement that $\phi_{\lambda_1}^{\lambda_2}$ be invertible. It would be really nice if we could solve the linear flow integral exactly, and then use a piecewise-linear approximation instead.}
+{\meta For the linear flow generated by the linear-Gaussian model, the weight update integral can be done analytically. If we could only do the state update integral exactly as well then we could make this computationally more efficient and asymptotically better, as we wouldn't need the $\delta\lambda\rightarrow0$ for consistency.}
+
+{\meta Should add something about step-size selection.}
 
 
 
@@ -460,6 +464,12 @@ Examining the remaining terms using the formula for $b_{\lambda}$ and $A_{\lambd
 %
 Hence the hypothesised solution is valid.
 
+The Jacobian required for the weight update is trivial for this flow,
+%
+\begin{IEEEeqnarray}{rCl}
+ \left.\frac{\partial\flam}{\partial\xlam}\right|_{\lambda,\xlam} & = & A_{\lambda}     .
+\end{IEEEeqnarray}
+
 
 
 \subsection{Everything Else}
@@ -526,25 +536,29 @@ As an example, if we had a multivariate student-t observation density, then we w
 
 \section{The Stochastic Smooth Update}
 
-We now consider the more general case of $g_{\lambda}^{(j)}\ne0$, meaning that particles are moved stochastically as $\lambda$ increases. We will assume that $g_{\lambda}^{(j)}$ does not depend on $\xlam^{(j)}$. Particle motion is governed by the stochastic differential equation (SDE),
+We now consider the more general case of $g_{\lambda}^{(j)}\ne0$, meaning that particles are moved stochastically as $\lambda$ increases. For simplicity, we will assume that $g_{\lambda}^{(j)}$ does not depend on $\xlam^{(j)}$. Particle motion is governed by the stochastic differential equation (SDE),
 %
 \begin{IEEEeqnarray}{rCl}
  d\xlam & = & \flam(\xlam) d\lambda + g_{\lambda} d\epsilon_\lambda     ,
 \end{IEEEeqnarray}
 %
-where $\epsilon_\lambda$ is a Brownian motion.
+where $\epsilon_\lambda$ is a Brownian motion. Define,
+%
+\begin{IEEEeqnarray}{rCl}
+ \Dlam & = & \frac{1}{2} g_{\lambda} g_{\lambda}^T     .
+\end{IEEEeqnarray}
 
 
 
 \subsection{Weight Evolution}
 
-This is somewhat simpler than the deterministic case. In moving from $\lambda$ to $\lambda+\delta\lambda$, the new state is sampled from the Gaussian density,
+This is actually somewhat simpler than the deterministic case. In moving from $\lambda$ to $\lambda+\delta\lambda$, the new state is sampled from the Gaussian density,
 %
 \begin{IEEEeqnarray}{rCl}
- q(\xldl | \xlam) & = & \mathcal{N}(\xldl|\xlam+\flam(\xlam)\delta\lambda,\delta\lambda\glam\glam^T)     .
+ q(\xldl | \xlam) & = & \mathcal{N}(\xldl|\xlam+\flam(\xlam)\delta\lambda,2\delta\lambda \Dlam)     .
 \end{IEEEeqnarray}
 %
-The weight update is given by,
+The incremental weight update is given by,
 %
 \begin{IEEEeqnarray}{rCl}
  w_{\lambda+\delta\lambda} & = & \frac{ d\tilpildl(x_{1:t-1}, \xldl) d\rho(\xztldl | \xldl) }{ d\tilpilam(x_{1:t-1}, \xlam) d\rho(\xztl | \xlam) d q(\xldl | \xlam) } \nonumber \\
@@ -552,21 +566,44 @@ The weight update is given by,
                           & = & \frac{ \tilpildl(x_{1:t-1}, \xldl) \rho(\xlam | \xldl) }{ \tilpilam(x_{1:t-1}, \xlam) q(\xldl | \xlam) }      .
 \end{IEEEeqnarray}
 
-It is then possible to select $\rho$ so that it cancels out with $q$. When numerical integration is used, we make $\flam$ and $\glam$ constant over the short interval $\delta\lambda$. By rearranging, we can show that,
+For certain flows, it is then possible to select $\rho$ so that $\frac{\rho}{q}$ is easily evaluated. For example, for a linear flow, $\flam(\xlam) = A_{D,\lambda} \xlam + b_{D,\lambda}$, we can show that,
 %
 \begin{IEEEeqnarray}{rCl}
- \mathcal{N}(\xldl|\xlam+\flam\delta\lambda,\delta\lambda\glam\glam^T) & = & \mathcal{N}(\xlam|\xldl-\flam\delta\lambda,\delta\lambda\glam\glam^T)      .
+ \xlam+\flam(\xlam)\delta\lambda & = & \left[ I + \delta\lambda A_{D,\lambda} \right] \xlam + \delta\lambda b_{D,\lambda} \nonumber \\
+\end{IEEEeqnarray}
+\begin{IEEEeqnarray}{rCl}
+ \IEEEeqnarraymulticol{3}{l}{ \mathcal{N}(\xldl|\xlam+\flam(\xlam)\delta\lambda,2\delta\lambda \Dlam) } \nonumber \\
+ \qquad & = & \mathcal{N}(\xldl|\left[ I + \delta\lambda A_{D,\lambda} \right] \xlam + \delta\lambda b_{D,\lambda},2\delta\lambda \Dlam) \nonumber \\
+        & = & J_{\lambda} \mathcal{N}(\xlam | J_{\lambda} \left(\xldl-\delta\lambda b_{D,\lambda}\right),2\delta\lambda J_{\lambda} \Dlam J_{\lambda}) \nonumber      ,
 \end{IEEEeqnarray}
 %
-Hence, by choosing $\rho$ equal to this, we obtain the weight update formula,
+where
 %
 \begin{IEEEeqnarray}{rCl}
- w_{\lambda+\delta\lambda} & = & w_{\lambda} \frac{ \tilpildl(x_{1:t-1}, \xldl) }{ \tilpilam(x_{1:t-1}, \xlam) }     ,
+ J_{\lambda} & = & \left| I + \delta\lambda A_{D,\lambda} \right|^{-1}
 \end{IEEEeqnarray}
 %
-which is the same as that used previously for the deterministic flow.
+Hence, by choosing,
+%
+\begin{IEEEeqnarray}{rCl}
+ \rho(\xlam | \xldl) & = & \mathcal{N}(\xlam | J_{\lambda} \left(\xldl-\delta\lambda b_{D,\lambda}\right),2\delta\lambda J_{\lambda} \Dlam J_{\lambda})     ,
+\end{IEEEeqnarray}
+%
+we obtain the incremental weight update formula,
+%
+\begin{IEEEeqnarray}{rCl}
+ w_{\lambda+\delta\lambda} & = & w_{\lambda} \frac{ \tilpildl(\xldl) }{ \tilpilam(\xlam) } \left| I + \delta\lambda A_{D,\lambda} \right|       ,
+\end{IEEEeqnarray}
+%
+which is the same as that used previously for the deterministic flow, and may be used along with a numerical integration scheme for updating the particle weights. The states are updated using Euler integration of the SDE.
 
-Now we have a collection of weighted particles evolving stochastically in continuous time which initially approximate the prior density and finally approximate the posterior. We can resample these in the same manner as a continuous time particle filter, either on a fixed schedule or when the effective sample size falls below a threshold. In this way, we ensure that a diverse particle collection is maintained.
+
+
+\subsection{Intermediate Resampling}
+
+As the filter advances through the interval of pseudo-time, it may become apparent long before $\lambda$ approaches $1$ that some particles are going to have very low weights and are highly unlikely to be selected for the next time step. This motivates the introduction of intermediate resampling during the pseudo-time interval. The effective sample size can be calculated after each step in the numerical integration and resampling conducted whenever this falls below a chosen threshold. In this way, we ensure that a diverse particle collection is maintained, and computation is not wasted in performing numerical integration for insignificant particles.
+
+Resampling steps introduce correlation between particles which will decay over time. The rate of this decay is determined by the diffusion term $\glam$. In the limit, when $\glam=0$, and the flow is deterministic, multiple copies of the same particle will remain identical until $\lambda=1$. Note that the resampling is still beneficial as it means we do not waste computation on useless particles. On the other hand, when the $\glam$ is large, the particles will rapidly de-correlate after resampling, but smaller step sizes will be required in the numerical integration.
 
 
 
@@ -653,15 +690,62 @@ Finally, we need to check again that the constant terms balance.
             & = & \text{LHS}     .
 \end{IEEEeqnarray}
 
-The final consideration is how to choose the diffusion matrix, $\glam$ for the SDE. Small values will result in strong dependence between the posterior particles after resampling takes place. In the limit with no diffusion, there will be multiple identical copies of each resampled particle. With larger diffusion values, the SDE becomes harder to simulate, with smaller step sizes required for accurate results. However, the particles are able to ``de-correlate'' and explore the posterior modes more thoroughly. As a guideline, the value should be chosen to reflect the size (and possibly shape) of posterior modes
+The final consideration is how to choose the diffusion matrix, $\glam$ for the SDE. Small values will result in strong dependence between the posterior particles after resampling takes place. In the limit with no diffusion, there will be multiple identical copies of each resampled particle. With larger diffusion values, the SDE becomes harder to simulate, with smaller step sizes required for accurate results. However, the particles are able to de-correlate and explore the posterior modes more thoroughly. As a guideline, the value should be chosen to reflect the size (and possibly shape) of posterior modes
+
+
+
+\section{Further Extensions}
+
+\subsection{Mixed States}
+
+The methods considered in the previous sections are applicable only to continuous state spaces. However, mixed state spaces can be handled easily by proposing the discrete portion of the state and then using a smooth update for the continuous part.
+
+{\meta It would be nice to be able to include discrete states in the flow, with some sort of stochastic switching. In effect, have a continuous time Markov chain in parallel with the SDE. I've looked at this, but without much success yet.}
+
+\subsection{Intermittent Observations}
+
+It is commonly the case that an observation is not received at every time step.
+
+{\meta Handle this by concatenating all the intervening states. This needs further thought and testing.}
 
 
 
 \section{Numerical Demonstrations}
+
+In this section, we demonstrate the effectiveness of the SUPF on a number of simulations.
+
+\subsection{Linear Gaussian Model}
+
+We first consider the simplest example, in which the transition and observation models are linear and Gaussian,
+%
+\begin{IEEEeqnarray}{rCl}
+ p(x_t | x_{t-1}) & = & \mathcal{N}(x_t|F x_{t-1},Q) \nonumber \\
+ p(y_t | x_t)     & = & \mathcal{N}(y_t|H x_t    ,R)      .
+\end{IEEEeqnarray}
+
+For the SUPF, we can use the optimal flow derived for linear Gaussian models. However, we can also run an ordinary particle filter which samples exactly from the OID. The SUPF would, therefore, never be used in practice for this example. We include it simply to demonstrate that the particles approximations it generates are as good as the optimal choice.
+
+The model parameters are as follows:
+
+{\meta Table of model parameters.}
+
+{\meta Plots of accuracy, ESS and computational cost over time}
+
+
+
+\subsection{Nonlinear Non-Gaussian Model}
+
+
+
+
+
+
+\subsection{Really Nonlinear Gaussian Model}
+
 \section{Conclusions}
 
 \bibliographystyle{plain}
-%\bibliography{D:/pb404/Dropbox/PhD/OTbib}
-\bibliography{/home/pete/Dropbox/PhD/OTbib.bib}
+\bibliography{D:/pb404/Dropbox/PhD/OTbib}
+%\bibliography{/home/pete/Dropbox/PhD/OTbib.bib}
 
 \end{document}
