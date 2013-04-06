@@ -14,8 +14,8 @@ for ii = 1:algo.N
 end
 
 % Set up integration schedule
-ratio = 1.05;
-num_steps = 200;
+ratio = 1.2;
+num_steps = 100;
 scale_fact = (1-ratio)/(ratio*(1-ratio^num_steps));
 lam_rng = cumsum([0 scale_fact*ratio.^(1:num_steps)]);
 L = length(lam_rng);
@@ -23,6 +23,13 @@ L = length(lam_rng);
 % State evolution array (in case we want to plot the trajectories)
 state_evolution = zeros(model.ds, algo.N, L);
 state_evolution(:,:,1) = state;
+weight_evolution = zeros(L,algo.N);
+weight_evolution(1,:) = weight;
+
+% Weight arrays
+inc_weight = zeros(1, algo.N);
+prob = zeros(1, algo.N);
+last_prob = init_trans_prob;
 
 % Prior density
 if isempty(prev_state)
@@ -42,16 +49,13 @@ end
 dsc = model.ds - 1;
 I = eye(dsc);
 
-% Jacobian integral for weight
-wt_jac = ones(1, algo.N);
-
 % for ii = 1:algo.N
 %     
 %     x = state(2:end,ii);
 %     m = prior_mn(:,ii);
 %     
 %     lam_rng = [0 1];
-%     [lam, x] = ode45(@(lam_in, x_in) v_iter(model, lam_in, x_in, obs, m, P), lam_rng, x);
+%     [lam, x] = ode15s(@(lam_in, x_in) v_iter(model, lam_in, x_in, obs, m, P), lam_rng, x);
 %     state(2:end,ii) = x(end,:)';
 %     
 % end
@@ -95,7 +99,7 @@ for ll = 1:L-1
         end
         
         % Calculate velocity
-        [ A, b ] = linear_flow( lam, m, P, y, H, R );
+        [ A, b ] = linear_flow( lam, m, P, y, H, R, algo.D );
         v = A*x + b;
         
         % Push forward
@@ -110,28 +114,41 @@ for ll = 1:L-1
         state(2:end,ii) = x;
         state_evolution(:,ii,ll+1) = state(:,ii);
         
+        % Densities
+        if ~isempty(prev_state)
+            [~, trans_prob] = feval(fh.transition, model, prev_state(:,ii), state(:,ii));
+        else
+            [~, trans_prob] = feval(fh.stateprior, model, state(:,ii));
+        end
+        [~, lhood_prob] = feval(fh.observation, model, state(:,ii), obs);
+        prob(ii) = trans_prob + lam*lhood_prob;
+        
         % Update weight
-        wt_jac(ii) = wt_jac(ii) * det(I + dl*A);
+        inc_weight(ii) = prob(ii) - last_prob(ii) + log(det(I + dl*A));
+        weight(ii) = weight(ii) + inc_weight(ii);
+        weight_evolution(ll+1,ii) = weight(ii);
         
     end
     
-end
-
-% Weight update loop
-for ii = 1:algo.N
+    last_prob = prob;
     
-    % Densities
-    if ~isempty(prev_state)
-        [~, trans_prob] = feval(fh.transition, model, prev_state(:,ii), state(:,ii));
-    else
-        [~, trans_prob] = feval(fh.stateprior, model, state(:,ii));
-    end
-    [~, lhood_prob] = feval(fh.observation, model, state(:,ii), obs);
-
-    % Weight update
-    weight(ii) = weight(ii) + lhood_prob + trans_prob - init_trans_prob(ii) + log(wt_jac(ii));
-
 end
+
+% % Weight update loop
+% for ii = 1:algo.N
+%     
+%     % Densities
+%     if ~isempty(prev_state)
+%         [~, trans_prob] = feval(fh.transition, model, prev_state(:,ii), state(:,ii));
+%     else
+%         [~, trans_prob] = feval(fh.stateprior, model, state(:,ii));
+%     end
+%     [~, lhood_prob] = feval(fh.observation, model, state(:,ii), obs);
+% 
+%     % Weight update
+%     weight(ii) = weight(ii) + lhood_prob + trans_prob - init_trans_prob(ii) + log(wt_jac(ii));
+% 
+% end
 
 % Plot particle paths (first state only)
 if display.plot_particle_paths
@@ -145,6 +162,11 @@ if display.plot_particle_paths
         plot(squeeze(state_evolution(2,ii,:)), squeeze(state_evolution(3,ii,:)));
         plot(squeeze(state_evolution(2,ii,end)), squeeze(state_evolution(3,ii,end)), 'o');
     end
+    figure(3), clf, hold on
+    for ii = 1:algo.N
+        plot(lam_rng, weight_evolution(:,ii));
+    end
+    drawnow;
 end
 
 end

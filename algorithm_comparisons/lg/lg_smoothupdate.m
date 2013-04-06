@@ -56,7 +56,7 @@ for ll = 1:L-1
         m = prior_mn(:,ii);
         
         % Calculate velocity
-        [ A, b ] = linear_flow( lam, m, P, y, H, R );
+        [ A, b ] = linear_flow( lam, m, P, y, H, R, algo.D );
         v = A*x + b;
         
         % Push forward

@@ -15,7 +15,7 @@ model.ds = dsc + 1;         % Dimension of the state
 
 % Parameters
 sigx = 100;
-sigy = 0.01;
+sigy = 1;
 
 % Transition
 model.beta1 = 0.5;
@@ -25,13 +25,16 @@ model.beta3 = 8;
 % Observation
 model.alpha1 = 0.05;
 model.alpha2 = 2;
+% model.Hlin = [1 1];
+% model.Hlin = [1 1 1 1; 1 1 0 0; 0 0 1 1];
+% model.Hlin = eye(dsc);
 model.Hlin = zeros(model.do, dsc);
 for ii = 1:model.do
-    model.Hlin(ii, 2*ii-1:2*ii) = 1/2;
+    model.Hlin(ii, 2*ii-1:2*ii) = 1;
 end
 
 % Noises
-model.dfy = 1; % Number of degrees of freedom for t-distributed noise. 1 = Cauchy, inf = Normal
+model.dfy = Inf; % Number of degrees of freedom for t-distributed noise. 1 = Cauchy, inf = Normal
 model.Q = sigx * eye(dsc);
 model.R = sigy * eye(model.do);     % R is a spread matrix, rather than a covariance
 

@@ -1,5 +1,5 @@
-function [state, ppsl_prob] = nlng_ekfproposal( model, prev_state, obs, state )
-%nlng_ekfproposal Sample and/or evaluate EKF approximation of the OID for
+function [state, ppsl_prob] = nlng_ukfproposal( model, prev_state, obs, state )
+%nlng_ukfproposal Sample and/or evaluate UKF approximation of the OID for
 % the nonlinear non-Gaussian benchmark model.
 
 % If prev_state is empty, assume that this is the first step, so use the
@@ -22,13 +22,6 @@ else
     prior_vr = model.Q;
 end
 
-% Observation mean
-obs_mn = nlng_h(model, prior_mn);
-
-% Linearise observation model around the prior mean
-H = nlng_obsjacobian(model, prior_mn);
-obs_lin = obs - obs_mn + H*prior_mn;
-
 % Sample a mixing value and scale the covariance
 if ~isinf(model.dfy)
     xi = chi2rnd(model.dfy);
@@ -37,8 +30,10 @@ else
 end
 R = model.R / xi;
 
-% EKF update
-[ppsl_mn, ppsl_vr] = ekf_update1(prior_mn, prior_vr, obs_lin, H, R, obs_mn);
+% UKF update
+h = @(x, par)nlng_h(model, x);
+[ppsl_mn, ppsl_vr] = ukf_update1(prior_mn, prior_vr, obs, h, R, [], [], [], 1);
+ppsl_vr = 0.5*(ppsl_vr+ppsl_vr');
 
 % Sample state if not provided
 if (nargin<4)||isempty(state)
