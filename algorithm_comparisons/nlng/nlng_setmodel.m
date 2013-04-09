@@ -34,7 +34,7 @@ for ii = 1:model.do
 end
 
 % Noises
-model.dfy = Inf; % Number of degrees of freedom for t-distributed noise. 1 = Cauchy, inf = Normal
+model.dfy = 1; % Number of degrees of freedom for t-distributed noise. 1 = Cauchy, inf = Normal
 model.Q = sigx * eye(dsc);
 model.R = sigy * eye(model.do);     % R is a spread matrix, rather than a covariance
 

@@ -84,12 +84,23 @@ for ll = 1:L-1
         
         if ~isinf(model.dfy)
             
-            % Calculate value and gradient of the observation density
-            pdf = mvnstpdf(obs', obs_mn', model.R, model.dfy);
-            Dpdf_pdf = (model.dfy+model.do)*(H'/model.R)*(obs-obs_mn)/(model.dfy + (obs-obs_mn)'*(model.R\(obs-obs_mn)));
+            dfy = model.dfy;
+            do = model.do;
+            R = model.R;
+            dy = obs - obs_mn;
+            Rdy = R\dy;
+            dyRdy = dy'*Rdy;
+            tdist = 1+dyRdy/dfy;
+            
+            % Calculate gradient and Hessian of the observation density
+            Dp = ((dfy+do)*H'*Rdy)/(dfy*tdist);
+            double_Rdy = [Rdy Rdy]';
+            double_Rdy = double_Rdy(:);
+            nasty_term = -H'*(R\H) + diag(double_Rdy);
+            D2p = ((dfy+do)*( -H'*(Rdy*Rdy')*H/tdist + nasty_term ))/(dfy*tdist);
             
             % Match a Gaussian to these
-            [y, H, R] = gaussian_match_obs(x, pdf, Dpdf_pdf);
+            [y, H, R] = gaussian_match_obs(x, Dp, D2p);
             
         else
             
@@ -124,9 +135,13 @@ for ll = 1:L-1
         prob(ii) = trans_prob + lam*lhood_prob;
         
         % Update weight
-        inc_weight(ii) = prob(ii) - last_prob(ii) + log(det(I + dl*A));
+        inc_weight(ii) = prob(ii) - last_prob(ii) + log(1-trace(logm(eye(model.ds-1)+P*H'*(R\H))));
         weight(ii) = weight(ii) + inc_weight(ii);
         weight_evolution(ll+1,ii) = weight(ii);
+        
+        if ~isreal(weight(ii))
+            weight(ii) = -inf;
+        end
         
     end
     

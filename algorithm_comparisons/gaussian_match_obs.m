@@ -1,17 +1,24 @@
-function [ y, H, R ] = gaussian_match_obs( x, p, Dp_p )
+function [ y, H, R ] = gaussian_match_obs( x, Dp, D2p )
 %gaussian_match_obs Select a Gaussian for the observation density with a
-%particular value and gradient at point x.
-
-% p is the density and Dp_p the ratio grad(density)/density
+%particular gradient and Hessian of the log-density at point x.
 
 ds = length(x);
 
-DTD = Dp_p'*Dp_p;
-
+% We get to choose H (must be nvertible), so how about I
 H = eye(ds);
-sig = ds*numerical_lambertw(DTD*p^(-2/ds)/(2*pi*ds))/DTD;
-R = sig*eye(ds);
-y = x + sig*Dp_p;
+
+% Covariance
+R = -inv(D2p);
+
+% Make it positive definite
+if ~isposdef(R)
+    R = R - (min(eig(R))-1E-4)*eye(ds);
+end
+
+assert(isposdef(R))
+
+% Mean
+y = x - D2p\Dp; 
 
 end
 

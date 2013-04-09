@@ -1,4 +1,4 @@
-function algo = lg_setalgo(test, al)
+function algo = lg_setalgo(test, model, al)
 
 % Algorithm parameters
 

@@ -12,7 +12,7 @@ if ~exist('test.flag_batch', 'var') || (~test.flag_batch)
     
     clup
     dbstop if error
-    dbstop if warning
+%     dbstop if warning
     
     %%% SETTINGS %%%
     
@@ -20,7 +20,7 @@ if ~exist('test.flag_batch', 'var') || (~test.flag_batch)
     rand_seed = 1;
     
     % Which model?
-    model_flag = 2;     % 1 = linear Gaussian
+    model_flag = 1;     % 1 = linear Gaussian
                         % 2 = nonlinear non-Gaussian benchmark
                         % 3 = heartbeat alignment
     
@@ -79,7 +79,7 @@ if ~exist('test.flag_batch', 'var') || (~test.flag_batch)
         display.h_pf(2) = figure;
     end
     display.plot_after = true;
-    display.plot_particle_paths = false;
+    display.plot_particle_paths = true;
     display.plot_colours = {'k', 'b', 'c', 'm', 'g'};
     
     % Set test options
@@ -90,8 +90,8 @@ if ~exist('test.flag_batch', 'var') || (~test.flag_batch)
                                     % 4 = linearised OID proposal
                                     % 5 = SUPF
 %     test.num_filt_pts = [10000, 5000, 1700, 30, 100];
-    test.num_filt_pts = [15000, 9000, 6000, 300, 100];
-%     test.num_filt_pts = 100*ones(1,5);
+%     test.num_filt_pts = [15000, 9000, 6000, 300, 100];
+    test.num_filt_pts = 100*ones(1,5);
                                     % Number of particles to use with each algorithm
     
     
