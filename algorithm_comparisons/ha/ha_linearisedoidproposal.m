@@ -14,20 +14,19 @@ else
     A_vr = model.A_vr;
 end
 
-% % Sample a mixing value and scale the covariance
-% if ~isinf(model.dfy)
-%     xi = chi2rnd(model.dfy);
-% else
-%     xi = 1;
-% end
-% R = model.R / xi;
 R = model.R;
 
 % Maximise OID
+% start_x = [model.tau_shift+model.tau_shape*model.tau_scale; A_mn];
+start_x = [model.tau_shift+gamrnd(model.tau_shape,model.tau_scale); mvnrnd(A_mn, A_vr)];
 h_of = @(x) log_oid_with_derivs(model, A_mn, A_vr, obs, R, x);
 options = optimset('GradObj','on','Display','notify-detailed');
-start_x = [model.tau_shift+model.tau_shape*model.tau_scale; A_mn]+rand(model.ds-1,1);
 lin_x = fminunc(h_of,start_x,options);
+
+% figure(1), hold on
+% plot([start_x(1) lin_x(1)], [start_x(2) lin_x(2)]);
+% plot(lin_x(1), lin_x(2), 'o');
+
 
 % Laplace Approximation
 [~, ~, Hess] = log_oid_with_derivs(model, A_mn, A_vr, obs, R, lin_x);

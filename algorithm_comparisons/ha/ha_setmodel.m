@@ -7,7 +7,7 @@ function model = ha_setmodel(test)
 %%%%%%%%%%%%%%%%
 
 % General things
-model.K = 20;              % Number of time points
+model.K = 5;              % Number of time points
 model.do = 30;              % Dimension of the observations
 model.ds = 2;               % Dimension of the state
 

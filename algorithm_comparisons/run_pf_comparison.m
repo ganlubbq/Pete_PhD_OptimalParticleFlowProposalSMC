@@ -17,10 +17,10 @@ if ~exist('test.flag_batch', 'var') || (~test.flag_batch)
     %%% SETTINGS %%%
     
     % DEFINE RANDOM SEED
-    rand_seed = 0;
+    rand_seed = 1;
     
     % Which model?
-    model_flag = 3;     % 1 = linear Gaussian
+    model_flag = 2;     % 1 = linear Gaussian
                         % 2 = nonlinear non-Gaussian benchmark
                         % 3 = heartbeat alignment
     
@@ -79,11 +79,11 @@ if ~exist('test.flag_batch', 'var') || (~test.flag_batch)
         display.h_pf(2) = figure;
     end
     display.plot_after = true;
-    display.plot_particle_paths = true;
+    display.plot_particle_paths = false;
     display.plot_colours = {'k', 'b', 'c', 'm', 'g'};
     
     % Set test options
-    test.algs_to_run = [1 2 3 4 5];         % Vector of algorithm indexes to run
+    test.algs_to_run = [5];         % Vector of algorithm indexes to run
                                     % 1 = bootstrap
                                     % 2 = EKF proposal
                                     % 3 = UKF proposal
@@ -147,8 +147,8 @@ for aa = 1:num_to_run
                 vr = pf{aa}(kk).vr(2:end, 2:end);
         end
         
-        rmse{aa}(kk) = sqrt(sum(se.^2));
-        if det(vr) > 1E-8
+        rmse{aa}(kk) = sqrt(sum(se.^2));   %abs(se(1));%
+        if det(vr) > 1E-12
             nees{aa}(kk) = (se'/vr)*se;
             tnees{aa}(kk) = nees{aa}(kk)./(1+nees{aa}(kk));
         else
@@ -166,7 +166,7 @@ if display.text
     fprintf(1, 'Algorithm | Running Time (s) |  mean ESS  |  mean RMSE | mean TNEES \n');
     for aa = 1:num_to_run
         alg = test.algs_to_run(aa);
-        fprintf(1, '        %u |            %5.1f |      %5.1f |      %5.1f |      %5.3f \n', alg, sum([diagnostics{aa}.rt]), mean([diagnostics{aa}(2:end).ess]), mean(rmse{aa}), mean(tnees{aa}));
+        fprintf(1, '        %u |            %5.1f |      %5.1f |      %5.3f |      %5.3f \n', alg, sum([diagnostics{aa}.rt]), mean([diagnostics{aa}(2:end).ess]), mean(rmse{aa}(2:end)), mean(tnees{aa}(2:end)));
     end
     fprintf(1, '____________________________________________________________________\n');
     

@@ -85,6 +85,8 @@ evo_w(:,1) = prior_w;
 
 figure(1), gcf, hold on
 
+flag_resamp = false;
+
 % Euler integration loop
 for ll = 1:L-1;
     
@@ -100,8 +102,11 @@ for ll = 1:L-1;
     evo_ess(ll) = calc_ESS(evo_w(:,ll));
     
     % Normalise weights
-    anc = sample_weights(evo_w(:,ll), algo.N, 2);
-%     anc = 1:algo.N;
+    if flag_resamp
+        anc = sample_weights(evo_w(:,ll), algo.N, 2);
+    else
+        anc = 1:algo.N;
+    end
     
     % Particle loop
     for ii = 1:algo.N
@@ -117,7 +122,7 @@ for ll = 1:L-1;
             
         else
             
-            v = flow_velocity(model, lam, last_x, template, signal, D);
+            [v, A] = flow_velocity(model, lam, last_x, template, signal, D);
             
             x = last_x + v*dl + mvnrnd(zeros(1,2), 2*D*dl)';
             
@@ -128,7 +133,14 @@ for ll = 1:L-1;
                 + loggausspdf(x(2), model.A_mn, model.A_vr) ...
                 + lam * likelihood( model, x(1), x(2), template, signal );
             
-            evo_w(ii,ll+1) =  inc_w(ii,ll+1) - inc_w(anc(ii),ll);
+            evo_w(ii,ll+1) =  log( 1 + dl*trace(A) ) + inc_w(ii,ll+1) - inc_w(anc(ii),ll);
+            if ~flag_resamp
+                evo_w(ii,ll+1) = evo_w(ii,ll+1) + evo_w(anc(ii),ll);
+            end
+            
+            if isnan(evo_w(ii,ll+1))
+                evo_w(ii,ll+1) = -inf;
+            end
             
         end
         

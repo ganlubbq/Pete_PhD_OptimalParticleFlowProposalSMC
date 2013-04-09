@@ -1,4 +1,4 @@
-function [ v ] = flow_velocity( model, lam, x, template, signal, D )
+function [ v, A ] = flow_velocity( model, lam, x, template, signal, D )
 %FLOW_VELOCITY 
 
 tau = x(1);
@@ -31,7 +31,7 @@ y_mod = y - Amp*H*template.m + dH*x;
 p0 = invgampdf(tau-tau_s, model.tau_a, model.tau_b);
 d0 = ((tau_b^tau_a)/gamma(tau_a))*(tau-tau_s)^(-(tau_a+1)-2)*exp(-tau_b/(tau-tau_s))*(tau_b-(tau_a+1)*(tau-tau_s));
 Del = -d0/p0;
-Qt = lambertw_ex(Del^2/(2*pi*p0^2))/Del^2;
+Qt = numerical_lambertw(Del^2/(2*pi*p0^2))/Del^2;
 mt = tau - Del*Qt;
 
 if isnan(Qt)||isinf(Qt)
