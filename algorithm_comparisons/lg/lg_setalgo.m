@@ -6,11 +6,11 @@ function algo = lg_setalgo(test, model, al)
 algo.N = test.num_filt_pts(al);
 
 % Stochastic smooth update?
-algo.flag_stochastic = false;
+algo.flag_stochastic = true;
 if algo.flag_stochastic
-    algo.D = blkdiag(1E-2*eye(2), 1E-3*eye(2));
+    algo.Dscale = 1;
 else
-    algo.D = zeros(model.ds);
+    algo.Dscale = 0;
 end
 
 end

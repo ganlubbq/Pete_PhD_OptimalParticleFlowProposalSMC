@@ -8,7 +8,7 @@ R = model.R;
 
 % Arrays
 state = zeros(model.ds, algo.N);
-    
+
 % Particle loop
 for ii = 1:algo.N
     
@@ -29,12 +29,7 @@ for ii = 1:algo.N
         end
     
     % Analytical flow
-    [ x, wt_jac] = linear_flow_move( 1, 0, x0, m, P, y, H, R, algo.D );
-    
-    % Stochastic bit
-    if algo.flag_stochastic
-        x = mvnrnd(x', 2*dl*algo.D)';
-    end
+    [ x, wt_jac, Z] = linear_flow_move( 1, 0, x0, m, P, y, H, R, algo.Dscale );
     
     % Store state
     state(:,ii) = x;
@@ -48,7 +43,11 @@ for ii = 1:algo.N
     [~, lhood_prob] = feval(fh.observation, model, state(:,ii), obs);
 
     % Weight update
-    weight(ii) = weight(ii) + lhood_prob + trans_prob - ppsl_prob + log(wt_jac);
+    if algo.Dscale == 0
+        weight(ii) = weight(ii) + lhood_prob + trans_prob - ppsl_prob + log(wt_jac);
+    else
+        weight(ii) = weight(ii) + lhood_prob + trans_prob - Z;
+    end
 
 end
 
