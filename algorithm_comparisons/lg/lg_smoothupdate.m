@@ -29,7 +29,7 @@ for ii = 1:algo.N
         end
     
     % Analytical flow
-    [ x, wt_jac, Z] = linear_flow_move( 1, 0, x0, m, P, y, H, R, algo.Dscale );
+    [ x, wt_jac, prob_ratio] = linear_flow_move( 1, 0, x0, m, P, y, H, R, algo.Dscale );
     
     % Store state
     state(:,ii) = x;
@@ -46,7 +46,7 @@ for ii = 1:algo.N
     if algo.Dscale == 0
         weight(ii) = weight(ii) + lhood_prob + trans_prob - ppsl_prob + log(wt_jac);
     else
-        weight(ii) = weight(ii) + lhood_prob + trans_prob - Z;
+        weight(ii) = weight(ii) + lhood_prob + trans_prob - ppsl_prob + prob_ratio;
     end
 
 end

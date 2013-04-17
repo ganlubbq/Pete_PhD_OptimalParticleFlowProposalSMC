@@ -14,10 +14,11 @@ for ii = 1:algo.N
 end
 
 % Set up integration schedule
-ratio = 1.2;
+ratio = 1.05;
 num_steps = 100;
 scale_fact = (1-ratio)/(ratio*(1-ratio^num_steps));
 lam_rng = cumsum([0 scale_fact*ratio.^(1:num_steps)]);
+% lam_rng = 0:0.01:1;
 L = length(lam_rng);
 
 % State evolution array (in case we want to plot the trajectories)
@@ -27,7 +28,6 @@ weight_evolution = zeros(L,algo.N);
 weight_evolution(1,:) = weight;
 
 % Weight arrays
-inc_weight = zeros(1, algo.N);
 prob = zeros(1, algo.N);
 last_prob = init_trans_prob;
 
@@ -49,38 +49,27 @@ end
 dsc = model.ds - 1;
 I = eye(dsc);
 
-% for ii = 1:algo.N
-%     
-%     x = state(2:end,ii);
-%     m = prior_mn(:,ii);
-%     
-%     lam_rng = [0 1];
-%     [lam, x] = ode15s(@(lam_in, x_in) v_iter(model, lam_in, x_in, obs, m, P), lam_rng, x);
-%     state(2:end,ii) = x(end,:)';
-%     
-% end
-
 % Pseudo-time loop
 for ll = 1:L-1
     
     % Resampling
     
     % Pseudo-time
-    lam = lam_rng(ll);
-    dl = lam_rng(ll+1)-lam_rng(ll);
+    lam0 = lam_rng(ll);
+    lam = lam_rng(ll+1);
     
     % Particle loop
     for ii = 1:algo.N
         
         % Get state
-        x = state(2:end,ii);
+        x0 = state(2:end,ii);
         m = prior_mn(:,ii);
         
         % Observation mean
-        obs_mn = nlng_h(model, x);
+        obs_mn = nlng_h(model, x0);
         
         % Linearise observation model around the current point
-        H = nlng_obsjacobian(model, x);
+        H = nlng_obsjacobian(model, x0);
         
         if ~isinf(model.dfy)
             
@@ -100,26 +89,17 @@ for ll = 1:L-1
             D2p = ((dfy+do)*( -H'*(Rdy*Rdy')*H/tdist + nasty_term ))/(dfy*tdist);
             
             % Match a Gaussian to these
-            [y, H, R] = gaussian_match_obs(x, Dp, D2p);
+            [y, H, R] = gaussian_match_obs(x0, Dp, D2p);
             
         else
             
             R = model.R;
-            y = obs - obs_mn + H*x;
+            y = obs - obs_mn + H*x0;
             
         end
         
-        % Calculate velocity
-        [ A, b ] = linear_flow( lam, m, P, y, H, R, algo.D );
-        v = A*x + b;
-        
-        % Push forward
-        x = x + v*dl;
-        
-        % Stochastic bit
-        if algo.flag_stochastic
-            x = mvnrnd(x', 2*dl*algo.D)';
-        end
+        % Analytical flow
+        [ x, wt_jac, prob_ratio] = linear_flow_move( lam, lam0, x0, m, P, y, H, R, algo.Dscale );
         
         % Store state
         state(2:end,ii) = x;
@@ -134,9 +114,12 @@ for ll = 1:L-1
         [~, lhood_prob] = feval(fh.observation, model, state(:,ii), obs);
         prob(ii) = trans_prob + lam*lhood_prob;
         
-        % Update weight
-        inc_weight(ii) = prob(ii) - last_prob(ii) + log(1-trace(logm(eye(model.ds-1)+P*H'*(R\H))));
-        weight(ii) = weight(ii) + inc_weight(ii);
+        % Weight update
+        if algo.Dscale == 0
+            weight(ii) = weight(ii) + prob(ii) - last_prob(ii) + log(wt_jac);
+        else
+            weight(ii) = weight(ii) + prob(ii) - last_prob(ii) + prob_ratio;%log(wt_jac);%
+        end
         weight_evolution(ll+1,ii) = weight(ii);
         
         if ~isreal(weight(ii))
@@ -146,24 +129,9 @@ for ll = 1:L-1
     end
     
     last_prob = prob;
+    test(ll) = calc_ESS(weight);
     
 end
-
-% % Weight update loop
-% for ii = 1:algo.N
-%     
-%     % Densities
-%     if ~isempty(prev_state)
-%         [~, trans_prob] = feval(fh.transition, model, prev_state(:,ii), state(:,ii));
-%     else
-%         [~, trans_prob] = feval(fh.stateprior, model, state(:,ii));
-%     end
-%     [~, lhood_prob] = feval(fh.observation, model, state(:,ii), obs);
-% 
-%     % Weight update
-%     weight(ii) = weight(ii) + lhood_prob + trans_prob - init_trans_prob(ii) + log(wt_jac(ii));
-% 
-% end
 
 % Plot particle paths (first state only)
 if display.plot_particle_paths

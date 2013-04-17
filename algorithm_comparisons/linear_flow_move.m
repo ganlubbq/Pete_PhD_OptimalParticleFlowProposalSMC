@@ -1,4 +1,4 @@
-function [ x, J, Z] = linear_flow_move( t, t0, x0, m, P, y, H, R, Dscale )
+function [ x, J, prob_ratio] = linear_flow_move( t, t0, x0, m, P, y, H, R, Dscale )
 %linear_flow_move Calculate the movement produced by a linear flow for a
 %set of matrixes. Optimal for linear Gaussian models. Analytic integral of
 %linear_flow.
@@ -18,8 +18,9 @@ St = I + t*P*H'*(R\H);
 sqrtSt = sqrtm(St);
 sqrtS0 = sqrtm(S0);
 
-dS = St-S0;
-expdS = expm(-Dscale*dS/2);
+% dS = St-S0;
+% expdS = expm(-Dscale*dS/2);
+expdS = expm(-Dscale*(t-t0)*I/2);
 
 % H pseudo-inverse
 assert(r==min(nr,nc), 'H is not full rank');
@@ -36,10 +37,10 @@ x_mn = F*x0+r;
 
 if Dscale ~= 0
     % Stochastic bit
-    Vr = (I-expdS^2)*(St\P);
-    Vr = (Vr+Vr')/2;
-    Vr = Vr + 1E-8*eye(size(Vr));
-    x = mvnrnd(x_mn', Vr)';
+    x_vr = (I-expdS^2)*(St\P);
+    x_vr = (x_vr+x_vr')/2;
+    x_vr = x_vr + 1E-8*eye(size(x_vr));
+    x = mvnrnd(x_mn', x_vr)';
 %     Vr = (expm(Dscale*St) - expm(Dscale*S0))*P;
 %     dIs = mvnrnd(zeros(size(x')), Vr)';
 %     x = x + Mt\dIs;
@@ -53,13 +54,14 @@ end
 J = sqrt(det(S0)/det(St))*det(expdS);
 
 if Dscale ~= 0
-    % Artificial distribution
-    Sigma = St\P;
-    mu = Sigma*(P\m + t*H'*(R\y));
-    C = Vr;
-    Z = loggausspdf(x, F*mu+r, F*Sigma*F'+C);
+    % Probabilities
+    C = x_vr;
+    [art_mn, art_vr] = kf_update(m, P, x-r, F, C);
+    art_prob = loggausspdf(x0, art_mn, art_vr);
+    flow_prob = loggausspdf(x, x_mn, x_vr);
+    prob_ratio = art_prob-flow_prob;
 else
-    Z = 0;
+    prob_ratio = 0;
 end
 
 end

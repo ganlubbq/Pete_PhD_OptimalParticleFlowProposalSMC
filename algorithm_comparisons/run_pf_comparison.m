@@ -20,7 +20,7 @@ if ~exist('test.flag_batch', 'var') || (~test.flag_batch)
     rand_seed = 3;
     
     % Which model?
-    model_flag = 1;     % 1 = linear Gaussian
+    model_flag = 2;     % 1 = linear Gaussian
                         % 2 = nonlinear non-Gaussian benchmark
                         % 3 = heartbeat alignment
     
@@ -83,7 +83,7 @@ if ~exist('test.flag_batch', 'var') || (~test.flag_batch)
     display.plot_colours = {'k', 'b', 'c', 'm', 'g'};
     
     % Set test options
-    test.algs_to_run = [4 5];         % Vector of algorithm indexes to run
+    test.algs_to_run = [5];         % Vector of algorithm indexes to run
                                     % 1 = bootstrap
                                     % 2 = EKF proposal
                                     % 3 = UKF proposal
