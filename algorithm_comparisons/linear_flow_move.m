@@ -26,7 +26,10 @@ assert(r==min(nr,nc), 'H is not full rank');
 Hpi = pinv(H);
 
 % Find x
-x_mn = Hpi*y - St\Hpi*(y-H*m) + (expdS/sqrtSt)*(sqrtS0\( Hpi*(y-H*m) - S0*(Hpi*y-x0) ));
+F = (expdS/sqrtSt)*sqrtS0;
+r = Hpi*y - St\Hpi*(y-H*m) + (expdS/sqrtSt)*(sqrtS0\( Hpi*(y-H*m) - S0*Hpi*y ));
+x_mn = F*x0+r;
+% x_mn = Hpi*y - St\Hpi*(y-H*m) + (expdS/sqrtSt)*(sqrtS0\( Hpi*(y-H*m) - S0*(Hpi*y-x0) ));
 % x = Mt\( M0*x0 ...
 %     - (sqrtSt\expSt - sqrtS0\expS0)*Hpi*(y-H*m) ...
 %     + (sqrtSt*expSt - sqrtS0*expS0)*Hpi*y   );
@@ -51,10 +54,8 @@ J = sqrt(det(S0)/det(St))*det(expdS);
 
 if Dscale ~= 0
     % Artificial distribution
-    Sigma = inv(inv(P)+t*H'*(R\H));
+    Sigma = St\P;
     mu = Sigma*(P\m + t*H'*(R\y));
-    F = (expdS/sqrtSt)*(sqrtS0\( S0 ));
-    r = Hpi*y - St\Hpi*(y-H*m) + (expdS/sqrtSt)*(sqrtS0\( Hpi*(y-H*m) - S0*Hpi*y ));
     C = Vr;
     Z = loggausspdf(x, F*mu+r, F*Sigma*F'+C);
 else
