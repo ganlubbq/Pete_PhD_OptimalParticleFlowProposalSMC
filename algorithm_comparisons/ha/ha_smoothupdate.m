@@ -26,13 +26,6 @@ pf(1).state = init_state;
 pf(1).weight = init_weight;
 pf(1).origin = 1:algo.N;
 
-% Stochastic?
-if algo.flag_stochastic
-    D = algo.D;
-else
-    D = zeros(model.ds);
-end
-
 % Set up for plotting
 if display.plot_particle_paths
     figure(1); clf; hold on;

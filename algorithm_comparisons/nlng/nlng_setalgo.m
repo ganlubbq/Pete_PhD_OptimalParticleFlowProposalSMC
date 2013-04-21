@@ -12,5 +12,6 @@ if algo.flag_stochastic
 else
     algo.Dscale = 0;
 end
+algo.flag_intermediate_resample = false;
 
 end

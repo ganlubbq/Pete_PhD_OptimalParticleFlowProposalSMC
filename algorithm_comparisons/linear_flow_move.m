@@ -20,15 +20,16 @@ sqrtS0 = sqrtm(S0);
 
 % dS = St-S0;
 % expdS = expm(-Dscale*dS/2);
-expdS = expm(-Dscale*(t-t0)*I/2);
+% expdS = expm(-Dscale*(t-t0)*I/2);
+expdS = exp(-Dscale*(t-t0)/2);
 
 % H pseudo-inverse
 assert(r==min(nr,nc), 'H is not full rank');
 Hpi = pinv(H);
 
 % Find x
-F = (expdS/sqrtSt)*sqrtS0;
-r = Hpi*y - St\Hpi*(y-H*m) + (expdS/sqrtSt)*(sqrtS0\( Hpi*(y-H*m) - S0*Hpi*y ));
+F = expdS*(sqrtSt\sqrtS0);
+r = Hpi*y - St\Hpi*(y-H*m) + expdS*(sqrtSt\(sqrtS0\( Hpi*(y-H*m) - S0*Hpi*y )));
 x_mn = F*x0+r;
 % x_mn = Hpi*y - St\Hpi*(y-H*m) + (expdS/sqrtSt)*(sqrtS0\( Hpi*(y-H*m) - S0*(Hpi*y-x0) ));
 % x = Mt\( M0*x0 ...
@@ -37,7 +38,7 @@ x_mn = F*x0+r;
 
 if Dscale ~= 0
     % Stochastic bit
-    x_vr = (I-expdS^2)*(St\P);
+    x_vr = (1-expdS^2)*(St\P);
     x_vr = (x_vr+x_vr')/2;
     x_vr = x_vr + 1E-8*eye(size(x_vr));
     x = mvnrnd(x_mn', x_vr)';
