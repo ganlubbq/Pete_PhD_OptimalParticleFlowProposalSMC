@@ -75,21 +75,32 @@ for ll = 1:L-1
             
             dfy = model.dfy;
             do = model.do;
+            ds = model.ds-1;
             R = model.R;
             dy = obs - obs_mn;
             Rdy = R\dy;
             dyRdy = dy'*Rdy;
             tdist = 1+dyRdy/dfy;
             
-            % Calculate gradient and Hessian of the observation density
-            Dp = ((dfy+do)*H'*Rdy)/(dfy*tdist);
-            double_Rdy = [Rdy Rdy]';
-            double_Rdy = double_Rdy(:);
-            nasty_term = -H'*(R\H) + diag(double_Rdy);
-            D2p = ((dfy+do)*( -H'*(Rdy*Rdy')*H/tdist + nasty_term ))/(dfy*tdist);
+%             % Calculate gradient and Hessian of the observation density
+%             Dp = ((dfy+do)*H'*Rdy)/(dfy*tdist);
+%             double_Rdy = [Rdy Rdy]';
+%             double_Rdy = double_Rdy(:);
+%             nasty_term = -H'*(R\H) + diag(double_Rdy);
+%             D2p = ((dfy+do)*( (2/dfy)*H'*(Rdy*Rdy')*H/tdist + nasty_term ))/(dfy*tdist);
+%             D2p = ((dfy+do)*( (2/dfy)*H'*(Rdy*Rdy')*H/tdist - H'*(R\H) ))/(dfy*tdist);
+%             D2p = ((dfy+do)*( - H'*(R\H) ))/(dfy*tdist);
+%             D2p = - H'*(R\H);
+%             D2p = I;
+
+            % Calculate value and gradient of the observation density
+            p = mvnstpdf(obs', obs_mn', model.R, model.dfy);
+            Dp_p = (model.dfy+model.do)*(H'/model.R)*(obs-obs_mn)/(model.dfy + (obs-obs_mn)'*(model.R\(obs-obs_mn)));
             
             % Match a Gaussian to these
-            [y, H, R] = gaussian_match_obs(x0, Dp, D2p);
+            [y, H, R] = gaussian_match_obs(x0, p, Dp_p);
+%             [y, ~] = gaussian_match_obs(x0, Dp, [], H, R);
+%             y = obs;
             
         else
             
@@ -125,6 +136,14 @@ for ll = 1:L-1
         if ~isreal(weight(ii))
             weight(ii) = -inf;
         end
+        
+        %%% REMOVE THIS %%%
+        if isnan(weight(ii))
+            weight(ii) = -inf;
+        end
+        %%%%%%%%%%%%%%%%%%%
+        
+        assert(~isnan(weight(ii)));
         
     end
     
