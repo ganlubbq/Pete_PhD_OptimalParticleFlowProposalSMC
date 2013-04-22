@@ -4,7 +4,7 @@ function [ state, weight ] = nlng_smoothupdate( display, algo, model, fh, obs, p
 
 % Set up integration schedule
 ratio = 1.05;
-num_steps = 250;
+num_steps = 50;
 scale_fact = (1-ratio)/(ratio*(1-ratio^num_steps));
 lam_rng = cumsum([0 scale_fact*ratio.^(1:num_steps)]);
 % lam_rng = 0:0.01:1;
@@ -102,7 +102,11 @@ for ll = 1:L-1
             dyRdy = dy'*Rdy;
             tdist = 1+dyRdy/dfy;
             
-%             % Calculate gradient and Hessian of the observation density
+            xi = chi2rnd(model.dfy);
+            R = model.R / xi;
+            y = obs - obs_mn + H*x0;
+            
+            % Calculate gradient and Hessian of the observation density
 %             Dp = ((dfy+do)*H'*Rdy)/(dfy*tdist);
 %             double_Rdy = [Rdy Rdy]';
 %             double_Rdy = double_Rdy(:);
@@ -113,18 +117,29 @@ for ll = 1:L-1
 %             D2p = - H'*(R\H);
 %             D2p = I;
 
-            % Calculate value and gradient of the observation density
-            p = mvnstpdf(obs', obs_mn', model.R, model.dfy);
-            Dp_p = (model.dfy+model.do)*(H'/model.R)*(obs-obs_mn)/(model.dfy + (obs-obs_mn)'*(model.R\(obs-obs_mn)));
+%             % Calculate value and gradient of the observation density
+%             p = mvnstpdf(obs', obs_mn', model.R, model.dfy);
+%             Dp_p = (model.dfy+model.do)*(H'/model.R)*(obs-obs_mn)/(model.dfy + (obs-obs_mn)'*(model.R\(obs-obs_mn)));
             
-            % Match a Gaussian to these
-            if p > 0
-                [y, H, R] = gaussian_match_obs(x0, p, Dp_p, H);
-            else
-                y = obs; H = I; R = model.R;
-            end
+%             y = obs - obs_mn + H*x0;
+%             sf = pinv(Dp_p)*H'*(R\(y-H*x0));
+%             R = sf*R;
+
+%             [ y, R ] = gaussian_match_obs( x0, Dp, D2p, H, R );
+%             % Match a Gaussian to these
+%             if p > 0
+%                 [y, H, R] = gaussian_match_obs(x0, p, Dp_p, H, obs_mn);
+%             else
+%                 y = obs; H = I; R = model.R;
+%             end
 %             [y, ~] = gaussian_match_obs(x0, Dp, [], H, R);
 %             y = obs;
+
+%             Dp = - ((dfy+do)*Rdy)/(dfy*tdist);
+%             D2p = - ((dfy+do)*( (2/dfy)*(Rdy*Rdy') + inv(R)/tdist ))/dfy;
+%             
+%             R = -inv(D2p);
+%             y = H*x0 + D2p\Dp;
             
         else
             
