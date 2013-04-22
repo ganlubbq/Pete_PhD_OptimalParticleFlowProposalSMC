@@ -83,7 +83,7 @@ if ~exist('test.flag_batch', 'var') || (~test.flag_batch)
     display.plot_colours = {'k', 'b', 'c', 'm', 'g'};
     
     % Set test options
-    test.algs_to_run = [5];         % Vector of algorithm indexes to run
+    test.algs_to_run = [1 4 5];         % Vector of algorithm indexes to run
                                     % 1 = bootstrap
                                     % 2 = EKF proposal
                                     % 3 = UKF proposal

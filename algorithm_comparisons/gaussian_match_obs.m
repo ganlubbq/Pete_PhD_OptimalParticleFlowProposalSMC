@@ -7,25 +7,25 @@
 % r = rank(H);
 % assert(r==m, 'Haven''t solved/coded that case!')
 % 
-% % % Pseudo-inverse
-% % Hpi = pinv(H);
-% % 
-% % % Covariance
-% % R = inv( -Hpi'*D2p*Hpi );
-% % 
-% % % Make it positive definite
-% % if ~isposdef(R)
-% %     R = R - (min(eig(R))-1E-4)*eye(size(R));
-% % end
-% % 
-% % assert(isposdef(R))
+% % Pseudo-inverse
+% Hpi = pinv(H);
+% 
+% % Covariance
+% R = inv( -Hpi'*D2p*Hpi );
+% 
+% % Make it positive definite
+% if ~isposdef(R)
+%     R = R - (min(eig(R))-1E-4)*eye(size(R));
+% end
+% 
+% assert(isposdef(R))
 % 
 % % Observation
 % y = pinv(H'/R)*( Dp + H'*(R\H)*x );
 % 
 % end
 
-function [ y, H, R ] = gaussian_match_obs( x, p, Dp_p, H )
+function [ y, H, R ] = gaussian_match_obs( x, p, Dp_p, H, obs_mn )
 %gaussian_match_obs Select a Gaussian for the observation density with a
 %particular value and gradient at point x.
 
@@ -45,11 +45,11 @@ function [ y, H, R ] = gaussian_match_obs( x, p, Dp_p, H )
 [do,ds] = size(H);
 
 Hpi = pinv(H);
-DTD = Dp_p'*(Hpi*Hpi')*Dp_p;
+DTD = sum((Dp_p'*Hpi).^2);
 
 sig = ds*numerical_lambertw(DTD*p^(-2/ds)/(2*pi*ds))/DTD;
 R = sig*eye(do);
 
-y = H*x + sig*Hpi'*Dp_p;
+y = (obs_mn-H*x) + sig*Hpi'*Dp_p;
 
 end

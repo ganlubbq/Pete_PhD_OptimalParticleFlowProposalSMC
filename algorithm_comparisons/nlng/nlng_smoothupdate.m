@@ -90,63 +90,15 @@ for ll = 1:L-1
         
         % Linearise observation model around the current point
         H = nlng_obsjacobian(model, x0);
+        y = obs - obs_mn + H*x0;
         
+        % SMoN scaling.
         if ~isinf(model.dfy)
-            
-            dfy = model.dfy;
-            do = model.do;
-            ds = model.ds-1;
-            R = model.R;
-            dy = obs - obs_mn;
-            Rdy = R\dy;
-            dyRdy = dy'*Rdy;
-            tdist = 1+dyRdy/dfy;
-            
             xi = chi2rnd(model.dfy);
-            R = model.R / xi;
-            y = obs - obs_mn + H*x0;
-            
-            % Calculate gradient and Hessian of the observation density
-%             Dp = ((dfy+do)*H'*Rdy)/(dfy*tdist);
-%             double_Rdy = [Rdy Rdy]';
-%             double_Rdy = double_Rdy(:);
-%             nasty_term = -H'*(R\H) + diag(double_Rdy);
-%             D2p = ((dfy+do)*( (2/dfy)*H'*(Rdy*Rdy')*H/tdist + nasty_term ))/(dfy*tdist);
-%             D2p = ((dfy+do)*( (2/dfy)*H'*(Rdy*Rdy')*H/tdist - H'*(R\H) ))/(dfy*tdist);
-%             D2p = ((dfy+do)*( - H'*(R\H) ))/(dfy*tdist);
-%             D2p = - H'*(R\H);
-%             D2p = I;
-
-%             % Calculate value and gradient of the observation density
-%             p = mvnstpdf(obs', obs_mn', model.R, model.dfy);
-%             Dp_p = (model.dfy+model.do)*(H'/model.R)*(obs-obs_mn)/(model.dfy + (obs-obs_mn)'*(model.R\(obs-obs_mn)));
-            
-%             y = obs - obs_mn + H*x0;
-%             sf = pinv(Dp_p)*H'*(R\(y-H*x0));
-%             R = sf*R;
-
-%             [ y, R ] = gaussian_match_obs( x0, Dp, D2p, H, R );
-%             % Match a Gaussian to these
-%             if p > 0
-%                 [y, H, R] = gaussian_match_obs(x0, p, Dp_p, H, obs_mn);
-%             else
-%                 y = obs; H = I; R = model.R;
-%             end
-%             [y, ~] = gaussian_match_obs(x0, Dp, [], H, R);
-%             y = obs;
-
-%             Dp = - ((dfy+do)*Rdy)/(dfy*tdist);
-%             D2p = - ((dfy+do)*( (2/dfy)*(Rdy*Rdy') + inv(R)/tdist ))/dfy;
-%             
-%             R = -inv(D2p);
-%             y = H*x0 + D2p\Dp;
-            
         else
-            
-            R = model.R;
-            y = obs - obs_mn + H*x0;
-            
+            xi = 1;
         end
+        R = model.R / xi;
         
         % Analytical flow
         [ x, wt_jac, prob_ratio] = linear_flow_move( lam, lam0, x0, m, P, y, H, R, algo.Dscale );
