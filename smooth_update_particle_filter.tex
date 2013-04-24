@@ -10,6 +10,9 @@
 \usepackage{amsmath}
 \usepackage{amsfonts}
 \usepackage{bbm}
+\usepackage[T1]{fontenc}
+\usepackage{pandora}
+\linespread{1.05}
 % Environments
 \usepackage{IEEEtrantools}
 \usepackage{algorithm}
@@ -23,22 +26,25 @@
 \newenvironment{meta}[0]{\color{red} \em}{}
 
 % Notational shortcuts
+\newcommand{\tilpit}[1]{\tilde{\pi}_{t,#1}}
+\newcommand{\pit}[1]{\pi_{t,#1}}
+\newcommand{\xt}[1]{x_{t,#1}}
+\newcommand{\wt}[1]{w_{t,#1}}
+
+%%% OLD SHORTCUTS %%%
 \newcommand{\tilpitlam}{\tilde{\pi}_{t,\lambda}}
 \newcommand{\tilpitldl}{\tilde{\pi}_{t,\lambda+\delta\lambda}}
 \newcommand{\pitlam}{\pi_{t,\lambda}}
 \newcommand{\xtlam}{x_{t,\lambda}}
 \newcommand{\xtztl}{x_{t,0:\lambda}}
-
 \newcommand{\xtl}{x_{t,\lambda}}
 \newcommand{\xtldl}{x_{t,\lambda+\delta\lambda}}
-
 \newcommand{\tilpilam}{\tilde{\pi}_{\lambda}}
 \newcommand{\tilpildl}{\tilde{\pi}_{\lambda+\delta\lambda}}
 \newcommand{\pilam}{\pi_{\lambda}}
 \newcommand{\pildl}{\pi_{\lambda+\delta\lambda}}
 \newcommand{\piztl}{\pi_{0:\lambda}}
 \newcommand{\piztldl}{\pi_{0:\lambda+\delta\lambda}}
-
 \newcommand{\xlam}{x_{\lambda}}
 \newcommand{\xldl}{x_{\lambda+\delta\lambda}}
 \newcommand{\xztl}{x_{0:\lambda}}
@@ -79,7 +85,7 @@ More recently, methods have been proposed which define a continuous sequence of 
 
 In this paper, we devise a new ``smooth update'' particle filter which, rather than applying a particle flow directly to the filtering distribution, uses it to generate samples from an approximation of the OID. By moving the approximations into the proposal step, we recover the asymptotic properties of the particle filter, at the expense of parallelism. Mixed and bounded state-space also present no obstacle. The algorithm is based on the standard framework of Sequential Monte Carlo Samplers \cite{DelMoral2006}, with the target distribution being extended over the state trajectory induced by during the filter update. The approximately optimal flow we employ is derived by first solving the dynamical equations for a linear Gaussian model, and then by making suitable local approximations to this model for all other cases, in a fashion roughly analogous to the EKF.
 
-Having covered some particle filter basics in section __, we introduce a framework for new algorithm in section __. In section __, an optimal solution is derived for the linear Gaussian case, and in section __, this is employed as a tool for implementing quasi-optimal solutions for other models. Numerical illustrations are presented in section __.
+Having covered some particle filter basics in section , we introduce a framework for new algorithm in section . In section , an optimal solution is derived for the linear Gaussian case, and in section , this is employed as a tool for implementing quasi-optimal solutions for other models. Numerical illustrations are presented in section .
 
 
 
@@ -187,7 +193,7 @@ In the update step, the effects of the new observation, $y_t$, are introduced by
 
 
 
-\section{Particle Flows}
+\section{Existing Particle Flow Methods}
 
 At the heart of our new algorithm lies the concept of an optimal particle flow, which has been employed in particle filters by \cite{Daum2008,Daum2011d,Reich2011}. Details of these methods will not be presented here, but since they form the the inspiration and the starting point for our endeavours, it is apposite to include an overview of their operation and a discussion of their characteristics.
 
@@ -201,54 +207,65 @@ Our new algorithm, which we dub the smooth update particle filter (SUPF), addres
 
 
 
-
-Daum's algorithm suffered from the need to approximate the predictive density at any point, either numerically or functionally, leading to the loss of consistency. Our modification is have a different family of densities for each particle, between $p(x_t|x_{t-1}^{(a_j)})$ and $p(x_t|x_{t-1}^{(a_j)}, y_{t})$. This removes the need for approximations provided $p(x_t|x_{t-1}^{(a_j)})$ can be evaluated (and differentiated) analytically.
-
-A further headache in Daum's filter was the fact that the Fokker-Planck equation could rarely be solved analytically, meaning further approximations were required in calculation of the particle flow. Instead, we use only one flow --- a linear (or piecewise-linear) one --- which locally approximates the optimal flow.
-
-The most significant addition for the SUPF is to place the particle flow methods into the SMC sampler framework. This means that we can maintain path history estimates, rather than simply the distribution of the latest state, and also allows principled weight calculations. Furthermore, we introduce the use of stochastic rather than merely deterministic flows, allowing particle diversity to be refreshed during the update steps, rather than only in between.
-
-The paper proceeds as follows. First we lay out the mathematical framework for the SUPF, including general formulas for the weight update. We then look at deterministic case, showing how weights can be updated for our workhorse --- the linear flow --- before then proving this to be optimal for the linear-Gaussian case. Next we discuss the optimal flow for any other model may be approximated using a piecewise-linear flow. Finally, we discuss the modifications required in order to use a stochastic particle flow.
-
-
-
-
-\section{Motivation and Outline}
-
-{\meta Cut or edit this section.}
-
-The algorithm presented in this paper arises as an extension to the particle flow methods devised by \cite{Daum2008,Daum2011d,Reich2011}. By embedding optimal or near-optimal flows within the framework of sequential Monte Carlo samplers \cite{DelMoral2006}, we obtain a particle filter which retains asymptotic consistency (in a sense) and yields larger effective sample sizes than other, less sophisticated methods. This, of course, comes at a price in computation per particle. Since the key to the better proposals comes in the gradual introduction of the effects of the observation, we refer to the new algorithm as the smooth update particle filter (SUPF).
-
-In this section, we briefly outline the motivation behind the SUPF and the steps in the following exposition, so that the path through the mathematical complexities should be lit by intuition.
-
-Take as a starting point the algorithm devised in \cite{Daum2008}. The leap of insight taken here, which lies at the heart of the SUPF, was to introduce a continuous sequence of densities between the predictive, $p(x_t|y_{1:t-1})$, and filtering, $p(x_t|y_{1:t})$, densities. A set of particles is first sampled from the predictive density. Then, by applying the Fokker-Planck equation, which relates the flow of densities to the corresponding flow of particles, it is possible to move the particles so they are distributed according to the sequence.
-
-Daum's algorithm suffered from the need to approximate the predictive density at any point, either numerically or functionally, leading to the loss of consistency. Our modification is have a different family of densities for each particle, between $p(x_t|x_{t-1}^{(a_j)})$ and $p(x_t|x_{t-1}^{(a_j)}, y_{t})$. This removes the need for approximations provided $p(x_t|x_{t-1}^{(a_j)})$ can be evaluated (and differentiated) analytically.
-
-A further headache in Daum's filter was the fact that the Fokker-Planck equation could rarely be solved analytically, meaning further approximations were required in calculation of the particle flow. Instead, we use only one flow --- a linear (or piecewise-linear) one --- which locally approximates the optimal flow.
-
-The most significant addition for the SUPF is to place the particle flow methods into the SMC sampler framework. This means that we can maintain path history estimates, rather than simply the distribution of the latest state, and also allows principled weight calculations. Furthermore, we introduce the use of stochastic rather than merely deterministic flows, allowing particle diversity to be refreshed during the update steps, rather than only in between.
-
-The paper proceeds as follows. First we lay out the mathematical framework for the SUPF, including general formulas for the weight update. We then look at deterministic case, showing how weights can be updated for our workhorse --- the linear flow --- before then proving this to be optimal for the linear-Gaussian case. Next we discuss the optimal flow for any other model may be approximated using a piecewise-linear flow. Finally, we discuss the modifications required in order to use a stochastic particle flow.
-
-
-
 \section{A Framework for the Smooth Update}
 
-In a similar manner to the bootstrap filter, we split each iteration of the particle filter into two steps: a prediction and an update. Prediction consists of a selection step and sampling from the transition density, (exactly the same as the bootstrap filter), and results in weighted set of particles approximating the predictive density, $p(x_{1:t}|y_{1:t-1})$. The novelty lies in the update step.
+We split each iteration of the particle filter into two steps: a prediction and an update. Prediction consists of a selection step and sampling from the transition density, (exactly the same as the bootstrap filter), and results in weighted set of particles approximating the predictive density, $p(x_{1:t}|y_{1:t-1})$. The novelty lies in the update step.
 
-First, a variable $\lambda \in [0,1]$ is introduced. Intuitively, this is a stretch of ``pseudo-time'' between the predictive and filtering distributions, allowing the effect of the observation to be introduced gradually. Define $\xtlam$ as the state at time $t$ and pseudo-time $\lambda$.
-
-\subsection{The Extended Target Distribution}
+First, as in \cite{Daum2011d}, a variable $\lambda \in [0,1]$ is introduced. Intuitively, this is a stretch of ``pseudo-time'' between the predictive and filtering distributions, allowing the effect of the observation to be introduced gradually. Define $\xtlam$ as the state at time $t$ and pseudo-time $\lambda$.
 
 Now we define a continuous sequence of target densities,
 %
 \begin{IEEEeqnarray}{rCl}
- \tilpitlam(x_{1:t-1}, \xtlam) & = & \frac{ p(y_t | \xtlam)^{\lambda} p(\xtlam | x_{t-1}) p(x_{1:t-1}|y_{1:t-1}) }{ \tilde{K}_{\lambda} } \nonumber \\
- \tilde{K}_{\lambda} & = & \int p(y_t | \xtlam)^{\lambda} p(\xtlam | y_{1:t-1}) d\xtlam      .
+ \tilpit{\lambda}(x_{1:t-1}, \xt{\lambda}) & = & \frac{ p(y_t | \xt{\lambda})^{\lambda} p(\xt{\lambda} | x_{t-1}) p(x_{1:t-1}|y_{1:t-1}) }{ \tilde{K}_{\lambda} } \nonumber \\
+ \tilde{K}_{\lambda} & = & \int p(y_t | \xt{\lambda})^{\lambda} p(\xt{\lambda} | y_{1:t-1}) d\xt{\lambda}      .
 \end{IEEEeqnarray}
 %
-This is equal to the predictive density when $\lambda=0$ and the desired filtering density when $\lambda=1$. However, this will not allow us to formulate an appropriate particle filter, because the weight update calculation will contain an intractable integral. This difficulty is circumvented through the device of an extended target distribution, introduced by \cite{DelMoral2006} in the context of SMC samplers.
+This is equal to the predictive density when $\lambda=0$ and the desired filtering density when $\lambda=1$. Rather than attempting to propose particles directly to approximate $p(x_{1:t}|y_{1:t})$, we begin with our predictive particles sampled from the transition density and move incrementally through pseudo-time, targeting $\tilpit{\lambda}$ with an SMC sampler.
+
+\subsection{SMC Sampler Steps}
+
+Here we consider a generic SMC method for advancing the particle approximation through pseudo-time. Assume we have a set of particles $\{\xt{\lambda_0}^{(i)}\}$ with weights $\{\wt{\lambda_0}^{(i)}\}$ approximating $\tilpit{\lambda_0}$ and consider the change between $\lambda_0$ and a later pseudo-time $\lambda_1$. For the $(j)$th particle, a new state, $\xt{\lambda_1}^{(j)}$ is sampled from an importance density, $q(\xt{\lambda_1}^{(j)} | \xt{\lambda_0}^{(j)})$. We wish to target the $\tilpit{\lambda_1}$; however, this would lead to a (usually intractable) integral in evaluating the associated particle weight,
+%
+\begin{IEEEeqnarray}{rCl}
+ \wt{\lambda_1}^{(j)} & = & \frac{ \tilpit{\lambda_1}(x_{1:t-1}, \xt{\lambda_1}) }{ \int \tilpit{\lambda_1}(x_{1:t-1}, \xt{\lambda_0}) q(\xt{\lambda_1}^{(j)} | \xt{\lambda_0}^{(j)}) d\xt{\lambda_0} } \nonumber     .
+\end{IEEEeqnarray}
+%
+To circumvent this intractability, an SMC sampler \cite{DelMoral2006} employs an extended target distribution over $\xt{\lambda_0}$ and $\xt{\lambda_1}$ by introducing an artificial conditional density, $\rho(\xt{\lambda_0} | \xt{\lambda_1})$. The weight formula for this extended target is then,
+%
+\begin{IEEEeqnarray}{rCl}
+ \wt{\lambda_1}^{(j)} & = & \frac{ \tilpit{\lambda_1}(x_{1:t-1}, \xt{\lambda_1}) \rho(\xt{\lambda_0} | \xt{\lambda_1}) }{ \tilpit{\lambda_1}(x_{1:t-1}, \xt{\lambda_0}) q(\xt{\lambda_1}^{(j)} | \xt{\lambda_0}^{(j)}) } \nonumber \\
+ & = & \wt{\lambda_0}^{(j)} \frac{ p(y_t | \xt{\lambda_1})^{\lambda_1} p(\xt{\lambda_1} | x_{t-1}) }{ p(y_t | \xt{\lambda_0})^{\lambda_0} p(\xt{\lambda_0} | x_{t-1}) } \times \frac{ \rho(\xt{\lambda_0} | \xt{\lambda_1}) }{ q(\xt{\lambda_1}^{(j)} | \xt{\lambda_0}^{(j)}) }
+\end{IEEEeqnarray}
+%
+This is easily evaluated, after which the $\xt{\lambda_0}$ states may be marginalised (i.e. simply discarded).
+
+{\meta Discuss either here or at the start of the section that this is the same as what you would use for an SMC version of the Godsill method. In fact, I think this is in the SMC paper by Del Moral et al.}
+
+
+\subsection{The Optimal Particle Flow}
+
+\subsection{Artificial Target Densities and Weight Updates}
+\subsubsection{Deterministic Flows}
+\subsubsection{Stochastic Flows}
+
+
+
+\section{The Linear Gaussian Model}
+\subsection{Optimal Deterministic Flow}
+\subsection{Optimal Stochastic Flow}
+
+
+
+\section{Nonlinear Non-Gaussian Models}
+\subsection{Linearisation}
+\subsection{Scale Mixtures of Normals}
+\subsection{Gradient Matching}
+
+
+
+{\meta OLD STUFF}
+
+ However, this will not allow us to formulate an appropriate particle filter, because the weight update calculation will contain an intractable integral. This difficulty is circumvented through the device of an extended target distribution, introduced by \cite{DelMoral2006} in the context of SMC samplers.
 
 The variable over which we extend the target distribution is the continuous state trajectory over the pseudo-time interval $\left(0,\lambda\right)$, which we denote, $\xtztl$. The target distribution then chosen for the SUPF has the measure,
 %
