@@ -240,7 +240,7 @@ To circumvent this intractability, an SMC sampler \cite{DelMoral2006} employs an
 %
 \begin{IEEEeqnarray}{rCl}
  \wt{\lambda_1}\pij & = & \frac{ \tilpit{\lambda_1}(x_{1:t-1}, \xt{\lambda_1}) \rho(\xt{\lambda_0} | \xt{\lambda_1}) }{ \tilpit{\lambda_1}(x_{1:t-1}, \xt{\lambda_0}) q(\xt{\lambda_1}\pij | \xt{\lambda_0}\pij) } \nonumber \\
- & = & \wt{\lambda_0}\pij \frac{ p(y_t | \xt{\lambda_1})^{\lambda_1} p(\xt{\lambda_1} | x_{t-1}) }{ p(y_t | \xt{\lambda_0})^{\lambda_0} p(\xt{\lambda_0} | x_{t-1}) } \times \frac{ \rho(\xt{\lambda_0} | \xt{\lambda_1}) }{ q(\xt{\lambda_1}\pij | \xt{\lambda_0}\pij) }
+ & = & \wt{\lambda_0}\pij \frac{ p(y_t | \xt{\lambda_1})^{\lambda_1} p(\xt{\lambda_1} | x_{t-1}) }{ p(y_t | \xt{\lambda_0})^{\lambda_0} p(\xt{\lambda_0} | x_{t-1}) } \times \frac{ \rho(\xt{\lambda_0} | \xt{\lambda_1}) }{ q(\xt{\lambda_1}\pij | \xt{\lambda_0}\pij) } \label{eq:general_weight_update}
 \end{IEEEeqnarray}
 %
 This is easily evaluated, after which the $\xt{\lambda_0}$ states may be marginalised (i.e. simply discarded).
@@ -261,7 +261,7 @@ Hence, $\pit{0}$ is the transition density and $\pit{1}$ the usual OID.
 As pseudo-time advances from $0$ to $1$, particles are moved according to a stochastic differential equation (time subscripts $t$ omitted for clarity),
 %
 \begin{IEEEeqnarray}{rCl}
- d\lam{x}\pij & = & \lam{f}\pij(\lam{x}\pij) d\lambda + \lam{g}\pij d\lam{\epsilon}\pij     ,
+ d\lam{x}\pij & = & \lam{f}\pij(\lam{x}\pij) d\lambda + \lam{g}\pij d\lam{\epsilon}\pij \label{eq:flow}     ,
 \end{IEEEeqnarray}
 %
 where $\lam{\epsilon}\pij$ is a Brownian motion. Note that a more general case in which $\lam{g}$ depended on $\lam{x}$ could also be used, but this has not been investigated.
@@ -270,13 +270,12 @@ An optimal particle flow is produced by selecting $\lam{f}\pij$ and $\lam{g}\pij
 %
 \begin{IEEEeqnarray}{rCl}
 \log\left(\beta(\lam{x})\right) - \mathbb{E}_{\pilam}\left[ \log\left(\beta(\lam{x})\right) \right] & = & -\nabla\cdot \lam{f}(\lam{x}) - \lam{f}(\lam{x}) \cdot \nabla \log\left( \pilam(\lam{x}) \right) \nonumber \\
- &   & \qquad + \: \frac{1}{\pilam(\lam{x})} \nabla \cdot \left[ \lam{D} \nabla \pilam(\lam{x}) \right]      ,
+ &   & \qquad + \: \frac{1}{\pilam(\lam{x})} \nabla \cdot \left[ \lam{D} \nabla \pilam(\lam{x}) \right] \label{optimal_flow_PDE}      ,
 \end{IEEEeqnarray}
 %
 where
 %
 \begin{IEEEeqnarray}{rCl}
- \alpha(x) & = & p(x|x_{t-1}) \nonumber \\
  \beta(x) & = & p(y_t|x) \nonumber \\
  \lam{D} & = & \frac{1}{2} \lam{g} \lam{g}^T \nonumber      .
 \end{IEEEeqnarray}
@@ -289,15 +288,152 @@ Clearly, it will not often be possible to derive closed form expressions for suc
 
 
 
-\subsection{Artificial Target Densities and Weight Updates}
+\subsection{Weight Updates, Importance and Artificial Target Densities}
+
+Having chosen a flow, \eqref{eq:flow}, with which to move the particles, the next step is to use this to deduce the resulting proposal distribution and a suitable artificial conditional distribution with which to extend the target. We will examine two cases separately; the first where $\lam{g}=0$, and the particles are moved entirely deterministically, and second case where $\lam{g}\ne0$ and the particles move stochastically.
+
 \subsubsection{Deterministic Flows}
+
+When $\lam{g}=0$, the stochastic differential equation \eqref{eq:flow} for particle motion collapses to an ordinary differential equation,
+%
+\begin{IEEEeqnarray}{rCl}
+ \frac{d\xlam}{d\lambda} & = & \flam(\xlam)     .
+\end{IEEEeqnarray}
+
+In this case the particles are moved deterministically, meaning that the proposal density associated with an advance in pseudo-time from $\lambda_0$ to $\lambda_1$ collapses to a delta function. To find a valid formula for the weight update, we revert to the fundamental description of a particle weight as the ration of target and importance probability measures. Thus, equation~\eqref{eq:general_weight_update} becomes,
+%
+\begin{IEEEeqnarray}{rCl}
+  \wt{\lambda_1}\pij & = & \wt{\lambda_0}\pij \frac{ p(y_t | \xt{\lambda_1})^{\lambda_1} p(d\xt{\lambda_1} | x_{t-1}) }{ p(y_t | \xt{\lambda_0})^{\lambda_0} p(d\xt{\lambda_0} | x_{t-1}) } \times \frac{ \rho(d\xt{\lambda_0} | \xt{\lambda_1}) }{ q(d\xt{\lambda_1}\pij | \xt{\lambda_0}\pij) } \nonumber \\
+  & = & \wt{\lambda_0}\pij \frac{ p(y_t | \xt{\lambda_1})^{\lambda_1} p(\xt{\lambda_1} | x_{t-1}) }{ p(y_t | \xt{\lambda_0})^{\lambda_0} p(\xt{\lambda_0} | x_{t-1}) } \times \left| \frac{\partial \xt{\lambda_1}}{\partial \xt{\lambda_0}} \right| \times \frac{ \rho(d\xt{\lambda_0} | \xt{\lambda_1}) }{ q(d\xt{\lambda_1}\pij | \xt{\lambda_0}\pij) }    \label{eq:measure_weight_update}     .
+\end{IEEEeqnarray}
+%
+For the importance measure, we select,
+%
+\begin{IEEEeqnarray}{rCl}
+ q(d\xt{\lambda_1}\pij | \xt{\lambda_0}\pij) & = & \mathbbm{1}_{ \phi_{\lambda_0}^{\lambda_1} (\xt{\lambda_0}) }(d\xt{\lambda_1})     ,
+\end{IEEEeqnarray}
+%
+where the transport map is given by,
+%
+\begin{IEEEeqnarray}{rCl}
+ \phi_{\lambda_0}^{\lambda_1} (\xt{\lambda_0}) & = & \xt{\lambda_0} + \int_{\lambda_0}^{\lambda_1} \lam{f}(\xt{l}) d\xt{l}     .
+\end{IEEEeqnarray}
+%
+An appropriate choice for the artificial conditional is a second indicator measure at the point given by the integral of the time-reversed flow,
+%
+\begin{IEEEeqnarray}{rCl}
+ \rho(d\xt{\lambda_1}\pij | \xt{\lambda_0}\pij) & = & \mathbbm{1}_{ \phi_{\lambda_1}^{\lambda_0} (\xt{\lambda_1}) }(d\xt{\lambda_0})     .
+\end{IEEEeqnarray}
+%
+This results in a cancellation, and hence the following weight update equation,
+%
+\begin{IEEEeqnarray}{rCl}
+ \wt{\lambda_1}\pij & = & \wt{\lambda_0}\pij \frac{ p(y_t | \xt{\lambda_1})^{\lambda_1} p(\xt{\lambda_1} | x_{t-1}) }{ p(y_t | \xt{\lambda_0})^{\lambda_0} p(\xt{\lambda_0} | x_{t-1}) } \times \left| \frac{\partial \xt{\lambda_1}}{\partial \xt{\lambda_0}} \right|  \label{eq:deterministic_weight_update}     .
+\end{IEEEeqnarray}
+
+
+
 \subsubsection{Stochastic Flows}
+
+When $\lam{g}\ne0$, we can use \eqref{eq:general_weight_update} directly. The importance density is found by integrating the stochastic differential equation governing the flow \eqref{eq:flow} using the selected values of $\lam{f}$ and $\lam{g}$. The optimal choice for the artificial conditional density (in the sense of minimising the weight variance) is shown in \cite{DelMoral2006} to be,
+%
+\begin{IEEEeqnarray}{rCl}
+ \rho(\xt{\lambda_1}\pij | \xt{\lambda_0}\pij) & = & \frac{ \pilam(\xt{\lambda_1} | x_{t-1}) q(\xt{\lambda_1} | \xt{\lambda_0}) }{ \int \pilam(\xlam | x_{t-1} q(\xt{\lambda_1} | \xt{\lambda_0}) d\xlam }     .
+\end{IEEEeqnarray}
 
 
 
 \section{The Linear Gaussian Model}
+
+In order to implement an optimal form of the algorithm set out in the previous section, we need to achieve the following tasks:
+\begin{itemize}
+  \item Solve \eqref{eq:optimal_flow_PDE} to find the optimal choice for $\lam{f}$.
+  \item Select $\lam{g}$ and hence use $\lam{f}$ and $\lam{g}$ to find the importance density, $q(\xt{\lambda_1} | \xt{\lambda_0})$.
+  \item Calculate the optimal artificial conditional density, $\rho(\xt{\lambda_1}\pij | \xt{\lambda_0}\pij)$ in the stochastic case, or the required Jacobian in the deterministic case.
+\end{itemize}
+
+These can all be performed analytically for a linear Gaussian model, specifically a model with a linear observation function and Gaussian transition and observation densities. The transition function need not be linear.
+%
+\begin{IEEEeqnarray}{rCl}
+ p(x_t | x_{t-1}) & = & \mathcal{N}(x_t|f(x_{t-1}),Q) \nonumber \\
+ p(y_t | x_t)     & = & \mathcal{N}(y_t|H x_t,R)
+\end{IEEEeqnarray}
+
+{\meta NOTATION OVERLOAD: $f$ is used for both the flow and the transition function. Damn. FIX.}
+
+This is the same model for which the OID can be calculated analytically, so using an SUPF here is largely redundant in practice. However, consideration of this model will lead us to a method for running a near-optimal SUPF for nonlinear non-Gaussian models.
+
+
 \subsection{Optimal Deterministic Flow}
+
+When $\lam{g}=0$, the optimal choice for $\lam{f}$ in the deterministic case is given by,
+%
+\begin{IEEEeqnarray}{rCl}
+ \lam{f}(\lam{x}) & = & \lam{A} \lam{x} + \lam{b},
+\end{IEEEeqnarray}
+%
+where
+%
+\begin{IEEEeqnarray}{rCl}
+ \lam{A} & = & - \frac{1}{2} Q H^T \left(R + \lambda H Q H^T \right)^{-1} H \\
+ \lam{b} & = & \left[ I + 2 \lambda \lam{A} \right] \left[ (I + \lambda \lam{A}) Q H^T R^{-1} y + \lam{A} f(x_{t-1}) \right]     .
+\end{IEEEeqnarray}
+%
+For proof, see Appendix~\ref{app:optimal_flow_linear_Gaussian}.
+
+For this optimal choice of $\lam{f}$, the map associated with a transition form $\lambda_0$ to $\lambda_1$ is,
+%
+\begin{IEEEeqnarray}{rCl}
+ \phi_{\lambda_0}^{\lambda_1} (\xt{\lambda_0) & = & 
+\end{IEEEeqnarray}
+%
+For proof see Appendix~\ref{app:optimal_map_linear_Gaussian}.
+
+Finally, the Jacobian required for the weight update is given by,
+%
+\begin{IEEEeqnarray}{rCl}
+ \left| \frac{\partial \xt{\lambda_1}}{\partial \xt{\lambda_0}} \right| & = & 
+\end{IEEEeqnarray}
+
+
+
 \subsection{Optimal Stochastic Flow}
+
+When $\lam{g}\ne0$, the optimal choice for $\lam{f}$ in the deterministic case is given by,
+%
+\begin{IEEEeqnarray}{rCl}
+ \lam{f}(\lam{x}) & = & A_{D,\lambda} \lam{x} + b_{D,\lambda},
+\end{IEEEeqnarray}
+%
+where
+%
+ A_{D,\lambda} & = & \lam{A} - \lam{D} \left[ Q^{-1} + H^T R^{-1} H \right] \\
+ b_{D,\lambda} & = & \lam{b} + \lam{D} \left[ Q^{-1} f(x_{t-1}) + \lambda H^T R^{-1} y \right]     .
+\end{IEEEeqnarray}
+%
+For proof, see Appendix~\ref{app:optimal_flow_linear_Gaussian}.
+
+A suitable choice of $\lam{g}$ for this model is,
+%
+\begin{IEEEeqnarray}{rCl}
+ \lam{g} & = &
+\end{IEEEeqnarray}
+
+For these choices of $\lam{f}$ and $\lam{g}$, the importance density associated with a transition form $\lambda_0$ to $\lambda_1$ is,
+%
+\begin{IEEEeqnarray}{rCl}
+ q(\xt{\lambda_1} | \xt{\lambda_0})
+\end{IEEEeqnarray}
+%
+For proof see Appendix~\ref{app:optimal_importance_density_linear_Gaussian}.
+
+
+
+\subsection{Optimal SUPF for the Linear Gaussian Model}
+
+Using the derived equations for the linear Gaussian model, an optimal SUPF algorithm can be implemented, as detailed in algorithm~\ref{}.
+
+{\meta Put a pseudo-code algorithm here.}
 
 
 
@@ -308,147 +444,16 @@ Clearly, it will not often be possible to derive closed form expressions for suc
 
 
 
+\section{Numerical Simulations}
+\subsection{A Linear Gaussian Model}
+\subsection{A Nonlinear Model}
+\subsubsection{Gaussian Noise}
+\subsubsection{Student-t Noise}
+
 {\meta OLD STUFF}
 
 
 
-\section{The Deterministic Smooth Update}
-
-Particle superscripts are omitted for clarity in this section. We first consider the case where $g_{\lambda}=0$, meaning that particles are moved deterministically as we move through the pseudo-time interval according to,
-%
-\begin{IEEEeqnarray}{rCl}
- \frac{d\xlam}{d\lambda} & = & \flam(\xlam)     .
-\end{IEEEeqnarray}
-
-By integrating the flow along the particle trajectory, a map is defined between the state at any two points in pseudo-time, which we write as,
-%
-\begin{IEEEeqnarray}{rCcCl}
- x_{\lambda_2} & = & \phi_{\lambda_1,\lambda_2}(x_{\lambda_1}) & = & x_{\lambda_1} + \int_{x_{\lambda_1}}^{\lambda_2} f_{l}(x_{l}) dl     .
-\end{IEEEeqnarray}
-
-
-
-\subsection{Weight Evolution}
-
-As the particles move continuously through the state space, it is necessary to simultaneously adjust the weights. Denote the weight at pseudo-time $\lambda$ as $w_{\lambda}$. We assume that $\flam$ satisfies conditions which ensure $\phi_{\lambda_1}^{\lambda_2}$ is invertible. {\meta I think the required condition is simply that $\flam$ be continuous. EDIT: No, its not. We could have a piecewise-linear approximation to $\flam$ which would still lead to an invertible $\phi$.}
-
-Suppose we have a set of correctly-weighted particles representing the target distribution at pseudo-time $\lambda$. The particles are then advanced to $\lambda+\delta\lambda$ deterministically and the weights updated using the standard SMC formula,
-%
-\begin{IEEEeqnarray}{rCl}
- w_{\lambda+\delta\lambda} & = & w_{\lambda} \frac{ d\tilpildl(x_{1:t-1}, \xldl) d\rho(\xztldl | \xldl) }{ d\tilpilam(x_{1:t-1}, \xlam) d\rho(\xztl | \xlam) \mathbbm{1}_{\phi_{\lambda,\lambda+\delta\lambda}(\xlam)}(\xldl) } \nonumber \\
-                          & = & w_{\lambda} \frac{ d\tilpildl(x_{1:t-1}, \xldl) d\rho(\xlam | \xldl) }{ d\tilpilam(x_{1:t-1}, \xlam) \mathbbm{1}_{\phi_{\lambda,\lambda+\delta\lambda}(\xlam)}(\xldl) } \nonumber \\
-                          & = & w_{\lambda} \frac{ \tilpildl(x_{1:t-1}, \xldl) }{ \tilpilam(x_{1:t-1}, \xlam) } \left|\frac{ \partial \xldl }{ \partial \xlam }\right| \frac{ d\rho(\xlam | \xldl) }{ \mathbbm{1}_{\phi_{\lambda,\lambda+\delta\lambda}(\xlam)}(\xldl) } \nonumber      .
-\end{IEEEeqnarray}
-%
-If we choose $d\rho(\xlam | \xldl) = \mathbbm{1}_{\phi_{\lambda,\lambda+\delta\lambda}^{-1}(\xldl)}(\xlam)$, then the indicator measures cancel out and we are left with,
-%
-\begin{IEEEeqnarray}{rCl}
- w_{\lambda+\delta\lambda} & = & w_{\lambda} \frac{ \pildl(\xldl) }{ \pilam(\xlam) } \left|\frac{ \partial \xldl }{ \partial \xlam }\right| \nonumber       .
-\end{IEEEeqnarray}
-
-For a short interval, $\delta\lambda$, we have,
-%
-\begin{IEEEeqnarray}{rCl}
- \xldl & = & \xlam + \flam(\xlam) \delta\lambda \nonumber      ,
-\end{IEEEeqnarray}
-%
-in which case the Jacobian is given by,
-%
-\begin{IEEEeqnarray}{rCl}
- \left|\frac{ \partial \xldl }{ \partial \xlam }\right| & = & \left| I + \delta\lambda \left.\frac{\partial\flam}{\partial\xlam}\right|_{\lambda,\xlam} \right|     .
-\end{IEEEeqnarray}
-
-To establish the weight update from $\lambda_1$ to $\lambda_2$, we consider dividing the interval up into many such short increments and then taking a limit as $\delta\lambda\rightarrow0$,
-%
-\begin{IEEEeqnarray}{rCl}
- w_{\lambda_2} & = & w_{\lambda_1} \frac{ \tilde{\pi}_{\lambda_1}(x_{1:t-1}, x_{\lambda_1}) }{ \tilde{\pi}_{\lambda_2}(x_{1:t-1}, x_{\lambda_2}) } \prod_n \left| I + \delta\lambda \left.\frac{\partial f_{\nu}}{\partial x_{\nu}}\right|_{\lambda_1+n\delta\lambda,x_{\lambda_1+n\delta\lambda}} \right| \nonumber \\
- & = & w_{\lambda_1} \frac{ \tilde{\pi}_{\lambda_1}(x_{1:t-1}, x_{\lambda_1}) }{ \tilde{\pi}_{\lambda_2}(x_{1:t-1}, x_{\lambda_2}) } \left| I + \delta\lambda \sum_n \left.\frac{\partial f_{\nu}}{\partial x_{\nu}}\right|_{\lambda_1+n\delta\lambda,x_{\lambda_1+n\delta\lambda}} + \mathcal{O}(\delta\lambda^2) \right| \nonumber \\
- & = & w_{\lambda_1} \frac{ \tilde{\pi}_{\lambda_1}(x_{1:t-1}, x_{\lambda_1}) }{ \tilde{\pi}_{\lambda_2}(x_{1:t-1}, x_{\lambda_2}) } \left[ 1 + \delta\lambda \sum_n \mathcal{TR}\left[ \left.\frac{\partial f_{\nu}}{\partial x_{\nu}}\right|_{\lambda_1+n\delta\lambda,x_{\lambda_1+n\delta\lambda}} + \mathcal{O}(\delta\lambda)\right] \right] \nonumber \\
- & \rightarrow & w_{\lambda_1} \frac{ \tilde{\pi}_{\lambda_1}(x_{1:t-1}, x_{\lambda_1}) }{ \tilde{\pi}_{\lambda_2}(x_{1:t-1}, x_{\lambda_2}) } \left[ 1 + \int_{0}^{\lambda} \mathcal{TR}\left[ \left.\frac{\partial f_{\nu}}{\partial x_{\nu}}\right|_{l,x_l} \right] dl \right]       .
-\end{IEEEeqnarray}
-
-Both the total and incremental weight formulas will prove useful.
-
-
-
-\subsection{Numerical Integration}
-
-In all but a few trivial cases, it will not be possible to evaluate the integrals required in the calculation of new particle locations and weights. Instead, numerical integration schemes must be used in the calculation of both the particle trajectories and the associated weight. For example, using an Euler's method for numerical integration, state and weight updates are given by,
-%
-\begin{IEEEeqnarray}{rCl}
- \xldl & = & \xlam + \flam(\xlam) \delta\lambda \nonumber \\
- w_{\lambda+\delta\lambda} & = & w_{\lambda} \frac{ \pildl(\xldl) }{ \pilam(\xlam) } \left| I + \delta\lambda \left.\frac{\partial\flam}{\partial\xlam}\right|_{\lambda,\xlam} \right|      .
-\end{IEEEeqnarray}
-%
-using some suitably chosen step size, $\delta\lambda$. This numerical integration step is a source of additional error in the SUPF. Updates become exact as $\delta\lambda\rightarrow0$.
-
-{\meta For the linear flow generated by the linear-Gaussian model, the weight update integral can be done analytically. If we could only do the state update integral exactly as well then we could make this computationally more efficient and asymptotically better, as we wouldn't need the $\delta\lambda\rightarrow0$ for consistency.}
-
-{\meta Should add something about step-size selection.}
-
-
-
-\subsection{Optimal Particle Flows}
-
-This derivation is based closely on the exposition of \cite{Daum2008}, but we consider sampling from the OID rather than directly from the filtering distribution.
-
-Since we need consider only a single step and a single particle, we omit the time subscripts, particle superscripts and the dependence on $x_{t-1}$ for clarity in the following derivations. In addition, the transition and observation densities are written as,
-%
-\begin{IEEEeqnarray}{rCl}
- \alpha(x) & = & p(x|x_{t-1}) \nonumber \\
- \beta(x) & = & p(y_t|x) \nonumber      .
-\end{IEEEeqnarray}
-
-An equation for the optimal flow may be derived by considering our sequence of densities,
-%
-\begin{IEEEeqnarray}{rCl}
- \pilam(\xlam) & = & \frac{ \alpha(\xlam) \beta(\xlam)^\lambda }{ K_{\lambda} }      .
-\end{IEEEeqnarray}
-%
-Taking the log and differentiating with respect to $\lambda$ and $\xlam$,
-%
-\begin{IEEEeqnarray}{rCl}
- \log\left( \pilam(\xlam) \right) & = & \log\left( \alpha(\xlam) \right) + \lambda \log\left( \beta(\xlam) \right) - \log\left(K_{\lambda}\right)     ,
-\end{IEEEeqnarray}
-%
-\begin{IEEEeqnarray}{rCl}
- \frac{\partial}{\partial \lambda} \log\left( \pilam(\xlam) \right) & = & \frac{ 1 }{ \pilam(\xlam) } \frac{\partial \pilam}{\partial \lambda} \nonumber \\
-  & = & \log\left(\beta(\xlam)\right) - \frac{d}{d\lambda}\log\left(K_{\lambda}\right) \label{eq:dpi-dlam}     ,
-\end{IEEEeqnarray}
-%
-\begin{IEEEeqnarray}{rCl}
- \nabla \log\left( \pilam(\xlam) \right) & = & \frac{ 1 }{ \pilam(\xlam) } \nabla \pilam(\xlam) \label{eq:dpi-dx}     .
-\end{IEEEeqnarray}
-%
-The Fokker-Planck equation relates the flow of a particle with the evolution of the density for its position. For our deterministic case, particles move according to,
-%
-\begin{IEEEeqnarray}{rCl}
- \frac{d\xlam}{d\lambda} & = & \flam(\xlam)     ,
-\end{IEEEeqnarray}
-%
-then from Fokker-Planck, \eqref{eq:dpi-dlam} and \eqref{eq:dpi-dx}, we have,
-%
-\begin{IEEEeqnarray}{rCl}
- \frac{\partial \pilam}{\partial \lambda} & = & -\nabla \cdot \left[ \flam(\xlam) \pilam(\xlam) \right]     \nonumber \\
- \pilam(\xlam) \left[ \log\left(\beta(\xlam)\right) - \frac{d}{d\lambda}\log\left(K_{\lambda}\right) \right] & = & -\nabla\cdot \flam(\xlam) \pilam(\xlam) - \flam(\xlam) \cdot \nabla \pilam(\xlam) \nonumber \\
- \left[ \log\left(\beta(\xlam)\right) - \frac{d}{d\lambda}\log\left(K_{\lambda}\right) \right] & = & -\nabla\cdot \flam(\xlam) - \flam(\xlam) \cdot \nabla \log\left( \pilam(\xlam) \right)      .
-\end{IEEEeqnarray}
-%
-where in the last step we have divided through by $\pilam$. This requires the density to be nowhere vanishing. Finally consider the normalising constant,
-%
-\begin{IEEEeqnarray}{rCl}
- \frac{d}{d\lambda}\log\left(K_{\lambda}\right) & = & \frac{\frac{dK}{d\lambda}}{K_{\lambda}} \nonumber \\
-                                               & = & \frac{ \int \alpha(\xlam) \beta(\xlam)^\lambda \log\left(\beta(\xlam)\right) dx_t }{ \int \alpha(\xlam) \beta(\xlam)^\lambda d\xlam } \nonumber \\
-                                               & = & \mathbb{E}_{\pilam}\left[ \log\left(\beta(\xlam)\right) \right]     .
-\end{IEEEeqnarray}
-%
-Thus,
-%
-\begin{IEEEeqnarray}{rCl}
- \log\left(\beta(\xlam)\right) - \mathbb{E}_{\pilam}\left[ \log\left(\beta(\xlam)\right) \right] & = & -\nabla\cdot \flam(\xlam) - \flam(\xlam) \cdot \nabla \log\left( \pilam(\xlam) \right)      .
-\end{IEEEeqnarray}
-
-The result is a partial differential equation (PDE), for which any solution, $\flam(\xlam)$, will be an optimal flow, which maps particles sampled from the prior (i.e. the transition density) to new locations distributed according to the posterior (i.e. the OID).
 
 
 
@@ -813,7 +818,7 @@ The model parameters are as follows:
 
 \section{Conclusions}
 
-\theappendix
+\appendix
 
 \section{Governing Equation for the Optimal Flow} \label{app:optimal_flow_governing_eq}
 
@@ -874,6 +879,14 @@ Thus,
 \end{IEEEeqnarray}
 
 The result is a partial differential equation (PDE), for which any solution, $\lam{f}$ and $\lam{g}$, will produce an optimal flow, which maps particles sampled from the prior (i.e. the transition density) to new locations distributed according to the OID.
+
+
+
+\section{Optimal Deterministic Flow for a Linear Gaussian Model} \label{app:optimal_flow_linear_Gaussian}
+
+\section{Optimal Deterministic Transport Map for a Linear Gaussian Model} \label{app:optimal_map_linear_Gaussian}
+
+\section{Optimal Importance Density for a Linear Gaussian Model} \label{app:optimal_importance_density_linear_Gaussian}
 
 
 \bibliographystyle{plain}
