@@ -26,6 +26,10 @@
 \newenvironment{meta}[0]{\color{red} \em}{}
 
 % Notational shortcuts
+
+
+
+%%% OLD SHORTCUTS %%%
 \newcommand{\tilpit}[1]{\tilde{\pi}_{t,#1}}
 \newcommand{\pit}[1]{\pi_{t,#1}}
 \newcommand{\xt}[1]{x_{t,#1}}
@@ -38,7 +42,7 @@
 \newcommand{\pii}{^{(i)}}
 
 
-%%% OLD SHORTCUTS %%%
+%%% OLD OLD SHORTCUTS %%%
 \newcommand{\tilpitlam}{\tilde{\pi}_{t,\lambda}}
 \newcommand{\tilpitldl}{\tilde{\pi}_{t,\lambda+\delta\lambda}}
 \newcommand{\pitlam}{\pi_{t,\lambda}}
@@ -384,7 +388,7 @@ For proof, see Appendix~\ref{app:optimal_flow_linear_Gaussian}.
 For this optimal choice of $\lam{f}$, the map associated with a transition form $\lambda_0$ to $\lambda_1$ is,
 %
 \begin{IEEEeqnarray}{rCl}
- \phi_{\lambda_0}^{\lambda_1} (\xt{\lambda_0) & = & 
+ \phi_{\lambda_0}^{\lambda_1} (\xt{\lambda_0}) & = &
 \end{IEEEeqnarray}
 %
 For proof see Appendix~\ref{app:optimal_map_linear_Gaussian}.
@@ -392,7 +396,7 @@ For proof see Appendix~\ref{app:optimal_map_linear_Gaussian}.
 Finally, the Jacobian required for the weight update is given by,
 %
 \begin{IEEEeqnarray}{rCl}
- \left| \frac{\partial \xt{\lambda_1}}{\partial \xt{\lambda_0}} \right| & = & 
+ \left| \frac{\partial \xt{\lambda_1}}{\partial \xt{\lambda_0}} \right| & = &
 \end{IEEEeqnarray}
 
 
@@ -407,6 +411,7 @@ When $\lam{g}\ne0$, the optimal choice for $\lam{f}$ in the deterministic case i
 %
 where
 %
+\begin{IEEEeqnarray}{rCl}
  A_{D,\lambda} & = & \lam{A} - \lam{D} \left[ Q^{-1} + H^T R^{-1} H \right] \\
  b_{D,\lambda} & = & \lam{b} + \lam{D} \left[ Q^{-1} f(x_{t-1}) + \lambda H^T R^{-1} y \right]     .
 \end{IEEEeqnarray}
