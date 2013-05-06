@@ -452,7 +452,15 @@ For proof, see Appendix~\ref{app:optimal_flow_linear_Gaussian}.
 For this optimal choice of $\flowdrift{\pt}$, the map associated with a transition from $\pt_0$ to $\pt_1$ is,
 %
 \begin{IEEEeqnarray}{rCl}
- \flowmap{\pt_0}{\pt_1} (\ls{\rt,\pt_0}) & = & \exp\left\{ -\frac{\lfdiffsf}{2} \left( \pt_1 - \pt_0 \right) \right\} 
+ \flowmap{\pt_0}{\pt_1} (\ls{\rt,\pt_0}) & = & \lginterm{\pt_1}^{-\frac{1}{2}} \bigg[ \lginterm{\pt_0}^{\frac{1}{2}} \ls{\pt_0} \nonumber \\
+  & & \qquad + \: \left( \lginterm{\pt_1}^{\frac{1}{2}} - \lginterm{\pt_0}^{\frac{1}{2}} \right) \obsmat^+ \ob{\rt} \nonumber \\
+  & & \qquad - \: \left( \lginterm{\pt_1}^{-\frac{1}{2}} - \lginterm{\pt_0}^{-\frac{1}{2}} \right) \left( \obsmat^+ \ob{\rt} - \transfun(\ls{\rt-1}) \right) \bigg]     ,
+\end{IEEEeqnarray}
+%
+where,
+%
+\begin{IEEEeqnarray}{rCl}
+ \lginterm{\pt} & = & I + \pt \transcov \obsmat^T \obscov^{-1} \obsmat \nonumber     .
 \end{IEEEeqnarray}
 %
 For proof see Appendix~\ref{app:optimal_map_linear_Gaussian}.
@@ -460,7 +468,8 @@ For proof see Appendix~\ref{app:optimal_map_linear_Gaussian}.
 Finally, the Jacobian required for the weight update is given by,
 %
 \begin{IEEEeqnarray}{rCl}
- \magdet{ \frac{\partial \ls{\pt_1}}{\partial \ls{\pt_0}} } & = &
+ \magdet{ \frac{\partial \ls{\pt_1}}{\partial \ls{\pt_0}} } & = & \magdet{ \lginterm{\pt_1}^{-\frac{1}{2}} \lginterm{\pt_0}^{\frac{1}{2}} } \nonumber \\
+ & = & \sqrt{ \frac{\magdet{\lginterm{\pt_0}}}{\magdet{\lginterm{\pt_1}}} }
 \end{IEEEeqnarray}
 
 
@@ -485,8 +494,11 @@ For proof, see Appendix~\ref{app:optimal_flow_linear_Gaussian}.
 A suitable choice of $\flowdiffuse{\pt}$ for this model is,
 %
 \begin{IEEEeqnarray}{rCl}
- \flowdiffuse{\pt} & = &
+ \flowdiffuse{\pt} & = & \left[ \lfdiffsf \lgoicov{\pt} \right]^{\frac{1}{2}} \nonumber \\
+                   & = & \left[ \lfdiffsf \left( \transcov^{-1} + \pt \obsmat^T \obscov^{-1} \obsmat \right) \right]^{\frac{1}{2}}     ,
 \end{IEEEeqnarray}
+%
+where $\lfdiffsf$ is a positive scale factor. This choice encourages particles to diffuse faster in directions with a larger covariance and thus a larger uncertainty, which seems intuitively sensible.
 
 For these choices of $\flowdrift{\pt}$ and $\flowdiffuse{\pt}$, the importance density associated with a transition form $\pt_0$ to $\pt_1$ is,
 %
@@ -944,14 +956,14 @@ where in the last step we have divided through by $\oiden{\pt}$. This requires t
 Thus,
 %
 \begin{IEEEeqnarray}{rCl}
- \log\left(\flowod(\ls{\pt})\right) - \expect{\oiden{\pt}}\left[ \log\left(\flowod(\ls{\pt})\right) \right] & = & -\nabla\cdot \flowdrift{\pt}(\ls{\pt}) - \flowdrift{\pt}(\ls{\pt}) \cdot \nabla \log\left( \oiden{\pt}(\ls{\pt}) \right) + \frac{ 1 }{ \oiden{\pt}(\ls{\pt}) } \nabla \cdot \left[ \flowcov{\pt} \nabla \oiden{\pt}(\ls{\pt}) \right]      .
+ \log\left(\flowod(\ls{\pt})\right) - \expect{\oiden{\pt}}\left[ \log\left(\flowod(\ls{\pt})\right) \right] & = & -\nabla\cdot \flowdrift{\pt}(\ls{\pt}) - \flowdrift{\pt}(\ls{\pt}) \cdot \nabla \log\left( \oiden{\pt}(\ls{\pt}) \right) + \frac{ 1 }{ \oiden{\pt}(\ls{\pt}) } \nabla \cdot \left[ \flowcov{\pt} \nabla \oiden{\pt}(\ls{\pt}) \right] \label{app-eq:optimal_flow_PDE}      .
 \end{IEEEeqnarray}
 
 The result is a partial differential equation (PDE), for which any solution, $\flowdrift{\pt}$ and $\flowdiffuse{\pt}$, will produce an optimal flow, which maps particles sampled from the prior (i.e. the transition density) to new locations distributed according to the OID.
 
 
 
-\section{Optimal Deterministic Flow for a Linear Gaussian Model} \label{app:optimal_flow_linear_Gaussian}
+\section{Optimal Flow for a Linear Gaussian Model} \label{app:optimal_flow_linear_Gaussian}
 
 If the transition and observation densities are Gaussian, and the observation function is linear, then the optimal flow PDE can be solved analytically. Time subscripts, particle superscripts and dependence on $\ls{\rt-1}$ is omitted where appropriate for clarity. In addition, the transition and observation densities are written as,
 %
@@ -987,13 +999,15 @@ The following intermediate terms can then be calculated,
  \expect{\oiden{\pt}}\left[ (\ob{\rt}-\obsmat\ls{\pt})^T \obscov^{-1}(\ob{\rt}-\obsmat\ls{\pt}) \right] & = & \ob{\rt}^T \obscov^{-1} \ob{\rt} - 2 \ob{\rt}^T \obscov^{-1} \obsmat \lgoimean{\pt} + \lgoimean{\pt}^T \obsmat^T \obscov^{-1} \obsmat \lgoimean{\pt} + \trace\left( \obsmat^T \obscov^{-1} \obsmat \lgoicov{\pt} \right) \nonumber
 \end{IEEEeqnarray}
 
+\subsection{Deterministic Case}
+
 Assume the flow takes the form,
 %
 \begin{IEEEeqnarray}{rCl}
- \flowdrift{\pt}(\ls{\pt}) & = & \lfmat{\pt} \ls{\pt} + \lfshift{\pt} \label{eq:linear_drift}     .
+ \flowdrift{\pt}(\ls{\pt}) & = & \lfmat{\pt} \ls{\pt} + \lfshift{\pt} \label{app-eq:linear_drift}     .
 \end{IEEEeqnarray}
-%
-Then substituting terms into \eqref{app-eq:optimal_flow_PDE} and using $\flowcov=0$ to give us the deterministic case,
+
+Substituting terms into \eqref{app-eq:optimal_flow_PDE} and using $\flowcov{\pt}=0$ gives us an equation for the the deterministic case,
 %
 \begin{IEEEeqnarray}{rCl}
 \IEEEeqnarraymulticol{3}{l}{ -\frac{1}{2}(\ob{\rt}-\obsmat\ls{\pt})^T \obscov^{-1}(\ob{\rt}-\obsmat\ls{\pt}) + \frac{1}{2}\expect{\pi}\left[ (\ob{\rt}-\obsmat\ls{\pt})^T \obscov^{-1}(\ob{\rt}-\obsmat\ls{\pt}) \right] } \nonumber \\
@@ -1002,7 +1016,7 @@ Then substituting terms into \eqref{app-eq:optimal_flow_PDE} and using $\flowcov
  \qquad & = & - \trace(\lfmat{\pt}) + \left( \lfmat{\pt} \ls{\pt} + \lfshift{\pt} \right)^T \lgoicov{\pt}^{-1} \left(\ls{\pt}-\lgoimean{\pt}\right)      .
 \end{IEEEeqnarray}
 %
-Now equating terms gives us the following three equations, which allow us to find values of $\lfmat{\pt}$ and $\lfshift{\pt}$,
+Now equating terms gives us the following equations, which allow us to find values of $\lfmat{\pt}$ and $\lfshift{\pt}$,
 %
 \begin{IEEEeqnarray}{rCl}
  - \frac{1}{2} \obsmat^T \obscov^{-1} \obsmat & = & \lfmat{\pt}^T \lgoicov{\pt}^{-1} \nonumber \\
@@ -1050,6 +1064,61 @@ Examining the remaining terms using the formula for $\lfshift{\pt}$ and $\lfmat{
 %
 Hence the assumed form \eqref{app-eq:linear_drift} for the drift is valid with the derived values.
 
+\subsection{Stochastic Case}
+
+If $\flowcov{\pt}\ne0$, then we must consider the additional intermediate terms,
+%
+\begin{IEEEeqnarray}{rCl}
+ \nabla \oiden{\pt}(\ls{\pt}) & = & \oiden{\pt}(\ls{\pt}) \left[ -\lgoicov{\pt}^{-1} \left(\ls{\pt}-\lgoimean{\pt}\right) \right] \\
+ \nabla \cdot \left[ \flowcov{\pt} \nabla \oiden{\pt}(\ls{\pt}) \right] & = & \nabla \cdot \left\{ \oiden{\pt}(\ls{\pt}) \left[ - \flowcov{\pt} \lgoicov{\pt}^{-1} \left(\ls{\pt}-\lgoimean{\pt}\right) \right] \right\} \nonumber \\
+ & = & \nabla \oiden{\pt}(\ls{\pt}) \cdot \left[ - \flowcov{\pt} \lgoicov{\pt}^{-1} \left(\ls{\pt}-\lgoimean{\pt}\right) \right] + \oiden{\pt}(\ls{\pt}) \nabla \cdot \left[ - \flowcov{\pt} \lgoicov{\pt}^{-1} \left(\ls{\pt}-\lgoimean{\pt}\right) \right] \nonumber \\
+ & = & \oiden{\pt}(\ls{\pt}) \left\{ \left(x-\mu_{\pt}\right)^T \lgoicov{\pt}^{-1} \flowcov{\pt} \lgoicov{\pt}^{-1} \left(\ls{\pt}-\lgoimean{\pt}\right) - \trace\left[ \flowcov{\pt} \lgoicov{\pt}^{-1} \right] \right\}     .
+\end{IEEEeqnarray}
+
+If we again assume that the drift depends linearly on $\ls{\pt}$,
+%
+\begin{IEEEeqnarray}{rCl}
+ \flowdrift{\pt}(\ls{\pt}) & = & \lfmat{D,\pt} \ls{\pt} + \lfshift{D,\pt}     ,
+\end{IEEEeqnarray}
+%
+then we can find $\lfmat{D,\pt}$ and $\lfshift{D,\pt}$ by equating terms again. For $\lfmat{D,\pt}$,
+%
+\begin{IEEEeqnarray}{rCl}
+ - \frac{1}{2} \obsmat^T \obscov^{-1} \obsmat & = & \lfmat{D,\pt}^T \lgoicov{\pt}^{-1} + \lgoicov{\pt}^{-1} \flowcov{\pt} \lgoicov{\pt}^{-1} \nonumber \\
+ \lfmat{D,\pt} & = & - \frac{1}{2} \lgoicov{\pt} \obsmat^T \obscov^{-1} \obsmat - \flowcov{\pt} \lgoicov{\pt}^{-1} \nonumber \\
+              & = & \lfmat{\pt} - \flowcov{\pt} \lgoicov{\pt}^{-1}      .
+\end{IEEEeqnarray}
+%
+For $\lfshift{D,\pt}$,
+%
+\begin{IEEEeqnarray}{rCl}
+ \ob{\rt}^T \obscov^{-1} \obsmat  & = & \lfshift{D,\pt}^T \lgoicov{\pt}^{-1} - \lgoimean{\pt}^T \lgoicov{\pt}^{-1} \lfmat{D,\pt} - 2 \lgoimean{\pt}^T \lgoicov{\pt}^{-1} \flowcov{\pt} \lgoicov{\pt}^{-1} \nonumber \\
+ \lfshift{D,\pt} & = & \lgoicov{\pt} \left[ \obsmat^T \obscov^{-1} \ob{\rt} + \lfmat{D,\pt}^T \lgoicov{\pt}^{-1} \lgoimean{\pt} \right] + 2 \flowcov{\pt} \lgoicov{\pt}^{-1} \lgoimean{\pt} \nonumber \\
+              & = & \lgoicov{\pt} \left[ \obsmat^T \obscov^{-1} \ob{\rt} + \lfmat{\pt}^T \lgoicov{\pt}^{-1} \lgoimean{\pt} \right] + \flowcov{\pt} \lgoicov{\pt}^{-1} \lgoimean{\pt} \nonumber \\
+            & = & \lfshift{\pt} + \flowcov{\pt} \lgoicov{\pt}^{-1} \lgoimean{\pt} \nonumber \\
+            & = & \lfshift{\pt} + \flowcov{\pt} \left[ \transcov^{-1} \transmean + \pt \obsmat^T \obscov^{-1} \ob{\rt} \right] \label{app-eq:lg_shift_stochastic}     .
+\end{IEEEeqnarray}
+
+Finally, we need to check again that the constant terms balance.
+%
+\begin{IEEEeqnarray}{rCl}
+ \text{RHS} & = & - \trace(\lfmat{D,\pt}) - \trace\left( \flowcov{\pt} \lgoicov{\pt}^{-1} \right) \nonumber \\
+            & = & - \trace\left( \lfmat{D,\pt} + \flowcov{\pt} \lgoicov{\pt}^{-1} \right) \nonumber \\
+            & = & \trace\left( \lfmat{\pt} \right) \nonumber \\
+            & = & \frac{1}{2} \trace\left( \lgoicov{\pt} \obsmat^T \obscov^{-1} \obsmat \right) \nonumber \\
+            & = & \frac{1}{2} \trace\left( \obsmat^T \obscov^{-1} \obsmat \lgoicov{\pt} \right)      .
+\end{IEEEeqnarray}
+%
+\begin{IEEEeqnarray}{rCl}
+ \text{RHS} & = & - \lfshift{D,\pt}^T \lgoicov{\pt}^{-1} \lgoimean{\pt} + \lgoimean{\pt}^T \lgoicov{\pt}^{-1} \flowcov{\pt} \lgoicov{\pt}^{-1} \lgoimean{\pt} \nonumber \\
+            & = & - \left[  \lfshift{\pt} + 2 \flowcov{\pt} \lgoicov{\pt}^{-1} \lgoimean{\pt} \right]^T \lgoicov{\pt}^{-1} \lgoimean{\pt} + \lgoimean{\pt}^T \lgoicov{\pt}^{-1} \flowcov{\pt} \lgoicov{\pt}^{-1} \lgoimean{\pt} \nonumber \\
+            & = & - \lfshift{\pt}^T \lgoicov{\pt}^{-1} \lgoimean{\pt} - \lgoimean{\pt}^T \lgoicov{\pt}^{-1} \flowcov{\pt} \lgoicov{\pt}^{-1} \lgoimean{\pt} \nonumber \\
+            & = & - \left[ \obsmat^T \obscov^{-1} \ob{\rt} + \lfmat{D,\pt}^T \lgoicov{\pt}^{-1} \lgoimean{\pt} \right]^T \lgoimean{\pt} - \lgoimean{\pt}^T \lgoicov{\pt}^{-1} \flowcov{\pt} \lgoicov{\pt}^{-1} \lgoimean{\pt} \nonumber \\
+            & = & - \left[ \obsmat^T \obscov^{-1} \ob{\rt} - \frac{1}{2} \obsmat^T \obscov^{-1} \obsmat \lgoimean{\pt} - \lgoicov{\pt}^{-1}\flowcov{\pt}\lgoicov{\pt}^{-1}\lgoimean{\pt} \right]^T \lgoimean{\pt} - \lgoimean{\pt}^T \lgoicov{\pt}^{-1} \flowcov{\pt} \lgoicov{\pt}^{-1} \lgoimean{\pt} \nonumber \\
+            & = & -\ob{\rt}^T \obscov^{-1} \obsmat \lgoimean{\pt} + \frac{1}{2} \lgoimean{\pt}^T \obsmat^T \obscov^{-1} \obsmat \lgoimean{\pt} \nonumber \\
+            & = & \text{LHS}     .
+\end{IEEEeqnarray}
+
 
 
 \section{Optimal Deterministic Transport Map for a Linear Gaussian Model} \label{app:optimal_map_linear_Gaussian}
@@ -1077,10 +1146,10 @@ This linear, matrix differential equation may be solved using the integrating fa
 and hence,
 %
 \begin{IEEEeqnarray}{rCl}
- \frac{dM_{\pt}}{d\pt} & = & - M_{\pt} \lfmat{\pt} = - \lfmat{\pt} M_{\pt} \label{app-eq:differential_of_M}     ,
+ \frac{dM_{\pt}}{d\pt} & = & - M_{\pt} \lfmat{\pt} = - \lfmat{\pt} M_{\pt} \label{app-eq:derivative_of_M}     ,
 \end{IEEEeqnarray}
 %
-\emph{only} if $P_{\pt}$ and $\lfmat{\pt}$ commute. Pre-multiplying \eqref{app-eq:deterministic_lG_ODE} by $M_{\pt}$ and using \eqref{app-eq:differential_of_M},
+\emph{only} if $P_{\pt}$ and $\lfmat{\pt}$ commute. Pre-multiplying \eqref{app-eq:deterministic_lG_ODE} by $M_{\pt}$ and using \eqref{app-eq:derivative_of_M},
 %
 \begin{IEEEeqnarray}{rCl}
  M_{\pt} \frac{d\ls{\pt}}{d\pt} & = & M_{\pt} \lfmat{\pt} \ls{\pt} + M_{\pt} \lfshift{\pt} \nonumber \\
@@ -1090,10 +1159,10 @@ and hence,
 Finally, integrating leads to,
 %
 \begin{IEEEeqnarray}{rCl}
- \ls{\pt_1} & = & \ls{\pt_0} + M_{\pt}^{-1} \int_{\pt_0}^{\pt_1} M_{l} \lfshift{l} dl     .
+ \ls{\pt} & = & M_{\pt}^{-1} \left[ C + \int_{\pt_0}^{\pt} M_{l} \lfshift{l} dl \right]      .
 \end{IEEEeqnarray}
 
-For the optimal linear Gaussian flow,
+For the optimal deterministic linear Gaussian flow,
 %
 \begin{IEEEeqnarray}{rCl}
  \lfmat{\pt} & = & - \frac{1}{2} \transcov \obsmat^T \left(\obscov + \pt \obsmat \transcov \obsmat^T \right)^{-1} \obsmat \nonumber     .
@@ -1108,7 +1177,7 @@ Hence,
           & = & \left( I + \pt \transcov \obsmat^T \obscov^{-1} \obsmat \right)^{\frac{1}{2}} \nonumber     ,
 \end{IEEEeqnarray}
 %
-in which the integral has been solved using the matrix logarithm. It will be helpful to define the following intermediate variables,
+in which the integral has been solved using the matrix logarithm. It is simple to check that $P_{\pt}$ and $\lfmat{\pt}$ fulfill the requirement that they commute. It will be helpful to define the following intermediate variables,
 %
 \begin{IEEEeqnarray}{rCl}
  X               & = & \transcov \obsmat^T \obscov^{-1} \obsmat \nonumber \\
@@ -1132,7 +1201,7 @@ Also, observe that,
  \transcov \obsmat^T \obscov^{-1} \ob{\pt} & = & X \obsmat^+ \ob{\pt} \nonumber     ,
 \end{IEEEeqnarray}
 %
-where $^+$ indicates the Moore-Penrose pseudo-inverse. This final identity is true for full rank $\obsmat$ of any dimensions {\meta Prove this in another appendix.}.
+where $^+$ indicates the Moore-Penrose pseudo-inverse. This final identity is true for full rank $\obsmat$ of any dimensions (see appendix \ref{app:pseudoinverse_proofs}).
 
 Now, to solve the integral, start with \eqref{app-eq:lG_shift_basic}, the equation for $\lfshift{\pt}$,
 %
@@ -1143,15 +1212,149 @@ Now, to solve the integral, start with \eqref{app-eq:lG_shift_basic}, the equati
                & = & \lginterm{\pt}^{-2} \left[ \left(I + \pt X\right) X \obsmat^+ \ob{\rt} - \frac{1}{2} X \left(\transmean + \pt X \obsmat^+ \ob{\rt} \right) \right] \nonumber \\
                & = & \frac{1}{2} \lginterm{\pt}^{-2} \left[ 2 X \obsmat^+ \ob{\rt} + 2 \pt X^2 \obsmat^+ \ob{\rt} - X \transmean - \pt X^2 \obsmat^+ \ob{\rt} \right] \nonumber \\
                & = & \frac{1}{2} \lginterm{\pt}^{-2} \left[ \left(I + \pt X\right) X \obsmat^+ \ob{\rt} + X \left( \obsmat^+ \ob{\rt} - \transmean \right) \right] \nonumber \\
-               & = & \frac{1}{2} \lginterm{\pt}^{-1} \left[ X \obsmat^+ \ob{\rt} + \lginterm{\pt}^{-1} X \left( \obsmat^+ \ob{\rt} - \transmean \right) \right]   .
+               & = & \frac{1}{2} \lginterm{\pt}^{-1} \left[ X \obsmat^+ \ob{\rt} + \lginterm{\pt}^{-1} X \left( \obsmat^+ \ob{\rt} - \transmean \right) \right] .
 \end{IEEEeqnarray}
 
-{\meta Add the integral}
+This leads us to the following solution to the integral,
+%
+\begin{IEEEeqnarray}{rCl}
+ \int_{\pt_0}^{\pt} M_{l} \lfshift{l} dl & = & \frac{1}{2} \int_{\pt_0}^{\pt} \lginterm{l}^{-\frac{1}{2}} \left[ X \obsmat^+ \ob{\rt} + \lginterm{l}^{-1} X \left( \obsmat^+ \ob{\rt} - \transmean \right) \right] dl \nonumber \\
+ & = & \frac{1}{2} \int_{\pt_0}^{\pt} \left(I + l X\right)^{-\frac{1}{2}} X dl \obsmat^+ \ob{\rt} + \frac{1}{2} \int_{\pt_0}^{\pt} \left(I + l X\right)^{-\frac{3}{2}} X dl \left( \obsmat^+ \ob{\rt} - \transmean \right) \nonumber \\
+ & = & \frac{1}{2} \left[ 2 \left(I + l X\right)^{\frac{1}{2}} \right]_{\pt_0}^{\pt} \obsmat^+ \ob{\rt} + \frac{1}{2} \left[ -2 \left(I + l X\right)^{-\frac{1}{2}} \right]_{\pt_0}^{\pt} \left( \obsmat^+ \ob{\rt} - \transmean \right) \nonumber \\
+ & = & \left[ \lginterm{\pt}^{\frac{1}{2}} - \lginterm{\pt_0}^{\frac{1}{2}} \right] \obsmat^+ \ob{\rt} - \left[ \lginterm{\pt}^{-\frac{1}{2}} - \lginterm{\pt_0}^{-\frac{1}{2}} \right] \left( \obsmat^+ \ob{\rt} - \transmean \right)      .
+\end{IEEEeqnarray}
+
+The optimal map is given by,
+%
+\begin{IEEEeqnarray}{rCl}
+ \ls{\pt} & = & M_{\pt}^{-1} \left[ C + \int_{\pt_0}^{\pt} M_{l} \lfshift{l} dl \right] \nonumber \\
+ & = & \lginterm{\pt}^{-\frac{1}{2}} \left\{ C + \left[ \lginterm{\pt}^{\frac{1}{2}} - \lginterm{\pt_0}^{\frac{1}{2}} \right] \obsmat^+ \ob{\rt} - \left[ \lginterm{\pt}^{-\frac{1}{2}} - \lginterm{\pt_0}^{-\frac{1}{2}} \right] \left( \obsmat^+ \ob{\rt} - \transmean \right) \right\}     .
+\end{IEEEeqnarray}
+
+The initial conditions allow us to find the constant of integration, $C$,
+%
+\begin{IEEEeqnarray}{rCl}
+  \ls{\pt_0} & = & \lginterm{\pt_0}^{-\frac{1}{2}} C     .
+\end{IEEEeqnarray}
+
+Finally,
+%
+\begin{IEEEeqnarray}{rCl}
+ \ls{\pt} & = & \lginterm{\pt}^{-\frac{1}{2}} \left\{ \lginterm{\pt_0}^{\frac{1}{2}} \ls{\pt_0} + \left[ \lginterm{\pt}^{\frac{1}{2}} - \lginterm{\pt_0}^{\frac{1}{2}} \right] \obsmat^+ \ob{\rt} - \left[ \lginterm{\pt}^{-\frac{1}{2}} - \lginterm{\pt_0}^{-\frac{1}{2}} \right] \left( \obsmat^+ \ob{\rt} - \transmean \right) \right\}     .
+\end{IEEEeqnarray}
 
 
 \section{Optimal Importance Density for a Linear Gaussian Model} \label{app:optimal_importance_density_linear_Gaussian}
 
-\section{Matrix Logarithms}
+When $\flowdiffuse{\pt} \ne 0$, the particle flow is governed by,
+%
+\begin{IEEEeqnarray}{rCl}
+ d\ls{\pt} & = & \flowdrift{\pt}(\ls{\pt}) d\pt + \flowdiffuse{\pt} d\flowbm{\pt} \nonumber \\
+           & = & \left[ \lfmat{D,\pt} \ls{\pt} + \lfshift{D,\pt} \right] d\pt + \flowdiffuse{\pt} d\flowbm{\pt}  \label{app-eq:stochastic_lG_SDE}     .
+\end{IEEEeqnarray}
+
+If a particle if moved from a known position according to this stochastic differential equation from pseudo-time $\pt_0$ to $\pt_1$, then the resulting perturbation is equivalent to sampling from an importance density, $\impden(\ls{\pt_1} | \ls{\pt_0})$, which can be calculated analytically from the optimal flow derived for the linear Gaussian flow. As in appendix~\ref{app:optimal_map_linear_Gaussian} the solution is obtained through a matrix form of the integrating factor method. First define,
+%
+\begin{IEEEeqnarray}{rCl}
+ P_{\pt} & = & - \int_{\pt_0}^{\pt_1} \lfmat{D,l} dl \nonumber \\
+ M_{\pt} & = & \exp\left\{ P_{\pt} \right\} \nonumber      ,
+\end{IEEEeqnarray}
+%
+and hence,
+%
+\begin{IEEEeqnarray}{rCl}
+ dM_{\pt} & = & - M_{\pt} \lfmat{\pt} d\pt = - \lfmat{\pt} M_{\pt} d\pt \label{app-eq:differential_of_M}     ,
+\end{IEEEeqnarray}
+%
+\emph{only} if $P_{\pt}$ and $\lfmat{\pt}$ commute. Pre-multiplying \eqref{app-eq:stochastic_lG_SDE} by $M_{\pt}$ and using \eqref{app-eq:differential_of_M},
+%
+\begin{IEEEeqnarray}{rCl}
+ M_{\pt} d\ls{\pt} & = & M_{\pt} \lfmat{D,\pt} \ls{\pt} d\pt + M_{\pt} \lfshift{D,\pt} d\pt + M_{\pt} \flowdiffuse{\pt} d\flowbm{\pt} \nonumber \\
+ d\left( M_{\pt} \ls{\pt} \right) & = & M_{\pt} \lfshift{D,\pt} d\pt + M_{\pt} \flowdiffuse{\pt} d\flowbm{\pt} \nonumber     .
+\end{IEEEeqnarray}
+%
+Finally, integrating leads to,
+%
+\begin{IEEEeqnarray}{rCl}
+ \ls{\pt} & = & M_{\pt}^{-1} \left[ C + \int_{\pt_0}^{\pt} M_{l} \lfshift{l} dl + \int_{\pt_0}^{\pt} M_{l} \flowdiffuse{l} d\flowbm{l} \right]      .
+\end{IEEEeqnarray}
+
+An intuitive form for $\flowdiffuse{\pt}$, which also leads to an analytic solution is as follows,
+%
+\begin{IEEEeqnarray}{rCl}
+ \flowdiffuse{\pt} & = & \left[ \lfdiffsf \lgoicov{\pt} \right]^{\frac{1}{2}} \nonumber \\
+ & = & \left[ \lfdiffsf \left( \transcov^{-1} + \pt \obsmat^T \obscov^{-1} \obsmat \right) \right]^{\frac{1}{2}}     ,
+\end{IEEEeqnarray}
+%
+which gives us,
+%
+\begin{IEEEeqnarray}{rCl}
+ \flowcov{\pt} & = & \frac{1}{2} \flowdiffuse{\pt} \flowdiffuse{\pt}^T \nonumber \\
+               & = & \frac{1}{2} \lfdiffsf \lgoicov{\pt}     .
+\end{IEEEeqnarray}
+
+In the following, we use the intermediate terms and results defined and derived in appendix~\ref{app:optimal_map_linear_Gaussian}. For the optimal stochastic linear Gaussian flow,
+%
+\begin{IEEEeqnarray}{rCl}
+ \lfmat{D,\pt} & = & \lfmat{\pt} - \flowcov{\pt} \lgoicov{\pt}^{-1} \nonumber     .
+\end{IEEEeqnarray}
+%
+Hence,
+%
+\begin{IEEEeqnarray}{rCl}
+ P_{\pt} & = & \frac{1}{2}\log\left( I + \pt \transcov \obsmat^T \obscov^{-1} \obsmat \right) + \frac{1}{2} \lfdiffsf \pt I \nonumber \\
+ M_{\pt} & = & \exp\left\{ \frac{1}{2} \lfdiffsf \pt \right\} \left( I + \pt \transcov \obsmat^T \obscov^{-1} \obsmat \right)^{\frac{1}{2}} \nonumber \\
+         & = & \exp\left\{ \frac{1}{2} \lfdiffsf \pt \right\} \lginterm{\pt}^{\frac{1}{2}}     .
+\end{IEEEeqnarray}
+%
+As before, it is simple to check that $P_{\pt}$ and $\lfmat{\pt}$ fulfill the requirement that they commute.
+
+Now, to solve the first integral, start with \eqref{app-eq:lg_shift_stochastic}, the equation for $\lfshift{D,\pt}$,
+%
+\begin{IEEEeqnarray}{rCl}
+ \lfshift{D,\pt} & = & \lfshift{\pt} + \flowcov{\pt} \left[ \transcov^{-1} \transmean + \pt \obsmat^T \obscov^{-1} \ob{\rt} \right] \nonumber \\
+                 & = & \frac{1}{2} \lginterm{\pt}^{-1} \left[ X \obsmat^+ \ob{\rt} + \lginterm{\pt}^{-1} X \left( \obsmat^+ \ob{\rt} - \transmean \right) \right] + \frac{1}{2} \lfdiffsf \left( \transcov^{-1} + \pt \obsmat^T \obscov^{-1} \obsmat \right)^{-1} \left[ \transcov^{-1} \transmean + \pt \obsmat^T \obscov^{-1} \ob{\rt} \right] \nonumber \\
+                 & = & \frac{1}{2} \lginterm{\pt}^{-1} \left[ X \obsmat^+ \ob{\rt} + \lginterm{\pt}^{-1} X \left( \obsmat^+ \ob{\rt} - \transmean \right) \right] + \frac{1}{2} \lfdiffsf \lginterm{\pt}^{-1} \left[ \transmean + \pt X \obsmat^+ \ob{\rt} \right] \nonumber \\
+                 & = & \frac{1}{2} \lginterm{\pt}^{-1} \left[ X \obsmat^+ \ob{\rt} + \lginterm{\pt}^{-1} X \left( \obsmat^+ \ob{\rt} - \transmean \right) + \lfdiffsf \transmean + \lfdiffsf \pt X \obsmat^+ \ob{\rt} \right] \nonumber \\
+                 & = & \frac{1}{2} \lginterm{\pt}^{-1} \left[ X \obsmat^+ \ob{\rt} + \lginterm{\pt}^{-1} X \left( \obsmat^+ \ob{\rt} - \transmean \right) + \lfdiffsf \transmean + \lfdiffsf \pt \left( \lginterm{\pt} - I \right) \obsmat^+ \ob{\rt} \right] \nonumber \\
+                 & = & \frac{1}{2} \lginterm{\pt}^{-1} \left[ \left(X + \lfdiffsf \lginterm{\pt} \right) \obsmat^+ \ob{\rt} - \left( \lfdiffsf I - \lginterm{\pt}^{-1} X \right) \left( \obsmat^+ \ob{\rt} - \transmean \right) \right]     .
+\end{IEEEeqnarray}
+
+This leads us to the following solution to the integral,
+%
+\begin{IEEEeqnarray}{rCl}
+ \int_{\pt_0}^{\pt} M_{l} \lfshift{D,l} dl & = & \frac{1}{2} \int_{\pt_0}^{\pt} \exp\left\{ \frac{1}{2} \lfdiffsf l \right\} \lginterm{l}^{-\frac{1}{2}} \left[ \left(X + \lfdiffsf \lginterm{l} \right) \obsmat^+ \ob{\rt} - \left( \lfdiffsf I - \lginterm{l}^{-1} X \right) \left( \obsmat^+ \ob{\rt} - \transmean \right) \right] dl \nonumber \\
+ & = & \int_{\pt_0}^{\pt} \frac{1}{2} \exp\left\{ \frac{1}{2} \lfdiffsf l \right\} \lginterm{l}^{-\frac{1}{2}} \left(X + \lfdiffsf \lginterm{l} \right) dl \obsmat^+ \ob{\rt} \nonumber \\
+ & & - \: \int_{\pt_0}^{\pt} \frac{1}{2} \exp\left\{ \frac{1}{2} \lfdiffsf l \right\} \lginterm{l}^{-\frac{1}{2}} \left( \lfdiffsf I - \lginterm{l}^{-1} X \right) dl \left( \obsmat^+ \ob{\rt} - \transmean \right) \nonumber \\
+ & = & \left[ \exp\left\{ \frac{1}{2} \lfdiffsf l \right\} \lginterm{l}^{\frac{1}{2}} \right]_{\pt_0}^{\pt} \obsmat^+ \ob{\rt} \nonumber \\
+ & & - \: \left[ \exp\left\{ \frac{1}{2} \lfdiffsf l \right\} \lginterm{l}^{-\frac{1}{2}} \right]_{\pt_0}^{\pt} \left( \obsmat^+ \ob{\rt} - \transmean \right) \nonumber \\
+ & = & \left[ \exp\left\{ \frac{1}{2} \lfdiffsf \pt \right\} \lginterm{\pt}^{\frac{1}{2}} - \exp\left\{ \frac{1}{2} \lfdiffsf \pt_0 \right\} \lginterm{\pt_0}^{\frac{1}{2}} \right] \obsmat^+ \ob{\rt} \nonumber \\
+ & & - \: \left[ \exp\left\{ \frac{1}{2} \lfdiffsf \pt \right\} \lginterm{\pt}^{-\frac{1}{2}} - \exp\left\{ \frac{1}{2} \lfdiffsf \pt_0 \right\} \lginterm{\pt_0}^{-\frac{1}{2}} \right] \left( \obsmat^+ \ob{\rt} - \transmean \right)      .
+\end{IEEEeqnarray}
+
+Next, consider the stochastic integral,
+%
+\begin{IEEEeqnarray}{rCl}
+ \int_{\pt_0}^{\pt} M_{l} \flowdiffuse{l} d\flowbm{l} & = & \int_{\pt_0}^{\pt} \exp\left\{ \frac{1}{2} \lfdiffsf l \right\} \lginterm{l}^{\frac{1}{2}} \left[ \lfdiffsf \lginterm{l}^{-1} \transcov \right]^{\frac{1}{2}} d\flowbm{l} \nonumber \\
+ & = & \lfdiffsf \int_{\pt_0}^{\pt} \exp\left\{ \frac{1}{2} \lfdiffsf l \right\} d\flowbm{l} \transcov^{\frac{1}{2}}
+\end{IEEEeqnarray}
+
+{\meta FINISH THIS OFF.}
+
+
+
+
+
+
+
+
+
+
+
+
+\section{Matrix Functions}
+
+\subsection{Logarithms}
 
 The matrix log is defined via its Taylor series,
 %
@@ -1166,13 +1369,13 @@ Thus, by diagonalising $X$ we have,
  \log\left(I+X\right) & = & U \log\left(I+\Lambda\right) U^{-1} \nonumber     ,
 \end{IEEEeqnarray}
 %
-where the log of the diagonal matrix is calculated by simply taking the log of the diagonal terms.
+where, for positive definite $X$, the log of the diagonal matrix is calculated by simply taking the log of the diagonal terms.
 
 By diagonalisation, we can show that the matrix log solves the following integrals,
 %
 \begin{IEEEeqnarray}{rCl}
- \int_{\pt_0}^{\pt_1} \left( I + l X \right)^{-1} X dl & = & \log\left(I + \pt_1 X\right) - \log\left(I + \pt_0 X\right) \nonumber \\
- \int_{\pt_0}^{\pt_1} X \left( I + l X \right)^{-1} dl & = & \log\left(I + \pt_1 X\right) - \log\left(I + \pt_0 X\right)      .
+ \int_{\pt_0}^{\pt_1} \left( I + l X \right)^{-1} X dl & = & \left[ \left(I + \pt_1 X\right) \right]_{\pt_0}^{\pt_1} \nonumber \\
+ \int_{\pt_0}^{\pt_1} X \left( I + l X \right)^{-1} dl & = & \left[ \left(I + \pt_1 X\right) \right]_{\pt_0}^{\pt_1} \nonumber      .
 \end{IEEEeqnarray}
 
 The matrix log follows most of the same rules as the scalar log, in particular,
@@ -1181,13 +1384,76 @@ The matrix log follows most of the same rules as the scalar log, in particular,
  a \log\left(X\right) & = & \log\left(X^a\right) \nonumber     .
 \end{IEEEeqnarray}
 
-The matrix log commutes with lots of things. These are all provable using the Taylor series,
+\subsection{Roots}
+
+The following matrix root integral ($n \ne 0$) may be proven by Taylor series or diagonalisation,
 %
 \begin{IEEEeqnarray}{rCl}
+ \int_{\pt_0}^{\pt_1} \left( I + l X \right)^{n} X dl & = & \frac{1}{n+1} \left[ \left( I + \pt X \right)^{n+1} \right]_{\pt_0}^{\pt_1} \nonumber       .
+\end{IEEEeqnarray}
+
+\subsection{Things that Commute}
+
+I commute. About $4 \frac{1}{2}$ miles by bicycle.  \\
+
+\noindent These are all provable using the Taylor series,
+%
+\begin{IEEEeqnarray}{rCl}
+ X \left( I + \pt X \right)^{-1} & = & \left( I + \pt X \right)^{-1} X \nonumber \\
  X \log\left( I + \pt X \right) & = & \log\left( I + \pt X \right) X \nonumber \\
  \left( I + \pt X \right)^{-1} \log\left( I + \pt X \right) & = & \log\left( I + \pt X \right) \left( I + \pt X \right)^{-1} \nonumber     .
 \end{IEEEeqnarray}
 
+
+
+\section{Pseudo-Inverses} \label{app:pseudoinverse_proofs}
+
+It is useful to show that if,
+%
+\begin{IEEEeqnarray}{rCl}
+ X & = & \transcov \obsmat^T \obscov^{-1} \obsmat \nonumber     ,
+\end{IEEEeqnarray}
+%
+then
+%
+\begin{IEEEeqnarray}{rCl}
+ \transcov \obsmat^T \obscov^{-1} \ob{\pt} & = & X \obsmat^+ \ob{\pt} \nonumber     .
+\end{IEEEeqnarray}
+
+First consider the case when $\obsmat$ is square and full rank. This means that $\obsmat^+ = \obsmat^{-1}$, and the proof is trivial. Next consider the case when $\obsmat$ is fat (i.e. more columns than rows) and full rank. This means,
+%
+\begin{IEEEeqnarray}{rCl}
+ \obsmat^+ & = & \obsmat^T \left(\obsmat \obsmat^T\right)^{-1} \nonumber \\
+ \obsmat \obsmat^+ & = & I     ,
+\end{IEEEeqnarray}
+%
+and again the proof is trivial.
+
+Finally, consider the case when $\obsmat$ is wide (i.e. more rows than columns) and full rank, and $\obscov$ is also full rank. In this case,
+%
+\begin{IEEEeqnarray}{rCl}
+ \left(\obsmat^T \obscov^{-1} \obsmat^T\right) \left(\obsmat^T \obscov^{-1} \obsmat^T\right)^{-1} & = & I     .
+\end{IEEEeqnarray}
+%
+Hence,
+%
+\begin{IEEEeqnarray}{rCl}
+ \transcov \obsmat^T \obscov^{-1} \ob{\pt} & = & \transcov \left(\obsmat^T \obscov^{-1} \obsmat^T\right) \left(\obsmat^T \obscov^{-1} \obsmat^T\right)^{-1} \obsmat^T \obscov^{-1} \ob{\pt} \nonumber \\
+ & = & X \left(\obsmat^T \obscov^{-1} \obsmat^T\right)^{-1} \obsmat^T \obscov^{-1} \ob{\pt} \nonumber \\
+ & = & X H^+ \ob{\pt} \nonumber     .
+\end{IEEEeqnarray}
+%
+In the last line, we have used the pseudo-inverse expressions,
+%
+\begin{IEEEeqnarray}{rCl}
+ \obsmat^+ & = & \left(\obsmat^T \obsmat\right)^{-1} \obsmat^T \nonumber \\
+           & = & \left(\obsmat^T \obscov^{-1} \obsmat\right)^{-1} \obsmat^T \obscov^{-1} \nonumber \\
+ \obsmat^+ \obsmat & = & I     .
+\end{IEEEeqnarray}
+%
+The second expression for $\obsmat^+$ may be proven using a singular value decomposition on $\obsmat$.
+
+{\meta Would be nice to generalise this for non-full rank $\obsmat$ and $\obscov$.}
 
 \bibliographystyle{plain}
 \bibliography{D:/pb404/Dropbox/PhD/OTbib}
