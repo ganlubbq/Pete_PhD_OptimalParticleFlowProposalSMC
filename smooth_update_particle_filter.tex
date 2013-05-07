@@ -29,11 +29,12 @@
 
 % Functions and operators
 \newcommand{\expect}[1]{\mathbb{E}_{#1}}                    % Expectation
-\newcommand{\variance}[1]{\mathbb{V}_{#1}}                    % Variance
+\newcommand{\variance}[1]{\mathbb{V}_{#1}}                  % Variance
 \DeclareMathOperator{\trace}{Tr}                            % Trace
 \newcommand{\magdet}[1]{\left|\left| #1 \right|\right|}     % Magnitude of the determinant
 \newcommand{\indic}[1]{\mathbbm{1}_{#1}}                    % Indicator function
 \newcommand{\normal}[3]{\mathcal{N}\left(#1|#2,#3\right)}   % Normal density
+\DeclareMathOperator{\lambert}{W}                           % Product-log function
 
 % Basics
 \newcommand{\rt}{t}                             % Real time
@@ -89,46 +90,11 @@
 \newcommand{\lginterm}[1]{S_{#1}}               % Useful intermediate term equal to \transcov / \lgoicov
 
 
-%%% OLD SHORTCUTS %%%
-\newcommand{\tilpit}[1]{\tilde{\pi}_{t,#1}}
-\newcommand{\pit}[1]{\pi_{t,#1}}
-\newcommand{\xt}[1]{x_{t,#1}}
-\newcommand{\wt}[1]{w_{t,#1}}
 
-\newcommand{\lam}[1]{{#1}_{\lambda}}
-\newcommand{\pilam}{\pi_{\lambda}}
-
-\newcommand{\pij}{^{(j)}}
-\newcommand{\pii}{^{(i)}}
-
-
-%%% OLD OLD SHORTCUTS %%%
-\newcommand{\tilpitlam}{\tilde{\pi}_{t,\lambda}}
-\newcommand{\tilpitldl}{\tilde{\pi}_{t,\lambda+\delta\lambda}}
-\newcommand{\pitlam}{\pi_{t,\lambda}}
-\newcommand{\xtlam}{x_{t,\lambda}}
-\newcommand{\xtztl}{x_{t,0:\lambda}}
-\newcommand{\xtl}{x_{t,\lambda}}
-\newcommand{\xtldl}{x_{t,\lambda+\delta\lambda}}
-\newcommand{\tilpilam}{\tilde{\pi}_{\lambda}}
-\newcommand{\tilpildl}{\tilde{\pi}_{\lambda+\delta\lambda}}
-\newcommand{\pildl}{\pi_{\lambda+\delta\lambda}}
-\newcommand{\piztl}{\pi_{0:\lambda}}
-\newcommand{\piztldl}{\pi_{0:\lambda+\delta\lambda}}
-\newcommand{\xlam}{x_{\lambda}}
-\newcommand{\xldl}{x_{\lambda+\delta\lambda}}
-\newcommand{\xztl}{x_{0:\lambda}}
-\newcommand{\xztldl}{x_{0:\lambda+\delta\lambda}}
-\newcommand{\flam}{f_{\lambda}}
-\newcommand{\glam}{g_{\lambda}}
-\newcommand{\Dlam}{D_{\lambda}}
-\newcommand{\xtraj}{\tilde{x}_{0:\lambda}}
-\newcommand{\W}{\mathbf{W}}
-
-%opening
+%%% Opening %%%
 \title{The Smooth Update Particle Filter}
 \author{Pete Bunch}
-\date{March 2013}
+\date{Had the idea: January 2013 \\ This report: May 2013}
 
 \begin{document}
 
@@ -632,11 +598,11 @@ and thus the parameters of the matched Gaussian are given by,
 %
 \begin{IEEEeqnarray}{rCl}
  \tilde{\transcov}  & = & \tilde{\sigma}_P^2 I \nonumber \\
- \tilde{\sigma}_P^2 & = & \frac{d_S}{\left|\Delta\right|^2} \W\left[ \frac{\left|\Delta\right|^2}{2 \pi d_S} \flowtd(\ls{}^*)^{-\frac{2}{d_S}} \right] \nonumber \\
+ \tilde{\sigma}_P^2 & = & \frac{d_S}{\left|\Delta\right|^2} \lambert\left[ \frac{\left|\Delta\right|^2}{2 \pi d_S} \flowtd(\ls{}^*)^{-\frac{2}{d_S}} \right] \nonumber \\
  \tilde{\transmean} & = & \ls{}^* + \tilde{\sigma}_P^2 \Delta     ,
 \end{IEEEeqnarray}
 %
-where $\W$ is the Lambert-W or product-log function and $d_S$ is the number of state dimensions.
+where $\lambert$ is the Lambert-W or product-log function and $d_S$ is the number of state dimensions.
 
 Repeating the same process for the observation density,
 %
@@ -651,7 +617,7 @@ with the additional step that we assume $\tilde{\obsmat}=I$, we obtain,
  \tilde{\flowod}(\ls{}) & := & \left| 2 \pi \tilde{\obscov} \right|^{-\frac{1}{2}} \exp\left\{ -\frac{1}{2} (\tilde{y} - \tilde{\obsmat} \ls{})^T \tilde{\obscov}^{-1} (\tilde{y} - \tilde{\obsmat} \ls{}) \right\} \nonumber \\
  \tilde{\obsmat} & = & I \nonumber \\
  \tilde{\obscov} & = & \tilde{\sigma}_L^2 I \nonumber \\
- \tilde{\sigma}_L^2 & = & \frac{d_S}{\left|\Delta\right|^2} \W\left[ \frac{\left|\Delta\right|^2}{2 \pi d_S} \flowod(\ls{}^*)^{-\frac{2}{d_S}} \right] \nonumber \\
+ \tilde{\sigma}_L^2 & = & \frac{d_S}{\left|\Delta\right|^2} \lambert\left[ \frac{\left|\Delta\right|^2}{2 \pi d_S} \flowod(\ls{}^*)^{-\frac{2}{d_S}} \right] \nonumber \\
  \tilde{y} & = & \ls{}^* + \tilde{\sigma}_L^2 \Delta     .
 \end{IEEEeqnarray}
 
@@ -697,6 +663,9 @@ The model parameters are as follows:
 \subsection{A Nonlinear Model}
 \subsubsection{Gaussian Noise}
 \subsubsection{Student-t Noise}
+
+
+
 
 
 
