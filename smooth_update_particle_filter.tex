@@ -149,7 +149,7 @@ Amongst others, \cite{Doucet2000a} demonstrated that the ideal choice of importa
 
 The effect of using a poor importance distribution (i.e. one which is not ``close'' to the OID) is that the variance of the importance weights is increased, resulting in a degeneracy of the filter. In the worst cases, there may be no particles proposed in regions of high posterior probability, causing the filter to diverge.
 
-Many solutions to the problem of particle filter degeneracy have been proposed, including the addition of Markov chain Monte Carlo (MCMC) steps to regenerate a particle approximation \cite{Gilks2001} and the marginalisation of variables which can be filtered analytically, a process known as ``Rao-Blackwellisation'' \cite{Casella1996,Doucet2000}. Degeneracy can also be mitigated by introducing the effect of each observation gradually, so that particles are progressively drawn towards peaks in the likelihood. This idea of tempering using a discrete set of bridging distributions between the prior and the posterior has appeared, for example, in \cite{Godsill2001b}.
+Many solutions to the problem of particle filter degeneracy have been proposed, including the addition of Markov chain Monte Carlo (MCMC) steps to regenerate a particle approximation \cite{Gilks2001} and the marginalisation of variables which can be filtered analytically, a process known as ``Rao-Blackwellisation'' \cite{Casella1996,Doucet2000}. Degeneracy can also be mitigated by introducing the effect of each observation gradually, so that particles are progressively drawn towards peaks in the likelihood. This idea of tempering using a discrete set of bridging distributions between the prior and the posterior has appeared, for example, in \cite{Godsill2001b}. The new algorithms described here may be thought of as optimal versions of such tempering schemes.
 
 More recently, methods have been proposed which define a continuous sequence of distributions between the prior and the posterior. The set of particles is then moved deterministically so that they are always distributed accordingly. Filtering algorithms based on this idea of particle flow or transport have been developed independently by \cite{Daum2008,Daum2011d} and \cite{Reich2011}, and for static state spaces by \cite{Moselhy2012}. Such particle flow filters have some clear advantages: they maintain equally weighted particles throughout and are thus readily parallelised. However, some of the attractive properties of normal particle filters are not retained. Because flows can rarely (if ever) be calculated analytically, approximations must be made, resulting in the loss of asymptotic consistency. There is also a loss in flexibility: Flow-based filters can be applied only to unbounded continuous state spaces; they cannot handle discrete variables such as indicators.
 
@@ -413,6 +413,16 @@ When $\flowdiffuse{\pt}\ne0$, we can use \eqref{eq:general_weight_update} direct
 
 
 
+\subsection{Intermediate Resampling}
+
+As the filter advances through the interval of pseudo-time, it may become apparent long before $\pt$ approaches $1$ that some particles have very low weights and are highly unlikely to be selected for the next (real) time step. This motivates the introduction of intermediate resampling steps during the pseudo-time interval. These function in exactly the same manner as the ordinary selection step during the prediction phase of the particle filter. Each weighted particle is replaced by an equal-weight particle sampled from the particle approximation. The timing of these steps could be controlled by monitoring the effective sample size.
+
+The effect of such intermediate resampling is to ensure that a diverse collection of particles is maintained throughout, and computation is not wasted in calculating new states for particles which are highly likely to be discarded in the selection step at $\rt+1$. Contrariwise, resampling will introduce dependence between particles, as those with high weights are reproduced multiple times. If $\flowdiffuse=0$, this means that the replicated particles will remain identical until $\pt=1$ and the update step ends. This will still be beneficial in reducing computation time. If $\flowdiffuse \ne 0$, then the particles will gradually ``de-correlate'' as the diffusion element of the flow reduces their interdependence.
+
+Such a system of intermediate resampling shares similarities with the density tempering method described in \cite{Godsill2001b}, in that they both allow us to maintain a collection of equally-weighted particles throughout the introduction of the observation density, and that particle dependence decays as $\pt$ increases. However, the SUPF with intermediate resampling does not require MCMC steps to refresh the state values.
+
+
+
 \section{The Linear Gaussian Model}
 
 In order to implement an optimal form of the algorithm set out in the previous section, we need to achieve the following tasks:
@@ -649,6 +659,14 @@ Other methods of matching are possible, for example choosing the Gaussian with t
 
 
 
+\subsection{Step Size Control}
+
+When using an approximately-optimal SUPF for a nonlinear non-Gaussian model, it is necessary to divide up the pseudo-time interval into small steps. In some cases, it may be sufficient to do this with fixed step sizes or according to some predetermined pseudo-time grid. (For example, shorter time steps early on when particles are moving more quickly.) However, it would be desirable to have an automatic scheme for selecting step sizes as we go on.
+
+{\meta Put something in about automatic step-size control based on $\left( I - \Gamma_{\pt_1}^{-1} \Gamma_{\pt_0} \right) \ls{\pt_1} + \Gamma_{\pt_1} \left( \nu_{\pt_0} - \nu_{\pt_1} \right)$, i.e. the round-trip movement.}
+
+
+
 \subsection{Approximately Optimal SUPF for Nonlinear Non-Gaussian Models}
 
 For nonlinear or non-Gaussian models, the SUPF is still an exact particle filter, but is only approximately optimal. Unlike the linear-Gaussian case, it is necessary to divide up pseudo-time into short intervals and make use of one of the Gaussian approximations for each interval. A summary is shown in algorithm~\ref{}.
@@ -658,33 +676,37 @@ For nonlinear or non-Gaussian models, the SUPF is still an exact particle filter
 
 
 \section{Numerical Simulations}
+
+In this section, we demonstrate the effectiveness of the SUPF on a number of simulations.
+
 \subsection{A Linear Gaussian Model}
+
+We first consider the simplest example, in which the transition and observation models are linear and Gaussian,
+%
+\begin{IEEEeqnarray}{rCl}
+ p(\ls{\rt} | \ls{\rt-1}) & = & \normal{\ls{\rt}}{\transfun(\ls{\rt-1})}{\transcov} \nonumber \\
+ p(\ob{\rt} | \ls{\rt})     & = & \normal{\ob{\rt}}{\obsmat \ls{\rt}}{\obscov} \nonumber
+\end{IEEEeqnarray}
+
+For the SUPF, we can use the optimal flow derived for linear Gaussian models. However, we can also run an ordinary particle filter which samples exactly from the OID. We include this example simply to demonstrate that the particles approximations by the two algorithms are equally good.
+
+The model parameters are as follows:
+
+
+
 \subsection{A Nonlinear Model}
 \subsubsection{Gaussian Noise}
 \subsubsection{Student-t Noise}
 
 
 
-
-
-\section{OLD STUFF}
-
-
-\subsection{Intermediate Resampling}
-
-As the filter advances through the interval of pseudo-time, it may become apparent long before $\pt$ approaches $1$ that some particles are going to have very low weights and are highly unlikely to be selected for the next time step. This motivates the introduction of intermediate resampling during the pseudo-time interval. The effective sample size can be calculated after each step in the numerical integration and resampling conducted whenever this falls below a chosen threshold. In this way, we ensure that a diverse particle collection is maintained, and computation is not wasted in performing numerical integration for insignificant particles.
-
-Resampling steps introduce correlation between particles which will decay over time. The rate of this decay is determined by the diffusion term $\glam$. In the limit, when $\glam=0$, and the flow is deterministic, multiple copies of the same particle will remain identical until $\pt=1$. Note that the resampling is still beneficial as it means we do not waste computation on useless particles. On the other hand, when the $\glam$ is large, the particles will rapidly de-correlate after resampling, but smaller step sizes will be required in the numerical integration.
-
-
-
-\section{Further Extensions}
+\section{Desirable Extensions}
 
 \subsection{Mixed States}
 
-The methods considered in the previous sections are applicable only to continuous state spaces. However, mixed state spaces can be handled easily by proposing the discrete portion of the state and then using a smooth update for the continuous part.
+The methods considered in the this paper are applicable only to continuous state spaces. However, mixed state spaces can be handled easily by proposing the discrete portion of the state and then using a smooth update for the continuous part.
 
-{\meta It would be nice to be able to include discrete states in the flow, with some sort of stochastic switching. In effect, have a continuous time Markov chain in parallel with the SDE. I've looked at this, but without much success yet.}
+{\meta However, it would be nice to be able to include discrete states in the flow, with some sort of stochastic switching. In effect, have a continuous time Markov chain in parallel with the SDE. I've looked at this, but without much success yet.}
 
 \subsection{Intermittent Observations}
 
@@ -694,25 +716,9 @@ It is commonly the case that an observation is not received at every time step.
 
 
 
-\section{Numerical Demonstrations}
+\section{Final Summary}
 
-In this section, we demonstrate the effectiveness of the SUPF on a number of simulations.
-
-\subsection{Linear Gaussian Model}
-
-We first consider the simplest example, in which the transition and observation models are linear and Gaussian,
-%
-\begin{IEEEeqnarray}{rCl}
- p(\ls{\rt} | \ls{\rt-1}) & = & \mathcal{N}(\ls{\rt}|F \ls{\rt-1},Q) \nonumber \\
- p(\ob{\rt} | \ls{\rt})     & = & \mathcal{N}(\ob{\rt}|H \ls{\rt}    ,R)      .
-\end{IEEEeqnarray}
-
-For the SUPF, we can use the optimal flow derived for linear Gaussian models. However, we can also run an ordinary particle filter which samples exactly from the OID. The SUPF would, therefore, never be used in practice for this example. We include it simply to demonstrate that the particles approximations it generates are as good as the optimal choice.
-
-The model parameters are as follows:
-
-{\meta END OF OLD STUFF}
-
+{\meta We have a new algorithm. It's sound. It works. Jolly Good.}
 
 
 
