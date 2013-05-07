@@ -463,8 +463,8 @@ When $\flowdiffuse{\pt}\ne0$, the optimal choice for $\flowdrift{\pt}$ in the de
 where
 %
 \begin{IEEEeqnarray}{rCl}
- \lfmat{D,\pt} & = & \lfmat - \flowcov{\pt} \left[ \transcov^{-1} + \obsmat^T \obscov^{-1} \obsmat \right] \\
- \lfshift{D,\pt} & = & \lfshift + \flowcov{\pt} \left[ \transcov^{-1} \transfun(\ls{\rt-1}) + \pt \obsmat^T \obscov^{-1} \ob{\rt} \right]     .
+ \lfmat{D,\pt} & = & \lfmat{\pt} - \flowcov{\pt} \left[ \transcov^{-1} + \obsmat^T \obscov^{-1} \obsmat \right] \\
+ \lfshift{D,\pt} & = & \lfshift{\pt} + \flowcov{\pt} \left[ \transcov^{-1} \transfun(\ls{\rt-1}) + \pt \obsmat^T \obscov^{-1} \ob{\rt} \right]     .
 \end{IEEEeqnarray}
 %
 For proof, see Appendix~\ref{app:optimal_flow_linear_Gaussian}.
@@ -481,11 +481,10 @@ where $\lfdiffsf$ is a positive scale factor. This choice encourages particles t
 For these choices of $\flowdrift{\pt}$ and $\flowdiffuse{\pt}$, the importance density associated with a transition form $\pt_0$ to $\pt_1$ is,
 %
 \begin{IEEEeqnarray}{rCl}
-\impden(\ls{\pt_1} | \ls{\pt_0}) & = & \normal{\ls{\pt_1}}{\Gamma \ls{\pt_0} + \nu}{\Omega} \\
- \Gamma & = & \exp\left\{ -\frac{1}{2} \lfdiffsf \pt_1 \right\} \lginterm{\pt_1}^{-\frac{1}{2}} \lginterm{\pt_0}^{\frac{1}{2}} \nonumber \\
- \nu    & = & \exp\left\{ -\frac{1}{2} \lfdiffsf \pt_1 \right\} \lginterm{\pt_1}^{-\frac{1}{2}} \Bigg\{ \left[ \exp\left\{ \frac{1}{2} \lfdiffsf \pt_1 \right\} \lginterm{\pt_1}^{\frac{1}{2}} - \exp\left\{ \frac{1}{2} \lfdiffsf \pt_0 \right\} \lginterm{\pt_0}^{\frac{1}{2}} \right] \obsmat^+ \ob{\rt} \nonumber \\
- & & - \: \left[ \exp\left\{ \frac{1}{2} \lfdiffsf \pt_1 \right\} \lginterm{\pt_1}^{-\frac{1}{2}} - \exp\left\{ \frac{1}{2} \lfdiffsf \pt_0 \right\} \lginterm{\pt_0}^{-\frac{1}{2}} \right] \left( \obsmat^+ \ob{\rt} - \transfun(\ls{\rt-1}) \right) \Bigg\} \nonumber \\
- \Omega & = & \left[ 1 - \exp\left\{ - \lfdiffsf \left(\pt_1 - \pt_0\right) \right\} \right] \left(\transcov^{-1} + \pt_1 \obsmat^T \obscov^{-1} \obsmat\right)^{-1}
+ \impden(\ls{\pt_1} | \ls{\pt_0}) & = & \normal{\ls{\pt_1}}{\Gamma \ls{\pt_0} + \nu}{\Omega} \\
+ \Gamma & = & \exp\left\{ -\frac{1}{2} \lfdiffsf \left( \pt_1 - \pt_0 \right) \right\} \lginterm{\pt_1}^{-\frac{1}{2}} \lginterm{\pt_0}^{\frac{1}{2}} \nonumber \\
+ \nu    & = & \Gamma \left[ \obsmat^+ \ob{\rt} - \lginterm{\pt_0}^{-1} \left( \obsmat^+ \ob{\rt} - \transmean \right) \right] + \obsmat^+ \ob{\rt} - \lginterm{\pt_1}^{-1} \left( \obsmat^+ \ob{\rt} - \transmean \right) \nonumber \\
+ \Omega & = & \left[ 1 - \exp\left\{ - \lfdiffsf \left(\pt_1 - \pt_0\right) \right\} \right] \lgoicov{\pt_1}
 \end{IEEEeqnarray}
 %
 where,
@@ -1129,7 +1128,7 @@ This leads us to the following solution to the integral,
 Hence, the deterministic term is given by,
 %
 \begin{IEEEeqnarray}{rCl}
- M_{\pt}^{-1} \left[ C + \int_{\pt_0}^{\pt} M_{l} \lfshift{l} dl \right] & = & \exp\left\{ -\frac{1}{2} \lfdiffsf \pt \right\} \lginterm{\pt}^{-\frac{1}{2}} \bigg\{ \lginterm{\pt_0}^{\frac{1}{2}} \ls{\pt_0} \nonumber \\
+ M_{\pt}^{-1} \left[ C + \int_{\pt_0}^{\pt} M_{l} \lfshift{l} dl \right] & = & \exp\left\{ -\frac{1}{2} \lfdiffsf \pt \right\} \lginterm{\pt}^{-\frac{1}{2}} \bigg\{ \exp\left\{ \frac{1}{2} \lfdiffsf \pt_0 \right\} \lginterm{\pt_0}^{\frac{1}{2}} \ls{\pt_0} \nonumber \\
  & & + \: \left[ \exp\left\{ \frac{1}{2} \lfdiffsf \pt \right\} \lginterm{\pt}^{\frac{1}{2}} - \exp\left\{ \frac{1}{2} \lfdiffsf \pt_0 \right\} \lginterm{\pt_0}^{\frac{1}{2}} \right] \obsmat^+ \ob{\rt} \nonumber \\
  & & - \: \left[ \exp\left\{ \frac{1}{2} \lfdiffsf \pt \right\} \lginterm{\pt}^{-\frac{1}{2}} - \exp\left\{ \frac{1}{2} \lfdiffsf \pt_0 \right\} \lginterm{\pt_0}^{-\frac{1}{2}} \right] \left( \obsmat^+ \ob{\rt} - \transmean \right) \bigg\}      .
 \end{IEEEeqnarray}
@@ -1165,9 +1164,9 @@ Putting all this together gives us a proposal density corresponding to optimal s
 %
 \begin{IEEEeqnarray}{rCl}
  \impden(\ls{\pt_1} | \ls{\pt_0}) & = & \normal{\ls{\pt_1}}{\Gamma \ls{\pt_0} + \nu}{\Omega} \\
- \Gamma & = & \exp\left\{ -\frac{1}{2} \lfdiffsf \pt_1 \right\} \lginterm{\pt_1}^{-\frac{1}{2}} \lginterm{\pt_0} \nonumber \\
- \nu    & = & \exp\left\{ -\frac{1}{2} \lfdiffsf \pt_1 \right\} \lginterm{\pt_1}^{-\frac{1}{2}} \Bigg\{ \left[ \exp\left\{ \frac{1}{2} \lfdiffsf \pt_1 \right\} \lginterm{\pt_1}^{\frac{1}{2}} - \exp\left\{ \frac{1}{2} \lfdiffsf \pt_0 \right\} \lginterm{\pt_0}^{\frac{1}{2}} \right] \obsmat^+ \ob{\rt} \nonumber \\
- & & - \: \left[ \exp\left\{ \frac{1}{2} \lfdiffsf \pt_1 \right\} \lginterm{\pt_1}^{-\frac{1}{2}} - \exp\left\{ \frac{1}{2} \lfdiffsf \pt_0 \right\} \lginterm{\pt_0}^{-\frac{1}{2}} \right] \left( \obsmat^+ \ob{\rt} - \transmean \right) \Bigg\} \nonumber \\
+ \Gamma & = & \exp\left\{ -\frac{1}{2} \lfdiffsf \left( \pt_1 - \pt_0 \right) \right\} \lginterm{\pt_1}^{-\frac{1}{2}} \lginterm{\pt_0}^{\frac{1}{2}} \nonumber \\
+ \nu    & = & \exp\left\{ -\frac{1}{2} \lfdiffsf \left( \pt_1 - \pt_0 \right) \right\} \lginterm{\pt_1}^{-\frac{1}{2}} \lginterm{\pt_0}^{\frac{1}{2}} \left[ \obsmat^+ \ob{\rt} - \lginterm{\pt_0}^{-1} \left( \obsmat^+ \ob{\rt} - \transmean \right) \right] \nonumber \\
+        &   & + \: \obsmat^+ \ob{\rt} - \lginterm{\pt_1}^{-1} \left( \obsmat^+ \ob{\rt} - \transmean \right) \nonumber \\
  \Omega & = & \left[ 1 - \exp\left\{ - \lfdiffsf \left(\pt_1 - \pt_0\right) \right\} \right] \lgoicov{\pt_1}
 \end{IEEEeqnarray}
 

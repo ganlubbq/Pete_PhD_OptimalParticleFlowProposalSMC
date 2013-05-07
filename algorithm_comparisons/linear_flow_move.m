@@ -29,7 +29,7 @@ Hpi = pinv(H);
 
 % Find x
 F = expdS*(sqrtSt\sqrtS0);
-r = Hpi*y - St\Hpi*(y-H*m) + expdS*(sqrtSt\(sqrtS0\( Hpi*(y-H*m) - S0*Hpi*y )));
+r = Hpi*y - St\(Hpi*y-m) + expdS*(sqrtSt\(sqrtS0\( (Hpi*y-m) - S0*Hpi*y )));
 x_mn = F*x0+r;
 % x_mn = Hpi*y - St\Hpi*(y-H*m) + (expdS/sqrtSt)*(sqrtS0\( Hpi*(y-H*m) - S0*(Hpi*y-x0) ));
 % x = Mt\( M0*x0 ...
