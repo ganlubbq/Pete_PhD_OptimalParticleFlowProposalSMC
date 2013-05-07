@@ -29,6 +29,7 @@
 
 % Functions and operators
 \newcommand{\expect}[1]{\mathbb{E}_{#1}}                    % Expectation
+\newcommand{\variance}[1]{\mathbb{V}_{#1}}                    % Variance
 \DeclareMathOperator{\trace}{Tr}                            % Trace
 \newcommand{\magdet}[1]{\left|\left| #1 \right|\right|}     % Magnitude of the determinant
 \newcommand{\indic}[1]{\mathbbm{1}_{#1}}                    % Indicator function
@@ -39,6 +40,7 @@
 \newcommand{\pt}{\lambda}                       % Pseudo-time
 \newcommand{\ls}[1]{x_{#1}}                     % Latent state
 \newcommand{\ob}[1]{y_{#1}}                     % Observation
+\newcommand{\linob}[1]{\tilde{y}_{#1}}          % Linearised bservation
 
 % Particle shizzle
 \newcommand{\pss}[2][]{^{(#2)#1}}               % Particle superscript
@@ -406,7 +408,7 @@ This results in a cancellation, and hence the following weight update equation,
 When $\flowdiffuse{\pt}\ne0$, we can use \eqref{eq:general_weight_update} directly. The importance density is found by integrating the stochastic differential equation governing the flow \eqref{eq:flow} using the selected values of $\flowdrift{\pt}$ and $\flowdiffuse{\pt}$. The optimal choice for the artificial conditional density (in the sense of minimising the weight variance) is shown in \cite{DelMoral2006} to be,
 %
 \begin{IEEEeqnarray}{rCl}
- \artden(\ls{\rt,\pt_1}\pss{j} | \ls{\rt,\pt_0}\pss{j}) & = & \frac{ \oiden{\pt}(\ls{\rt,\pt_1} | \ls{\rt-1}) \impden(\ls{\rt,\pt_1} | \ls{\rt,\pt_0}) }{ \int \oiden{\pt}(\ls{\pt} | \ls{\rt-1} \impden(\ls{\rt,\pt_1} | \ls{\rt,\pt_0}) d\ls{\pt} }     .
+ \artden(\ls{\rt,\pt_0}\pss{j} | \ls{\rt,\pt_1}\pss{j}) & = & \frac{ \oiden{\pt}(\ls{\rt,\pt_0} | \ls{\rt-1}) \impden(\ls{\rt,\pt_1} | \ls{\rt,\pt_0}) }{ \int \oiden{\pt}(\ls{\pt} | \ls{\rt-1}) \impden(\ls{\rt,\pt_1} | \ls{\rt,\pt}) d\ls{\pt} }     .
 \end{IEEEeqnarray}
 
 
@@ -417,7 +419,7 @@ In order to implement an optimal form of the algorithm set out in the previous s
 \begin{itemize}
   \item Solve \eqref{eq:optimal_flow_PDE} to find the optimal choice for $\flowdrift{\pt}$.
   \item Select $\flowdiffuse{\pt}$ and hence use $\flowdrift{\pt}$ and $\flowdiffuse{\pt}$ to find the importance density, $\impden(\ls{\rt,\pt_1} | \ls{\rt,\pt_0})$.
-  \item Calculate the optimal artificial conditional density, $\artden(\ls{\rt,\pt_1}\pss{j} | \ls{\rt,\pt_0}\pss{j})$ in the stochastic case, or the required Jacobian in the deterministic case.
+  \item Calculate the optimal artificial conditional density, $\artden(\ls{\rt,\pt_0}\pss{j} | \ls{\rt,\pt_1}\pss{j})$ in the stochastic case, or the required Jacobian in the deterministic case.
 \end{itemize}
 
 These can all be performed analytically for a linear Gaussian model, specifically a model with a linear observation function and Gaussian transition and observation densities. The transition function need not be linear.
@@ -503,25 +505,155 @@ where $\lfdiffsf$ is a positive scale factor. This choice encourages particles t
 For these choices of $\flowdrift{\pt}$ and $\flowdiffuse{\pt}$, the importance density associated with a transition form $\pt_0$ to $\pt_1$ is,
 %
 \begin{IEEEeqnarray}{rCl}
- \impden(\ls{\rt,\pt_1} | \ls{\rt,\pt_0})
+\impden(\ls{\pt_1} | \ls{\pt_0}) & = & \normal{\ls{\pt_1}}{\Gamma \ls{\pt_0} + \nu}{\Omega} \\
+ \Gamma & = & \exp\left\{ -\frac{1}{2} \lfdiffsf \pt_1 \right\} \lginterm{\pt_1}^{-\frac{1}{2}} \lginterm{\pt_0}^{\frac{1}{2}} \nonumber \\
+ \nu    & = & \exp\left\{ -\frac{1}{2} \lfdiffsf \pt_1 \right\} \lginterm{\pt_1}^{-\frac{1}{2}} \Bigg\{ \left[ \exp\left\{ \frac{1}{2} \lfdiffsf \pt_1 \right\} \lginterm{\pt_1}^{\frac{1}{2}} - \exp\left\{ \frac{1}{2} \lfdiffsf \pt_0 \right\} \lginterm{\pt_0}^{\frac{1}{2}} \right] \obsmat^+ \ob{\rt} \nonumber \\
+ & & - \: \left[ \exp\left\{ \frac{1}{2} \lfdiffsf \pt_1 \right\} \lginterm{\pt_1}^{-\frac{1}{2}} - \exp\left\{ \frac{1}{2} \lfdiffsf \pt_0 \right\} \lginterm{\pt_0}^{-\frac{1}{2}} \right] \left( \obsmat^+ \ob{\rt} - \transfun(\ls{\rt-1}) \right) \Bigg\} \nonumber \\
+ \Omega & = & \left[ 1 - \exp\left\{ - \lfdiffsf \left(\pt_1 - \pt_0\right) \right\} \right] \left(\transcov^{-1} + \pt_1 \obsmat^T \obscov^{-1} \obsmat\right)^{-1}
+\end{IEEEeqnarray}
+%
+where,
+%
+\begin{IEEEeqnarray}{rCl}
+ \lginterm{\pt} & = & I + \pt \transcov \obsmat^T \obscov^{-1} \obsmat \nonumber     .
 \end{IEEEeqnarray}
 %
 For proof see Appendix~\ref{app:optimal_importance_density_linear_Gaussian}.
+
+The optimal artificial density for this is given by the Kalman filter update equations,
+%
+\begin{IEEEeqnarray}{rCl}
+ \artden(\ls{\pt_0} | \ls{\pt_1}) & = & \frac{ \oiden{\pt}(\ls{\pt_0} | \ls{\rt-1}) \impden(\ls{\pt_1} | \ls{\pt_0}) }{ \int \oiden{\pt}(\ls{\pt} | \ls{\rt-1}) \impden(\ls{\pt_1} | \ls{\pt}) d\ls{\pt} } \nonumber \\
+ & \propto & \normal{\ls{\pt_0}}{\lgoimean{\pt_0}}{\lgoicov{\pt_0}} \normal{\ls{\pt_1}}{\Gamma \ls{\pt_0} + \nu}{\Omega} \nonumber \\
+ & = & \normal{\ls{\pt_0}}{\lgoimean{\pt_0} + \lgoicov{\pt_0} \Gamma^T\left(\Gamma \lgoicov{\pt_0} \Gamma^T + \Omega\right)^{-1}\left(\ls{\pt_1} - \Gamma \lgoimean{\pt_0} - \nu \right)}{\lgoicov{\pt_0} - \lgoicov{\pt_0} \Gamma^T\left(\Gamma \lgoicov{\pt_0} \Gamma^T + \Omega\right)^{-1} \lgoicov{\pt_0}}     .
+\end{IEEEeqnarray}
+{\meta Betcha this simplifies. Also, that we can show that as $\lfdiffsf\rightarrow0$ then the stochastic case limits into the deterministic case.}
 
 
 
 \subsection{Optimal SUPF for the Linear Gaussian Model}
 
-Using the derived equations for the linear Gaussian model, an optimal SUPF algorithm can be implemented, as detailed in algorithm~\ref{}.
+Using the derived equations for the linear Gaussian model, an optimal SUPF algorithm can be implemented, as detailed in algorithm~\ref{}, using a single step to advance all the way through pseudo-time from $\pt=0$ to $\pt=1$.
 
 {\meta Put a pseudo-code algorithm here.}
 
 
 
 \section{Nonlinear Non-Gaussian Models}
+
+So far, the only model considered is linear (in the observation function) and Gaussian. This is in fact not useful, since it is already possible to sample from the optimal importance distribution directly for this case, and the resulting weights may be calculated in closed form. However, we can now employ our analytical solutions for the flow in this nice case to approximate optimal flows for other models. Note the required approximations occur only in the choice of importance density. The resulting particle filter is therefore still ``exact'' in the asymptotic sense usual for particle filters, although only ``approximately optimal''.
+
 \subsection{Linearisation}
+
+As a first excursion into the realm of nonlinearities, consider the Gaussian model with nonlinear transition \emph{and} observation functions,
+%
+\begin{IEEEeqnarray}{rCl}
+ p(\ls{\rt} | \ls{\rt-1}) & = & \normal{\ls{\rt}}{\transfun(\ls{\rt-1})}{\transcov} \nonumber \\
+ p(\ob{\rt} | \ls{\rt})   & = & \normal{\ob{\rt}}{\obsfun(\ls{\rt})}{\obscov}     .
+\end{IEEEeqnarray}
+
+The observation model may be linearised in the usual way, by truncating the Taylor series expansion,
+%
+\begin{IEEEeqnarray}{rCl}
+ \obsfun(\ls{}) & \approx & \obsfun(\ls{}^*) + \underbrace{\left.\frac{\partial \obsfun}{\partial \ls{}}\right|_{\ls{}^*}}_{\obsmat(\ls{}^*)} (\ls{} - \ls{}^*)
+\end{IEEEeqnarray}
+\begin{IEEEeqnarray}{rCl}
+ p(\ob{\rt} | \ls{\rt}) & \approx & \normal{\linob{\rt}}{\obsmat(\ls{}^*)\ls{\rt}}{\obscov} \nonumber \\
+ \linob{\rt}            & = & \ob{\rt} - \obsfun(\ls{}^*) + \obsmat(\ls{}^*)\ls{}^* \nonumber     ,
+\end{IEEEeqnarray}
+%
+where $\ls{}^*$ is the point around which the function is linearised.
+
+Rather than moving from $\pt=0$ to $\pt=1$, as was possible in the linear Gaussian case, we now advance through pseudo-time in small increments, using the current state as the linearisation point. By making a local, Gaussian approximation to the observation density, all the same formulas may be used for generating new states and updating weights as were used for the linear Gaussian model. If the pseudo-time step sizes are sufficiently small, such a method may well give better results than using an ordinary particle filter using a Gaussian approximation to the OID.
+
+
+
 \subsection{Scale Mixtures of Normals}
+
+A further generalisation is possible to heavy-tailed densities (either transition or observation) which may be represented as scale mixtures of normals,
+%
+\begin{IEEEeqnarray}{rCl}
+ p(z) & = & \int \normal{z}{m}{\frac{1}{\xi}P} p(\xi) d\xi     .
+\end{IEEEeqnarray}
+%
+For example, if $p(\xi)$ is a chi-square distribution (with $\nu$ degrees of freedom), then $p(z)$ is a student-t distribution (with $\nu$ degrees of freedom). With $1$ degree of freedom, this becomes a Cauchy distribution. Alpha-stable distributions may also be represented \cite{Godsill1999}.
+
+By extending the target distribution to include the auxiliary mixing variable, $\xi$, the distribution becomes gamma-normal. We exploit this by sampling the mixing variable from its prior and then using the same optimal (or approximately optimal) flow methods for the linear (or nonlinear) Gaussian model. The importance density becomes simply,
+%
+\begin{IEEEeqnarray}{rCl}
+ \impden(\ls{\pt_1} | \ls{\pt_0}, \xi) p(\xi)     ,
+\end{IEEEeqnarray}
+%
+and the artificial conditional density,
+%
+\begin{IEEEeqnarray}{rCl}
+ \artden(\ls{\pt_0} | \ls{\pt_1}, \xi) p(\xi)     ,
+\end{IEEEeqnarray}
+%
+which results in no change to the weight update formulas.
+
+In the same manner as the linearisation method for nonlinear models, the stretch of pseudo-time is divided into small intervals and the value for the mixing variable may be sampled afresh for each. This has the effect that each particle is updated according to a ``blend'' of different flows corresponding to different values of $\xi$, rather than a single value.
+
 \subsection{Gradient Matching}
+
+A cruder form of approximation is possible for densities which cannot be written as scale mixtures of normals. Again, the troublesome density is approximated by a Gaussian for short intervals of pseudo-time, but this time the Gaussian is chosen so as to have the same value and gradient as the true density at some particular point, $\ls{}^*$.
+
+To match the transition density, we first write,
+%
+\begin{IEEEeqnarray}{rCl}
+ \flowtd(\ls{}) & = & p(\ob{\rt} | \ls{\rt})     ,
+\end{IEEEeqnarray}
+%
+and calculate $\flowtd(\ls{}^*)$ and $\Delta := \frac{\left. \nabla_{\ls{}} \flowtd \right|_{\ls{}^*}}{\flowtd(\ls{}^*)}$. Denoting the matched Gaussian density and its parameters with tildes, we can write the following,
+%
+\begin{IEEEeqnarray}{rCl}
+ \tilde{\flowtd}(\ls{}) & := & \left| 2 \pi \tilde{\transcov} \right|^{-\frac{1}{2}} \exp\left\{ -\frac{1}{2} (\ls{}-\tilde{\transmean})^T \tilde{\transcov}^{-1} (\ls{}-\tilde{\transmean}) \right\} \nonumber \\
+                   & = & \left| 2 \pi \tilde{\transcov} \right|^{-\frac{1}{2}} \exp\left\{ -\frac{1}{2} \tilde{\Delta}^T \tilde{\transcov} \tilde{\Delta} \right\} \nonumber \\
+ \tilde{\Delta} := \frac{\left.\nabla_{\ls{}} \tilde{\flowtd}(\ls{})\right|_{\ls{}^*}}{\tilde{\flowtd}(\ls{})} & = & - \tilde{\transcov}^{-1} (\ls{}-\tilde{\transmean}) \nonumber      .
+\end{IEEEeqnarray}
+%
+Now equating $\flowtd(\ls{}^*)=\tilde{\flowtd}(\ls{}^*)$ and $\Delta=\tilde{\Delta}$, and selecting $\tilde{\transcov} = \tilde{\sigma}_P^2 I$, we have,
+%
+\begin{IEEEeqnarray}{rCl}
+ \flowtd(\ls{}^*) & = & (2 \pi \tilde{\sigma}_P^2)^{\frac{-d_S}{2}} \exp \left\{ -\frac{1}{2} \left|\Delta\right|^2 \tilde{\sigma}_P^2 \right\} \nonumber
+\end{IEEEeqnarray}
+%
+and thus the parameters of the matched Gaussian are given by,
+%
+\begin{IEEEeqnarray}{rCl}
+ \tilde{\transcov}  & = & \tilde{\sigma}_P^2 I \nonumber \\
+ \tilde{\sigma}_P^2 & = & \frac{d_S}{\left|\Delta\right|^2} \W\left[ \frac{\left|\Delta\right|^2}{2 \pi d_S} \flowtd(\ls{}^*)^{-\frac{2}{d_S}} \right] \nonumber \\
+ \tilde{\transmean} & = & \ls{}^* + \tilde{\sigma}_P^2 \Delta     ,
+\end{IEEEeqnarray}
+%
+where $\W$ is the Lambert-W or product-log function and $d_S$ is the number of state dimensions.
+
+Repeating the same process for the observation density,
+%
+\begin{IEEEeqnarray}{rCl}
+ \flowod(\ls{}) & = & p(\ob{\rt} | \ls{}) \nonumber \\
+ \Delta & := & \frac{\left. \nabla_{\ls{}} \flowod \right|_{\ls{}^*}}{\flowod(\ls{}^*)} \nonumber     ,
+\end{IEEEeqnarray}
+%
+with the additional step that we assume $\tilde{\obsmat}=I$, we obtain,
+%
+\begin{IEEEeqnarray}{rCl}
+ \tilde{\flowod}(\ls{}) & := & \left| 2 \pi \tilde{\obscov} \right|^{-\frac{1}{2}} \exp\left\{ -\frac{1}{2} (\tilde{y} - \tilde{\obsmat} \ls{})^T \tilde{\obscov}^{-1} (\tilde{y} - \tilde{\obsmat} \ls{}) \right\} \nonumber \\
+ \tilde{\obsmat} & = & I \nonumber \\
+ \tilde{\obscov} & = & \tilde{\sigma}_L^2 I \nonumber \\
+ \tilde{\sigma}_L^2 & = & \frac{d_S}{\left|\Delta\right|^2} \W\left[ \frac{\left|\Delta\right|^2}{2 \pi d_S} \flowod(\ls{}^*)^{-\frac{2}{d_S}} \right] \nonumber \\
+ \tilde{y} & = & \ls{}^* + \tilde{\sigma}_L^2 \Delta     .
+\end{IEEEeqnarray}
+
+Other methods of matching are possible, for example choosing the Gaussian with the same gradient and Hessian as the true density. This requires special handling when the Hessian is not positive definite.
+
+
+
+\subsection{Approximately Optimal SUPF for Nonlinear Non-Gaussian Models}
+
+For nonlinear or non-Gaussian models, the SUPF is still an exact particle filter, but is only approximately optimal. Unlike the linear-Gaussian case, it is necessary to divide up pseudo-time into short intervals and make use of one of the Gaussian approximations for each interval. A summary is shown in algorithm~\ref{}.
+
+{\meta Put another pseudo-code algorithm here.}
 
 
 
@@ -531,227 +663,11 @@ Using the derived equations for the linear Gaussian model, an optimal SUPF algor
 \subsubsection{Gaussian Noise}
 \subsubsection{Student-t Noise}
 
-{\meta OLD STUFF}
-
 
 
 
 
 \section{OLD STUFF}
-\subsection{Linear Gaussian Models}
-
-If the transition and observation densities are Gaussian, and the observation function is linear, then the optimal flow PDE can be solved analytically. The following intermediate terms can then be calculated easily,
-%
-\begin{IEEEeqnarray}{rCl}
- \log\left(\alpha(\ls{\pt})\right) & = & -\frac{1}{2}\log\left(\left| 2 \pi Q \right|\right) - \frac{1}{2}(\ls{\pt}-m)^T Q^{-1}(\ls{\pt}-m) \\
- \log\left(\beta(\ls{\pt})\right)  & = & -\frac{1}{2}\log\left(\left| 2 \pi R \right|\right) - \frac{1}{2}(y-H\ls{\pt})^T R^{-1}(y-H\ls{\pt}) \\
- \nabla \log\left(\alpha(\ls{\pt})\right) & = & -Q^{-1}(\ls{\pt}-m) \\
- \nabla \log\left(\beta(\ls{\pt})\right)  & = & H^T R^{-1}(y-H\ls{\pt}) \\
- \nabla \log\left(\oiden{\pt}(\ls{\pt})\right)  & = & \left[ -Q^{-1}(\ls{\pt}-m) + \pt H^T R^{-1}(y-H\ls{\pt}) \right] \nonumber \\
-                                         & = & - \Sigma_{\pt}^{-1} \left(\ls{\pt}-\mu_{\pt}\right) \\
- \oiden{\pt}(\ls{\pt}) & = & \mathcal{N}(\ls{\pt}|\mu_{\pt},\Sigma_{\pt}) \\
- \Sigma_{\pt} & = & \left[ Q^{-1} + H^T \left(\frac{R}{\pt}\right)^{-1} H \right]^{-1} \\
- \mu_{\pt}    & = & \Sigma_{\pt} \left[ Q^{-1} m + H^T \left(\frac{R}{\pt}\right)^{-1} y \right] \\
- \mathbb{E}_{\oiden{\pt}}\left[ \log\left(\beta(\ls{\pt})\right) \right] & = & -\frac{1}{2}\log\left(\left| 2 \pi R \right|\right) - \frac{1}{2} \mathbb{E}_{\oiden{\pt}}\left[ (y-H\ls{\pt})^T R^{-1}(y-H\ls{\pt}) \right] \\
- \mathbb{E}_{\oiden{\pt}}\left[ (y-H\ls{\pt})^T R^{-1}(y-H\ls{\pt}) \right] & = & y^T R^{-1} y - 2 y^T R^{-1} H \mu_{\pt} + \mu_{\pt}^T H^T R^{-1} H \mu_{\pt} + \mathcal{TR}\left( H^T R^{-1} H \Sigma_{\pt} \right) \nonumber
-\end{IEEEeqnarray}
-
-Assume the flow takes the form,
-%
-\begin{IEEEeqnarray}{rCl}
- \flam(\ls{\pt}) & = & A_{\pt} \ls{\pt} + b_{\pt}     .
-\end{IEEEeqnarray}
-%
-Then,
-%
-\begin{IEEEeqnarray}{rCl}
-\IEEEeqnarraymulticol{3}{l}{ -\frac{1}{2}(y-H\ls{\pt})^T R^{-1}(y-H\ls{\pt}) + \frac{1}{2}\mathbb{E}_{\pi}\left[ (y-H\ls{\pt})^T R^{-1}(y-H\ls{\pt}) \right] } \nonumber \\
- \qquad & = & - \mathcal{TR}(A) + \left( A_{\pt} \ls{\pt} + b_{\pt} \right)^T \Sigma_{\pt}^{-1} \left(\ls{\pt}-\mu_{\pt}\right) \nonumber \\
-\IEEEeqnarraymulticol{3}{l}{ y^T R^{-1} H (\ls{\pt} - \mu_{\pt}) + \frac{1}{2}\left[ \mu_{\pt}^T H^T R^{-1} H \mu_{\pt} + \mathcal{TR}\left( H^T R^{-1} H \Sigma_{\pt} \right) - \ls{\pt}^T H^T R^{-1} H \ls{\pt} \right] } \nonumber \\
- \qquad & = & - \mathcal{TR}(A) + \left( A_{\pt} \ls{\pt} + b_{\pt} \right)^T \Sigma_{\pt}^{-1} \left(\ls{\pt}-\mu_{\pt}\right)      .
-\end{IEEEeqnarray}
-%
-Now equating terms gives us the following three equations, which allow us to find values of $A$ and $b$,
-%
-\begin{IEEEeqnarray}{rCl}
- - \frac{1}{2} H^T R^{-1} H & = & A_{\pt}^T \Sigma_{\pt}^{-1} \nonumber \\
- A_{\pt} & = & - \frac{1}{2} \Sigma_{\pt} H^T R^{-1} H \nonumber \\
-            & = & - \frac{1}{2} \left[ Q - Q H^T \left(\left(\frac{R}{\pt}\right) + H Q H^T \right)^{-1} H Q \right] H^T R^{-1} H \nonumber \\
-            & = & - \frac{1}{2} Q H^T \left[ R^{-1} - \left(\left(\frac{R}{\pt}\right) + H Q H^T \right)^{-1} H Q H^T R^{-1} \right] H \nonumber \\
-            & = & - \frac{1}{2} Q H^T \left(\left(\frac{R}{\pt}\right) + H Q H^T \right)^{-1} \underbrace{\left[ \left(\left(\frac{R}{\pt}\right) + H Q H^T \right) R^{-1} - H Q H^T R^{-1} \right]}_{\frac{1}{\pt} I} H \nonumber \\
-            & = & - \frac{1}{2} Q H^T \left(R + \pt H Q H^T \right)^{-1} H     .
-\end{IEEEeqnarray}
-%
-\begin{IEEEeqnarray}{rCl}
- y^T R^{-1} H  & = & b_{\pt}^T \Sigma_{\pt}^{-1} - \mu_{\pt}^T \Sigma_{\pt}^{-1} A_{\pt} \nonumber \\
- b_{\pt} & = & \Sigma_{\pt} \left[ H^T R^{-1} y + A_{\pt}^T \Sigma_{\pt}^{-1} \mu_{\pt} \right] \nonumber \\
-            & = & \left[ Q^{-1} + \pt H^T R^{-1} H \right]^{-1} \left[ H^T R^{-1} y + \pt A_{\pt}^T H^T R^{-1} y + A_{\pt}^T Q^{-1} m \right] \nonumber \\
-            & = & \left[ Q - Q H^T \left(\left(\frac{R}{\pt}\right) + H Q H^T \right)^{-1} H Q \right] \left[ (I + \pt A_{\pt}^T) H^T R^{-1} y + A_{\pt}^T Q^{-1} m \right] \nonumber \\
-            & = & \left[ I + 2 \pt A_{\pt} \right] Q \left[ (I + \pt A_{\pt}^T) H^T R^{-1} y + A_{\pt}^T Q^{-1} m \right] \nonumber \\
-            & = & \left[ I + 2 \pt A_{\pt} \right] \left[ (I + \pt A_{\pt}) Q H^T R^{-1} y + A_{\pt} m \right]     ,
-\end{IEEEeqnarray}
-%
-where we have used $Q A_{\pt}^T = A_{\pt} Q$ in the last line. Finally we need to make sure the constant terms balance,
-%
-\begin{IEEEeqnarray}{rCl}
- \IEEEeqnarraymulticol{3}{l}{-y^T R^{-1} H \mu_{\pt} + \frac{1}{2} \mu_{\pt}^T H^T R^{-1} H \mu_{\pt} + \frac{1}{2} \mathcal{TR}\left( H^T R^{-1} H \Sigma_{\pt} \right)} \nonumber \\
- \qquad \qquad \qquad & = & - \mathcal{TR}(A) + b_{\pt}^T \Sigma_{\pt}^{-1} \mu_{\pt}     .
-\end{IEEEeqnarray}
-%
-Comparing the trace terms using the formula for $A_{\pt}$,
-%
-\begin{IEEEeqnarray}{rCl}
- \text{RHS} & = & - \mathcal{TR}(A) \nonumber \\
-            & = & \frac{1}{2} \mathcal{TR}\left( \Sigma_{\pt} H^T R^{-1} H \right) \nonumber \\
-            & = & \frac{1}{2} \mathcal{TR}\left( H^T R^{-1} H \Sigma_{\pt} \right) \nonumber \\
-            & = & \text{LHS}     .
-\end{IEEEeqnarray}
-%
-Examining the remaining terms using the formula for $b_{\pt}$ and $A_{\pt}$,
-%
-\begin{IEEEeqnarray}{rCl}
- \text{RHS} & = & - b_{\pt}^T \Sigma_{\pt}^{-1} \mu_{\pt} \nonumber \\
-            & = & - \left[ H^T R^{-1} y + A_{\pt}^T \Sigma_{\pt}^{-1} \mu_{\pt} \right]^T \mu_{\pt} \nonumber \\
-            & = & - \left[ H^T R^{-1} y - \frac{1}{2} H^T R^{-1} H \mu_{\pt} \right]^T \mu_{\pt} \nonumber \\
-            & = & -y^T R^{-1} H \mu_{\pt} + \frac{1}{2} \mu_{\pt}^T H^T R^{-1} H \mu_{\pt} \nonumber \\
-            & = & \text{LHS}     .
-\end{IEEEeqnarray}
-%
-Hence the hypothesised solution is valid.
-
-The Jacobian required for the weight update is trivial for this flow,
-%
-\begin{IEEEeqnarray}{rCl}
- \left.\frac{\partial\flam}{\partial\ls{\pt}}\right|_{\pt,\ls{\pt}} & = & A_{\pt}     .
-\end{IEEEeqnarray}
-
-
-
-\subsection{Everything Else}
-
-The Linear-Gaussian case is the only one for which we know of an analytical solution for the optimal flow. However, the particle filter will still be valid whatever the choice for $\flam$. Therefore, for all other models we can form a local linear-Gaussian approximation the problem and use the optimal flow already derived, which will now be approximately optimal.
-
-If the densities are Gaussian but the observation model is nonlinear, we can linearise it in the normal way.
-%
-\begin{IEEEeqnarray}{rCl}
- h(\ls{\rt}) & \approx & h(\ls{\rt}^*) + \underbrace{\left.\frac{\partial h}{\partial \ls{\rt}}\right|_{\ls{\rt}^*}}_{H(\ls{\rt}^*)} (\ls{\rt} - \ls{\rt}^*) \nonumber \\
- \beta(\ls{\rt})  & = & \mathcal{N}(\ob{\rt}|h(\ls{\rt}),R) \nonumber \\
-             & \approx & \mathcal{N}(\ob{\rt}-h(\ls{\rt}^*)+H(\ls{\rt}^*) \ls{\rt}^* | H(\ls{\rt}^*) \ls{\rt}, R)      .
-\end{IEEEeqnarray}
-%
-The linearisation is carried out at the starting point of each step in the numerical integration.
-
-If the transition or observation density is not Gaussian, we can use a more drastic approximation. A Gaussian is selected which is in some sense the ``closest'' to the true density at the current state. This can be achieved by setting the mean and covariance so as to match the value and gradient of the exact and approximate densities.
-
-To match the transition density, we calculate $\alpha(x^*)$ and $\Delta := \frac{\left. \nabla_x \alpha \right|_{x^*}}{\alpha(x^*)}$ at the current state, $x_{\pt}$. Denoting the matched Gaussian density and its parameters with tildes, we can write the following,
-%
-\begin{IEEEeqnarray}{rCl}
- \tilde{\alpha}(x) & := & \left| 2 \pi \tilde{Q} \right|^{-\frac{1}{2}} \exp\left\{ -\frac{1}{2} (x-\tilde{m})^T \tilde{Q}^{-1} (x-\tilde{m}) \right\} \nonumber \\
-                   & = & \left| 2 \pi \tilde{Q} \right|^{-\frac{1}{2}} \exp\left\{ -\frac{1}{2} \tilde{\Delta}^T \tilde{Q} \tilde{\Delta} \right\} \nonumber \\
- \tilde{\Delta} := \frac{\left.\nabla_x \tilde{\alpha}(x)\right|_{x_{\pt}}}{\tilde{\alpha}(x)} & = & - \tilde{Q}^{-1} (x-\tilde{m}) \nonumber      .
-\end{IEEEeqnarray}
-%
-Now equating $\alpha(x_{\pt})=\tilde{\alpha}(x_{\pt})$ and $\Delta=\tilde{\Delta}$, and selecting $\tilde{Q} = \tilde{\sigma}_P^2 I$, we have,
-%
-\begin{IEEEeqnarray}{rCl}
- \alpha(x_{\pt}) & = & (2 \pi \tilde{\sigma}_P^2)^{\frac{-d_S}{2}} \exp \left\{ -\frac{1}{2} \left|\Delta\right|^2 \tilde{\sigma}_P^2 \right\} \nonumber \\
- \tilde{\sigma}_P^2 & = & \frac{d_S}{\left|\Delta\right|^2} \W\left[ \frac{\left|\Delta\right|^2}{2 \pi d_S} \alpha(x_{\pt})^{-\frac{2}{d_S}} \right] \\
- \tilde{m} & = & x_{\pt} + \tilde{\sigma}_P^2 \Delta
-\end{IEEEeqnarray}
-%
-where $\W$ is the Lambert-W or log-product function and $d_S$ is the number of state dimensions.
-
-The procedure is very similar for the observation density. This time we calculate $\beta(x_{\pt})$ and $\Delta := \frac{\left. \nabla_x \beta \right|_{x_{\pt}}}{\beta(x_{\pt})}$ at the current state, $x_{\pt}$, and write,
-%
-\begin{IEEEeqnarray}{rCl}
- \tilde{\beta}(x) & := & \left| 2 \pi \tilde{R} \right|^{-\frac{1}{2}} \exp\left\{ -\frac{1}{2} (\tilde{y}-\tilde{H}x)^T \tilde{R}^{-1} (\tilde{y}-\tilde{H}x) \right\} \nonumber \\
- \tilde{\Delta} := \frac{\left.\nabla_x \tilde{\beta}(x)\right|_{x_{\pt}}}{\tilde{\beta}(x)} & = & \tilde{R}^{-1} (\tilde{y}-\tilde{H}x) \nonumber      .
-\end{IEEEeqnarray}
-%
-Now equating $\beta(x_{\pt})=\tilde{\beta}(x_{\pt})$ and $\Delta=\tilde{\Delta}$, and selecting $\tilde{R} = \tilde{\sigma}_L^2 I$ and $\tilde{H} = I$, we have,
-%
-\begin{IEEEeqnarray}{rCl}
- \beta(x_{\pt}) & = & (2 \pi \tilde{\sigma}_L^2)^{\frac{-d_S}{2}} \exp \left\{ -\frac{1}{2} \left|\Delta\right|^2 \tilde{\sigma}_L^2 \right\} \nonumber \\
- \tilde{\sigma}_L^2 & = & \frac{d_S}{\left|\Delta\right|^2} \W\left[ \frac{\left|\Delta\right|^2}{2 \pi d_S} \beta(x_{\pt})^{-\frac{2}{d_S}} \right] \\
- \tilde{y} & = & x_{\pt} + \tilde{\sigma}_L^2 \Delta     .
-\end{IEEEeqnarray}
-
-As an example, if we had a multivariate student-t observation density, then we would calculate $\beta(x_{\pt})$ and $\Delta$ using the following formulas,
-%
-\begin{IEEEeqnarray}{rCl}
- \beta{x_{\pt}} & = & \frac{ \Gamma(\frac{\nu+1}{2}) }{ \Gamma(\frac{\nu}{2}) } \left|\nu \pi R\right|^{-\frac{1}{2}} \left[ 1+\frac{1}{\nu} (y-h(x_{\pt}))^T R^{-1} (y-h(x_{\pt})) \right]^{-\frac{1}{2}(\nu+d_O)} \\
- \left.\nabla_x \tilde{\beta}(x)\right|_{x_{\pt}} & = & -\frac{1}{2}(\nu+d_O) \frac{ \Gamma(\frac{\nu+1}{2}) }{ \Gamma(\frac{\nu}{2}) } \left|\nu \pi R\right|^{-\frac{1}{2}} \left[ 1+\frac{1}{\nu} (y-h(x_{\pt}))^T R^{-1} (y-h(x_{\pt})) \right]^{-\frac{1}{2}(\nu+d_O)-1} \nonumber \\
- &   & \qquad \times \left[ -\frac{2}{\nu} H^T R^{-1} (y-h(x_{\pt})) \right] \nonumber \\
- \Delta & = & -\frac{1}{2}(\nu+d_O) \left[ 1+\frac{1}{\nu} (y-h(x_{\pt}))^T R^{-1} (y-h(x_{\pt})) \right]^{-1} \left[ -\frac{2}{\nu} H^T R^{-1} (y-h(x_{\pt})) \right] \nonumber \\
-        & = & \frac{ (\nu+d_O) H^T R^{-1} (y-h(x_{\pt})) }{ \nu + (y-h(x_{\pt}))^T R^{-1} (y-h(x_{\pt})) } \\
- H & := & \left.\frac{\partial h}{\partial x}\right|_{x_{\pt}}
-\end{IEEEeqnarray}
-
-
-
-\section{The Stochastic Smooth Update}
-
-We now consider the more general case of $g_{\pt}^{(j)}\ne0$, meaning that particles are moved stochastically as $\pt$ increases. For simplicity, we will assume that $g_{\pt}^{(j)}$ does not depend on $\ls{\pt}^{(j)}$. Particle motion is governed by the stochastic differential equation (SDE),
-%
-\begin{IEEEeqnarray}{rCl}
- d\ls{\pt} & = & \flam(\ls{\pt}) d\pt + g_{\pt} d\epsilon_\pt     ,
-\end{IEEEeqnarray}
-%
-where $\epsilon_\pt$ is a Brownian motion. Define,
-%
-\begin{IEEEeqnarray}{rCl}
- \Dlam & = & \frac{1}{2} g_{\pt} g_{\pt}^T     .
-\end{IEEEeqnarray}
-
-
-
-\subsection{Weight Evolution}
-
-This is actually somewhat simpler than the deterministic case. In moving from $\pt$ to $\pt+\delta\pt$, the new state is sampled from the Gaussian density,
-%
-\begin{IEEEeqnarray}{rCl}
- q(\xldl | \ls{\pt}) & = & \mathcal{N}(\xldl|\ls{\pt}+\flam(\ls{\pt})\delta\pt,2\delta\pt \Dlam)     .
-\end{IEEEeqnarray}
-%
-The incremental weight update is given by,
-%
-\begin{IEEEeqnarray}{rCl}
- w_{\pt+\delta\pt} & = & \frac{ d\tilpildl(\ls{1:\rt-1}, \xldl) d\artden(\xztldl | \xldl) }{ d\tilpilam(\ls{1:\rt-1}, \ls{\pt}) d\artden(\xztl | \ls{\pt}) d q(\xldl | \ls{\pt}) } \nonumber \\
-                          & = & \frac{ d\tilpildl(\ls{1:\rt-1},\xldl) d\artden(\ls{\pt} | \xldl) }{ d\tilpilam(\ls{1:\rt-1}, \ls{\pt}) dq(\xldl | \ls{\pt}) } \nonumber \\
-                          & = & \frac{ \tilpildl(\ls{1:\rt-1}, \xldl) \artden(\ls{\pt} | \xldl) }{ \tilpilam(\ls{1:\rt-1}, \ls{\pt}) q(\xldl | \ls{\pt}) }      .
-\end{IEEEeqnarray}
-
-For certain flows, it is then possible to select $\artden$ so that $\frac{\artden}{q}$ is easily evaluated. For example, for a linear flow, $\flam(\ls{\pt}) = A_{D,\pt} \ls{\pt} + b_{D,\pt}$, we can show that,
-%
-\begin{IEEEeqnarray}{rCl}
- \ls{\pt}+\flam(\ls{\pt})\delta\pt & = & \left[ I + \delta\pt A_{D,\pt} \right] \ls{\pt} + \delta\pt b_{D,\pt} \nonumber \\
-\end{IEEEeqnarray}
-\begin{IEEEeqnarray}{rCl}
- \IEEEeqnarraymulticol{3}{l}{ \mathcal{N}(\xldl|\ls{\pt}+\flam(\ls{\pt})\delta\pt,2\delta\pt \Dlam) } \nonumber \\
- \qquad & = & \mathcal{N}(\xldl|\left[ I + \delta\pt A_{D,\pt} \right] \ls{\pt} + \delta\pt b_{D,\pt},2\delta\pt \Dlam) \nonumber \\
-        & = & J_{\pt} \mathcal{N}(\ls{\pt} | J_{\pt} \left(\xldl-\delta\pt b_{D,\pt}\right),2\delta\pt J_{\pt} \Dlam J_{\pt}) \nonumber      ,
-\end{IEEEeqnarray}
-%
-where
-%
-\begin{IEEEeqnarray}{rCl}
- J_{\pt} & = & \left| I + \delta\pt A_{D,\pt} \right|^{-1}
-\end{IEEEeqnarray}
-%
-Hence, by choosing,
-%
-\begin{IEEEeqnarray}{rCl}
- \artden(\ls{\pt} | \xldl) & = & \mathcal{N}(\ls{\pt} | J_{\pt} \left(\xldl-\delta\pt b_{D,\pt}\right),2\delta\pt J_{\pt} \Dlam J_{\pt})     ,
-\end{IEEEeqnarray}
-%
-we obtain the incremental weight update formula,
-%
-\begin{IEEEeqnarray}{rCl}
- w_{\pt+\delta\pt} & = & w_{\pt} \frac{ \tilpildl(\xldl) }{ \tilpilam(\ls{\pt}) } \left| I + \delta\pt A_{D,\pt} \right|       ,
-\end{IEEEeqnarray}
-%
-which is the same as that used previously for the deterministic flow, and may be used along with a numerical integration scheme for updating the particle weights. The states are updated using Euler integration of the SDE.
-
 
 
 \subsection{Intermediate Resampling}
@@ -759,93 +675,6 @@ which is the same as that used previously for the deterministic flow, and may be
 As the filter advances through the interval of pseudo-time, it may become apparent long before $\pt$ approaches $1$ that some particles are going to have very low weights and are highly unlikely to be selected for the next time step. This motivates the introduction of intermediate resampling during the pseudo-time interval. The effective sample size can be calculated after each step in the numerical integration and resampling conducted whenever this falls below a chosen threshold. In this way, we ensure that a diverse particle collection is maintained, and computation is not wasted in performing numerical integration for insignificant particles.
 
 Resampling steps introduce correlation between particles which will decay over time. The rate of this decay is determined by the diffusion term $\glam$. In the limit, when $\glam=0$, and the flow is deterministic, multiple copies of the same particle will remain identical until $\pt=1$. Note that the resampling is still beneficial as it means we do not waste computation on useless particles. On the other hand, when the $\glam$ is large, the particles will rapidly de-correlate after resampling, but smaller step sizes will be required in the numerical integration.
-
-
-
-\subsection{Optimal Flow for the Linear-Gaussian Case}
-
-The Fokker-Planck equation now gives us,
-%
-\begin{IEEEeqnarray}{rCl}
- \frac{\partial \oiden{\pt}}{\partial \pt} & = & -\nabla \cdot \left[ \flam(\ls{\pt}) \oiden{\pt}(\ls{\pt}) \right] + \sum_i \sum_j \frac{\partial^2}{\partial x_{\pt,i} \partial x_{\pt,j}} \left[ D_{\pt,i,j}(\ls{\pt}) \oiden{\pt}(\ls{\pt}) \right]       ,
-\end{IEEEeqnarray}
-%
-where
-%
-\begin{IEEEeqnarray}{rCl}
- D_{\pt}(\ls{\pt}) & = & \frac{1}{2} g_{\pt}(\ls{\pt}) g_{\pt}(\ls{\pt})^T     .
-\end{IEEEeqnarray}
-%
-If we assume that $\glam$ (and hence $D_{\pt}$) is independent of $\ls{\pt}$, then this becomes (as before),
-%
-\begin{IEEEeqnarray}{rCl}
- \frac{\partial \oiden{\pt}}{\partial \pt} & = & -\nabla \cdot \left[ \flam(\ls{\pt}) \oiden{\pt}(\ls{\pt}) \right] + \nabla \cdot \left[ D_{\pt} \nabla \oiden{\pt}(\ls{\pt}) \right]     \nonumber \\
-\log\left(\beta(\ls{\pt})\right) - \mathbb{E}_{\oiden{\pt}}\left[ \log\left(\beta(\ls{\pt})\right) \right] & = & -\nabla\cdot \flam(\ls{\pt}) - \flam(\ls{\pt}) \cdot \nabla \log\left( \oiden{\pt}(\ls{\pt}) \right) \nonumber \\
- &   & \qquad + \: \frac{1}{\oiden{\pt}(\ls{\pt})} \nabla \cdot \left[ D_{\pt} \nabla \oiden{\pt}(\ls{\pt}) \right]      .
-\end{IEEEeqnarray}
-
-For the Gaussian model considered previously, recall that,
-%
-\begin{IEEEeqnarray}{rCl}
- \pi(x, \pt) & = & \mathcal{N}(x|\mu_{\pt},\Sigma_{\pt}) = \left| 2 \pi \Sigma_{\pt} \right|^{-\frac{1}{2}} \exp\left\{ -\frac{1}{2} \left[ \left(x-\mu_{\pt}\right)^T \Sigma_{\pt}^{-1} \left(x-\mu_{\pt}\right) \right] \right\}      \nonumber \\
- \Sigma_{\pt} & = & \left[ Q^{-1} + H^T \left(\frac{R}{\pt}\right)^{-1} H \right]^{-1} \nonumber \\
- \mu_{\pt}    & = & \Sigma_{\pt} \left[ Q^{-1} m + H^T \left(\frac{R}{\pt}\right)^{-1} y \right] \nonumber     .
-\end{IEEEeqnarray}
-%
-Hence,
-%
-\begin{IEEEeqnarray}{rCl}
- \nabla \pi(x, \pt) & = & \pi(x, \pt) \left[ -\Sigma_{\pt}^{-1} \left(x-\mu_{\pt}\right) \right] \\
- \nabla \cdot \left[ D_{\pt} \nabla \pi(\ls{\pt}, \pt) \right] & = & \nabla \cdot \left\{ \pi(x, \pt) \left[ - D_{\pt} \Sigma_{\pt}^{-1} \left(x-\mu_{\pt}\right) \right] \right\} \nonumber \\
- & = & \nabla \pi(x, \pt) \cdot \left[ - D_{\pt} \Sigma_{\pt}^{-1} \left(x-\mu_{\pt}\right) \right] + \pi(x, \pt) \nabla \cdot \left[ - D_{\pt} \Sigma_{\pt}^{-1} \left(x-\mu_{\pt}\right) \right] \nonumber \\
- & = & \pi(x, \pt) \left\{ \left(x-\mu_{\pt}\right)^T \Sigma_{\pt}^{-1} D_{\pt} \Sigma_{\pt}^{-1} \left(x-\mu_{\pt}\right) - \mathcal{T}\left[ D \Sigma_{\pt}^{-1} \right] \right\}     .
-\end{IEEEeqnarray}
-
-If we again assume that the drift depends linearly on $\ls{\pt}$,
-%
-\begin{IEEEeqnarray}{rCl}
- \flam(\ls{\pt}) & = & A_{D,\pt} x + b_{D,\pt}     ,
-\end{IEEEeqnarray}
-%
-then we can find $A_D$ and $b_D$ by equating terms again. For $A_D$,
-%
-\begin{IEEEeqnarray}{rCl}
- - \frac{1}{2} H^T R^{-1} H & = & A_{D,\pt}^T \Sigma_{\pt}^{-1} + \Sigma_{\pt}^{-1} D_{\pt} \Sigma_{\pt}^{-1} \nonumber \\
- A_{D,\pt} & = & - \frac{1}{2} \Sigma_{\pt} H^T R^{-1} H - D_{\pt} \Sigma_{\pt}^{-1} \nonumber \\
-              & = & A_{\pt} - D_{\pt} \Sigma_{\pt}^{-1}      .
-\end{IEEEeqnarray}
-%
-For $b_D$,
-%
-\begin{IEEEeqnarray}{rCl}
- y^T R^{-1} H  & = & b_{D,\pt}^T \Sigma_{\pt}^{-1} - \mu_{\pt}^T \Sigma_{\pt}^{-1} A_{D,\pt} - 2 \mu_{\pt}^T \Sigma_{\pt}^{-1} D_{\pt} \Sigma_{\pt}^{-1} \nonumber \\
- b_{D,\pt} & = & \Sigma_{\pt} \left[ H^T R^{-1} y + A_{D,\pt}^T \Sigma_{\pt}^{-1} \mu_{\pt} \right] + 2 D_{\pt} \Sigma_{\pt}^{-1} \mu_{\pt} \nonumber \\
-              & = & \Sigma_{\pt} \left[ H^T R^{-1} y + A_{\pt}^T \Sigma_{\pt}^{-1} \mu_{\pt} \right] + D_{\pt} \Sigma_{\pt}^{-1} \mu_{\pt} \nonumber \\
-            & = & b_{\pt} + D_{\pt} \Sigma_{\pt}^{-1} \mu_{\pt} \nonumber \\
-            & = & b_{\pt} + D_{\pt} \left[ Q^{-1} m + \pt H^T R^{-1} y \right]     .
-\end{IEEEeqnarray}
-
-Finally, we need to check again that the constant terms balance.
-%
-\begin{IEEEeqnarray}{rCl}
- \text{RHS} & = & - \mathcal{TR}(A_D) - \mathcal{TR}\left( D_{\pt} \Sigma_{\pt}^{-1} \right) \nonumber \\
-            & = & - \mathcal{TR}\left( A_D + D_{\pt} \Sigma_{\pt}^{-1} \right) \nonumber \\
-            & = & \mathcal{TR}\left( A \right) \nonumber \\
-            & = & \frac{1}{2} \mathcal{TR}\left( \Sigma_{\pt} H^T R^{-1} H \right) \nonumber \\
-            & = & \frac{1}{2} \mathcal{TR}\left( H^T R^{-1} H \Sigma_{\pt} \right)      .
-\end{IEEEeqnarray}
-%
-\begin{IEEEeqnarray}{rCl}
- \text{RHS} & = & - b_{D,\pt}^T \Sigma_{\pt}^{-1} \mu_{\pt} + \mu_{\pt}^T \Sigma_{\pt}^{-1} D_{\pt} \Sigma_{\pt}^{-1} \mu_{\pt} \nonumber \\
-            & = & - \left[  b_{\pt} + 2 D_{\pt} \Sigma_{\pt}^{-1} \mu_{\pt} \right]^T \Sigma_{\pt}^{-1} \mu_{\pt} + \mu_{\pt}^T \Sigma_{\pt}^{-1} D_{\pt} \Sigma_{\pt}^{-1} \mu_{\pt} \nonumber \\
-            & = & - b_{\pt}^T \Sigma_{\pt}^{-1} \mu_{\pt} - \mu_{\pt}^T \Sigma_{\pt}^{-1} D_{\pt} \Sigma_{\pt}^{-1} \mu_{\pt} \nonumber \\
-            & = & - \left[ H^T R^{-1} y + A_{D,\pt}^T \Sigma_{\pt}^{-1} \mu_{\pt} \right]^T \mu_{\pt} - \mu_{\pt}^T \Sigma_{\pt}^{-1} D_{\pt} \Sigma_{\pt}^{-1} \mu_{\pt} \nonumber \\
-            & = & - \left[ H^T R^{-1} y - \frac{1}{2} H^T R^{-1} H \mu_{\pt} - \Sigma_{\pt}^{-1}D_{\pt}\Sigma_{\pt}^{-1}\mu_{\pt} \right]^T \mu_{\pt} - \mu_{\pt}^T \Sigma_{\pt}^{-1} D_{\pt} \Sigma_{\pt}^{-1} \mu_{\pt} \nonumber \\
-            & = & -y^T R^{-1} H \mu_{\pt} + \frac{1}{2} \mu_{\pt}^T H^T R^{-1} H \mu_{\pt} \nonumber \\
-            & = & \text{LHS}     .
-\end{IEEEeqnarray}
-
-The final consideration is how to choose the diffusion matrix, $\glam$ for the SDE. Small values will result in strong dependence between the posterior particles after resampling takes place. In the limit with no diffusion, there will be multiple identical copies of each resampled particle. With larger diffusion values, the SDE becomes harder to simulate, with smaller step sizes required for accurate results. However, the particles are able to de-correlate and explore the posterior modes more thoroughly. As a guideline, the value should be chosen to reflect the size (and possibly shape) of posterior modes
 
 
 
@@ -882,22 +711,12 @@ For the SUPF, we can use the optimal flow derived for linear Gaussian models. Ho
 
 The model parameters are as follows:
 
-{\meta Table of model parameters.}
-
-{\meta Plots of accuracy, ESS and computational cost over time}
-
-
-
-\subsection{Nonlinear Non-Gaussian Model}
+{\meta END OF OLD STUFF}
 
 
 
 
 
-
-\subsection{Really Nonlinear Gaussian Model}
-
-\section{Conclusions}
 
 \appendix
 
@@ -1331,15 +1150,51 @@ This leads us to the following solution to the integral,
  & = & \left[ \exp\left\{ \frac{1}{2} \lfdiffsf \pt \right\} \lginterm{\pt}^{\frac{1}{2}} - \exp\left\{ \frac{1}{2} \lfdiffsf \pt_0 \right\} \lginterm{\pt_0}^{\frac{1}{2}} \right] \obsmat^+ \ob{\rt} \nonumber \\
  & & - \: \left[ \exp\left\{ \frac{1}{2} \lfdiffsf \pt \right\} \lginterm{\pt}^{-\frac{1}{2}} - \exp\left\{ \frac{1}{2} \lfdiffsf \pt_0 \right\} \lginterm{\pt_0}^{-\frac{1}{2}} \right] \left( \obsmat^+ \ob{\rt} - \transmean \right)      .
 \end{IEEEeqnarray}
+%
+Hence, the deterministic term is given by,
+%
+\begin{IEEEeqnarray}{rCl}
+ M_{\pt}^{-1} \left[ C + \int_{\pt_0}^{\pt} M_{l} \lfshift{l} dl \right] & = & \exp\left\{ -\frac{1}{2} \lfdiffsf \pt \right\} \lginterm{\pt}^{-\frac{1}{2}} \bigg\{ \lginterm{\pt_0}^{\frac{1}{2}} \ls{\pt_0} \nonumber \\
+ & & + \: \left[ \exp\left\{ \frac{1}{2} \lfdiffsf \pt \right\} \lginterm{\pt}^{\frac{1}{2}} - \exp\left\{ \frac{1}{2} \lfdiffsf \pt_0 \right\} \lginterm{\pt_0}^{\frac{1}{2}} \right] \obsmat^+ \ob{\rt} \nonumber \\
+ & & - \: \left[ \exp\left\{ \frac{1}{2} \lfdiffsf \pt \right\} \lginterm{\pt}^{-\frac{1}{2}} - \exp\left\{ \frac{1}{2} \lfdiffsf \pt_0 \right\} \lginterm{\pt_0}^{-\frac{1}{2}} \right] \left( \obsmat^+ \ob{\rt} - \transmean \right) \bigg\}      .
+\end{IEEEeqnarray}
 
 Next, consider the stochastic integral,
 %
 \begin{IEEEeqnarray}{rCl}
  \int_{\pt_0}^{\pt} M_{l} \flowdiffuse{l} d\flowbm{l} & = & \int_{\pt_0}^{\pt} \exp\left\{ \frac{1}{2} \lfdiffsf l \right\} \lginterm{l}^{\frac{1}{2}} \left[ \lfdiffsf \lginterm{l}^{-1} \transcov \right]^{\frac{1}{2}} d\flowbm{l} \nonumber \\
- & = & \lfdiffsf \int_{\pt_0}^{\pt} \exp\left\{ \frac{1}{2} \lfdiffsf l \right\} d\flowbm{l} \transcov^{\frac{1}{2}}
+ & = & \lfdiffsf^{\frac{1}{2}} \int_{\pt_0}^{\pt} \exp\left\{ \frac{1}{2} \lfdiffsf l \right\} \transcov^{\frac{1}{2}} d\flowbm{l}      .
 \end{IEEEeqnarray}
 
-{\meta FINISH THIS OFF.}
+Using Ito's Lemma, this will be normally distributed random variable with zero mean and variance,
+%
+\begin{IEEEeqnarray}{rCl}
+ \variance{}\left[ \int_{\pt_0}^{\pt} M_{l} \flowdiffuse{l} d\flowbm{l} \right] & = & \expect{}\left[ \left(\int_{\pt_0}^{\pt} M_{l} \flowdiffuse{l} d\flowbm{l}\right) \left(\int_{\pt_0}^{\pt} M_{l'} \flowdiffuse{l'} d\flowbm{l'}\right)^T \right] \nonumber \\
+ & = & \lfdiffsf \expect{}\left[ \int_{\pt_0}^{\pt} \exp\left\{ \frac{1}{2} \lfdiffsf l \right\} \transcov^{\frac{1}{2}} d\flowbm{l} \int_{\pt_0}^{\pt} \exp\left\{ \frac{1}{2} \lfdiffsf l' \right\} \transcov^{\frac{1}{2}} d\flowbm{l'}^T \right] \nonumber \\
+ & = & \lfdiffsf \int_{\pt_0}^{\pt} \int_{\pt_0}^{\pt} \exp\left\{ \frac{1}{2} \lfdiffsf l \right\} \exp\left\{ \frac{1}{2} \lfdiffsf l' \right\}\transcov
+ \underbrace{\expect{}\left[ d\flowbm{l} d\flowbm{l'}^T \right]}_{=\delta(l'=l)dl} \nonumber \\
+ & = & \lfdiffsf \int_{\pt_0}^{\pt} \exp\left\{ \lfdiffsf l \right\} \transcov dl \nonumber \\
+ & = & \left[ \exp\left\{ \lfdiffsf \pt \right\} - \exp\left\{ \lfdiffsf \pt_0 \right\} \right] \transcov     .
+\end{IEEEeqnarray}
+
+Thus, the stochastic term in the solution is also a normally distributed random variable with zero mean and variance,
+%
+\begin{IEEEeqnarray}{rCl}
+ \variance{}\left[ M_{\pt}^{-1} \int_{\pt_0}^{\pt} M_{l} \flowdiffuse{l} d\flowbm{l} \right] & = & \left( \exp\left\{ -\frac{1}{2} \lfdiffsf \pt \right\} \lginterm{\pt}^{-\frac{1}{2}} \right) \left[ \exp\left\{ \lfdiffsf \pt \right\} - \exp\left\{ \lfdiffsf \pt_0 \right\} \right] \transcov \left( \exp\left\{ -\frac{1}{2} \lfdiffsf \pt \right\} \lginterm{\pt}^{-\frac{1}{2}} \right)^T \nonumber \\
+ & = & \left[ 1 - \exp\left\{ - \lfdiffsf \left(\pt - \pt_0\right) \right\} \right] \lginterm{\pt}^{-\frac{1}{2}} \transcov \transcov^T \lginterm{\pt}^{-\frac{1}{2}T} \nonumber \\
+ & = & \left[ 1 - \exp\left\{ - \lfdiffsf \left(\pt - \pt_0\right) \right\} \right] \left(\transcov^{-1} + \pt \obsmat^T \obscov^{-1} \obsmat\right)^{-1} \nonumber \\
+ & = & \left[ 1 - \exp\left\{ - \lfdiffsf \left(\pt - \pt_0\right) \right\} \right] \lgoicov{\pt}     .
+\end{IEEEeqnarray}
+
+Putting all this together gives us a proposal density corresponding to optimal stochastic flow for a linear Gaussian model,
+%
+\begin{IEEEeqnarray}{rCl}
+ \impden(\ls{\pt_1} | \ls{\pt_0}) & = & \normal{\ls{\pt_1}}{\Gamma \ls{\pt_0} + \nu}{\Omega} \\
+ \Gamma & = & \exp\left\{ -\frac{1}{2} \lfdiffsf \pt_1 \right\} \lginterm{\pt_1}^{-\frac{1}{2}} \lginterm{\pt_0} \nonumber \\
+ \nu    & = & \exp\left\{ -\frac{1}{2} \lfdiffsf \pt_1 \right\} \lginterm{\pt_1}^{-\frac{1}{2}} \Bigg\{ \left[ \exp\left\{ \frac{1}{2} \lfdiffsf \pt_1 \right\} \lginterm{\pt_1}^{\frac{1}{2}} - \exp\left\{ \frac{1}{2} \lfdiffsf \pt_0 \right\} \lginterm{\pt_0}^{\frac{1}{2}} \right] \obsmat^+ \ob{\rt} \nonumber \\
+ & & - \: \left[ \exp\left\{ \frac{1}{2} \lfdiffsf \pt_1 \right\} \lginterm{\pt_1}^{-\frac{1}{2}} - \exp\left\{ \frac{1}{2} \lfdiffsf \pt_0 \right\} \lginterm{\pt_0}^{-\frac{1}{2}} \right] \left( \obsmat^+ \ob{\rt} - \transmean \right) \Bigg\} \nonumber \\
+ \Omega & = & \left[ 1 - \exp\left\{ - \lfdiffsf \left(\pt_1 - \pt_0\right) \right\} \right] \lgoicov{\pt_1}
+\end{IEEEeqnarray}
 
 
 
