@@ -28,13 +28,14 @@
 %%% Notational shortcuts %%%
 
 % Functions and operators
-\newcommand{\expect}[1]{\mathbb{E}_{#1}}                    % Expectation
-\newcommand{\variance}[1]{\mathbb{V}_{#1}}                  % Variance
-\DeclareMathOperator{\trace}{Tr}                            % Trace
-\newcommand{\magdet}[1]{\left|\left| #1 \right|\right|}     % Magnitude of the determinant
-\newcommand{\indic}[1]{\mathbbm{1}_{#1}}                    % Indicator function
-\newcommand{\normal}[3]{\mathcal{N}\left(#1|#2,#3\right)}   % Normal density
-\DeclareMathOperator{\lambert}{W}                           % Product-log function
+\newcommand{\expect}[1]{\mathbb{E}_{#1}}                        % Expectation
+\newcommand{\variance}[1]{\mathbb{V}_{#1}}                      % Variance
+\DeclareMathOperator{\trace}{Tr}                                % Trace
+\newcommand{\magdet}[1]{\left|\left| #1 \right|\right|}         % Magnitude of the determinant
+\newcommand{\indic}[1]{\mathbbm{1}_{#1}}                        % Indicator function
+\newcommand{\normal}[3]{\mathcal{N}\left(#1|#2,#3\right)}       % Normal density
+\newcommand{\studentt}[4]{\mathcal{ST}\left(#1|#2,#3,#4\right)} % Student-t density (non-standard)
+\DeclareMathOperator{\lambert}{W}                               % Product-log function
 
 % Basics
 \newcommand{\rt}{t}                             % Real time
@@ -54,6 +55,7 @@
 \newcommand{\impden}{q}                         % Importance density
 \newcommand{\artden}{\rho}                      % Artificial conditional density
 \newcommand{\oiden}[1]{\pi_{#1}}                % Optimal importance density
+\newcommand{\approxoiden}[1]{\hat{\pi}_{#1}}    % Approximation of the optimal importance density
 \newcommand{\augfiltden}[1]{\tilde{\pi}_{#1}}   % Augmented filtering density
 \newcommand{\oinorm}[1]{K_{#1}}                 % Normalising constant for the optimal importance density
 \newcommand{\augfiltnorm}[1]{\tilde{K}_{#1}}    % Normalising constant for the augmented filtering density
@@ -75,14 +77,19 @@
 \newcommand{\lfmat}[1]{A_{#1}}                  % Linear flow matrix
 \newcommand{\lfshift}[1]{b_{#1}}                % Linear flow shift
 \newcommand{\lfdiffsf}{\gamma}                  % Linear flow diffusion matrix scale factor
+\newcommand{\lfmapmat}{\Gamma}                  % Linear flow map matrix
+\newcommand{\lfmapshift}{g}                     % Linear flow map shift
+\newcommand{\lfmapcov}{\Omega}                  % Linear flow map covariance
 
 % Models
 \newcommand{\transfun}{f}                       % Transition function
 \newcommand{\obsfun}{h}                         % Observation function
 \newcommand{\transcov}{Q}                       % Transition covariance
 \newcommand{\obscov}{R}                         % Observation covariance
+\newcommand{\transmat}{F}                       % Linear transition matrix
 \newcommand{\obsmat}{H}                         % Linear observation matrix
 \newcommand{\transmean}{m}                      % Mean of the transition density (i.e. f(x_{t-1}))
+\newcommand{\dof}{\nu}                          % Degrees of freedom of something student-t-ish
 
 % Linear Gaussian things
 \newcommand{\lgoimean}[1]{\mu_{#1}}             % Linear Gaussian optimal importance density mean
@@ -374,7 +381,7 @@ This results in a cancellation, and hence the following weight update equation,
 When $\flowdiffuse{\pt}\ne0$, we can use \eqref{eq:general_weight_update} directly. The importance density is found by integrating the stochastic differential equation governing the flow \eqref{eq:flow} using the selected values of $\flowdrift{\pt}$ and $\flowdiffuse{\pt}$. The optimal choice for the artificial conditional density (in the sense of minimising the weight variance) is shown in \cite{DelMoral2006} to be,
 %
 \begin{IEEEeqnarray}{rCl}
- \artden(\ls{\rt,\pt_0}\pss{j} | \ls{\rt,\pt_1}\pss{j}) & = & \frac{ \oiden{\pt}(\ls{\rt,\pt_0} | \ls{\rt-1}) \impden(\ls{\rt,\pt_1} | \ls{\rt,\pt_0}) }{ \int \oiden{\pt}(\ls{\pt} | \ls{\rt-1}) \impden(\ls{\rt,\pt_1} | \ls{\rt,\pt}) d\ls{\pt} }     .
+ \artden(\ls{\rt,\pt_0}\pss{j} | \ls{\rt,\pt_1}\pss{j}) & = & \frac{ \oiden{\pt_0}(\ls{\rt,\pt_0} | \ls{\rt-1}) \impden(\ls{\rt,\pt_1} | \ls{\rt,\pt_0}) }{ \int \oiden{\pt_0}(\ls{} | \ls{\rt-1}) \impden(\ls{\rt,\pt_1} | \ls{}) d\ls{} }     .
 \end{IEEEeqnarray}
 
 
@@ -481,10 +488,11 @@ where $\lfdiffsf$ is a positive scale factor. This choice encourages particles t
 For these choices of $\flowdrift{\pt}$ and $\flowdiffuse{\pt}$, the importance density associated with a transition form $\pt_0$ to $\pt_1$ is,
 %
 \begin{IEEEeqnarray}{rCl}
- \impden(\ls{\pt_1} | \ls{\pt_0}) & = & \normal{\ls{\pt_1}}{\Gamma \ls{\pt_0} + \nu}{\Omega} \\
- \Gamma & = & \exp\left\{ -\frac{1}{2} \lfdiffsf \left( \pt_1 - \pt_0 \right) \right\} \lginterm{\pt_1}^{-\frac{1}{2}} \lginterm{\pt_0}^{\frac{1}{2}} \nonumber \\
- \nu    & = & \Gamma \left[ \obsmat^+ \ob{\rt} - \lginterm{\pt_0}^{-1} \left( \obsmat^+ \ob{\rt} - \transmean \right) \right] + \obsmat^+ \ob{\rt} - \lginterm{\pt_1}^{-1} \left( \obsmat^+ \ob{\rt} - \transmean \right) \nonumber \\
- \Omega & = & \left[ 1 - \exp\left\{ - \lfdiffsf \left(\pt_1 - \pt_0\right) \right\} \right] \lgoicov{\pt_1}
+ \impden(\ls{\pt_1} | \ls{\pt_0}) & = & \normal{\ls{\pt_1}}{\lfmapmat \ls{\pt_0} + \lfmapshift}{\lfmapcov} \\
+ \lfmapmat   & = & \exp\left\{ -\frac{1}{2} \lfdiffsf \left( \pt_1 - \pt_0 \right) \right\} \lginterm{\pt_1}^{-\frac{1}{2}} \lginterm{\pt_0}^{\frac{1}{2}} \nonumber \\
+ \lfmapshift & = & \lfmapmat \left[ \lginterm{\pt_0}^{-1} \left( \obsmat^+ \ob{\rt} - \transmean \right) - \obsmat^+ \ob{\rt} \right] \nonumber \\
+             &   & + \: \obsmat^+ \ob{\rt} - \lginterm{\pt_1}^{-1} \left( \obsmat^+ \ob{\rt} - \transmean \right) \nonumber \\
+ \lfmapcov   & = & \left[ 1 - \exp\left\{ - \lfdiffsf \left(\pt_1 - \pt_0\right) \right\} \right] \lgoicov{\pt_1}
 \end{IEEEeqnarray}
 %
 where,
@@ -498,12 +506,13 @@ For proof see Appendix~\ref{app:optimal_importance_density_linear_Gaussian}.
 The optimal artificial density for this is given by the Kalman filter update equations,
 %
 \begin{IEEEeqnarray}{rCl}
- \artden(\ls{\pt_0} | \ls{\pt_1}) & = & \frac{ \oiden{\pt}(\ls{\pt_0} | \ls{\rt-1}) \impden(\ls{\pt_1} | \ls{\pt_0}) }{ \int \oiden{\pt}(\ls{\pt} | \ls{\rt-1}) \impden(\ls{\pt_1} | \ls{\pt}) d\ls{\pt} } \nonumber \\
- & \propto & \normal{\ls{\pt_0}}{\lgoimean{\pt_0}}{\lgoicov{\pt_0}} \normal{\ls{\pt_1}}{\Gamma \ls{\pt_0} + \nu}{\Omega} \nonumber \\
- & = & \normal{\ls{\pt_0}}{\lgoimean{\pt_0} + \lgoicov{\pt_0} \Gamma^T\left(\Gamma \lgoicov{\pt_0} \Gamma^T + \Omega\right)^{-1}\left(\ls{\pt_1} - \Gamma \lgoimean{\pt_0} - \nu \right)}{\lgoicov{\pt_0} - \lgoicov{\pt_0} \Gamma^T\left(\Gamma \lgoicov{\pt_0} \Gamma^T + \Omega\right)^{-1} \lgoicov{\pt_0}}     .
+ \artden(\ls{\pt_0} | \ls{\pt_1}) & = & \frac{ \oiden{\pt_0}(\ls{\rt,\pt_0} | \ls{\rt-1}) \impden(\ls{\rt,\pt_1} | \ls{\rt,\pt_0}) }{ \int \oiden{\pt_0}(\ls{} | \ls{\rt-1}) \impden(\ls{\rt,\pt_1} | \ls{}) d\ls{} } \nonumber \\
+ & \propto & \normal{\ls{\pt_0}}{\lgoimean{\pt_0}}{\lgoicov{\pt_0}} \normal{\ls{\pt_1}}{\lfmapmat \ls{\pt_0} + \lfmapshift}{\lfmapmat} \nonumber \\
+ & = & \normal{\ls{\pt_0}}{\lgoimean{\pt_0} + \lgoicov{\pt_0} \lfmapmat^T\left(\lfmapmat \lgoicov{\pt_0} \lfmapmat^T + \lfmapcov\right)^{-1}\left(\ls{\pt_1} - \lfmapmat \lgoimean{\pt_0} - \lfmapshift \right)}{\lgoicov{\pt_0} - \lgoicov{\pt_0} \lfmapmat^T\left(\lfmapmat \lgoicov{\pt_0} \lfmapmat^T + \lfmapcov\right)^{-1} \lgoicov{\pt_0}}     .
 \end{IEEEeqnarray}
-{\meta Betcha this simplifies. Also, that we can show that as $\lfdiffsf\rightarrow0$ then the stochastic case limits into the deterministic case.}
 
+{\meta Betcha this simplifies. Also, that we can show that as $\lfdiffsf\rightarrow0$ then the stochastic case limits into the deterministic case.} \\
+{\meta Change this to the ratio and show the cancellation in the complete expression.}
 
 
 \subsection{Optimal SUPF for the Linear Gaussian Model}
@@ -517,6 +526,12 @@ Using the derived equations for the linear Gaussian model, an optimal SUPF algor
 \section{Nonlinear Non-Gaussian Models}
 
 So far, the only model considered is linear (in the observation function) and Gaussian. This is in fact not useful, since it is already possible to sample from the optimal importance distribution directly for this case, and the resulting weights may be calculated in closed form. However, we can now employ our analytical solutions for the flow in this nice case to approximate optimal flows for other models. Note the required approximations occur only in the choice of importance density. The resulting particle filter is therefore still ``exact'' in the asymptotic sense usual for particle filters, although only ``approximately optimal''.
+
+\subsection{Weight Updates}
+
+In the stochastic case, $\flowdiffuse \ne 0$, the weight update formula will differ slightly to that used when the model was linear Gaussian, since the OID is no longer a Gaussian. $\impden$ and $\artden$ are calculated based on a Gaussian approximation to $\oiden{\pt_0}$, which we will denote $\approxoiden{\pt_0}$. Hence, the weight update becomes,
+
+{\meta Fill this in, examining the ratio ${\rho}{q}$.}
 
 \subsection{Linearisation}
 
@@ -649,23 +664,121 @@ In this section, we demonstrate the effectiveness of the SUPF on a number of sim
 We first consider the simplest example, in which the transition and observation models are linear and Gaussian,
 %
 \begin{IEEEeqnarray}{rCl}
- p(\ls{\rt} | \ls{\rt-1}) & = & \normal{\ls{\rt}}{\transfun(\ls{\rt-1})}{\transcov} \nonumber \\
- p(\ob{\rt} | \ls{\rt})     & = & \normal{\ob{\rt}}{\obsmat \ls{\rt}}{\obscov} \nonumber
+ p(\ls{\rt} | \ls{\rt-1}) & = & \normal{\ls{\rt}}{\transmat \ls{\rt-1}}{\transcov} \nonumber \\
+ p(\ob{\rt} | \ls{\rt})   & = & \normal{\ob{\rt}}{\obsmat \ls{\rt}}{\obscov} \nonumber     .
 \end{IEEEeqnarray}
 
-For the SUPF, we can use the optimal flow derived for linear Gaussian models. However, we can also run an ordinary particle filter which samples exactly from the OID. We include this example simply to demonstrate that the particles approximations by the two algorithms are equally good.
+For the SUPF, we can use the optimal flow derived for linear Gaussian models. However, we can also run an ordinary particle filter which samples exactly from the OID, $\oiden{1}$. We include this example simply to demonstrate that the particles approximations by the two algorithms are equally good. A bootstrap filter is also included for comparison. All the particle filters use resampling at every time step.
 
-The model parameters are as follows:
+The system matrixes used in the tests were,
+%
+\begin{IEEEeqnarray}{rCl}
+ \transmat & = & \begin{bmatrix} 1 & 0 & T & 0 \\ 0 & 1 & 0 & T \\ 0 & 0 & T & 0 \\ 0 & 0 & 0 & T \end{bmatrix} \nonumber \\
+ \transcov & = & \sigma_x^2 \begin{bmatrix} \frac{T^3}{3} & 0 & \frac{T^2}{2} & 0 \\ 0 & \frac{T^3}{3} & 0 & \frac{T^2}{2} \\ \frac{T^2}{2} & 0 & T & 0 \\ 0 & \frac{T^2}{2} & 0 & T \end{bmatrix} \nonumber \\
+ \obsmat   & = & \begin{bmatrix} \frac{1}{2} & \frac{1}{4} & \frac{1}{4} & 0 \\ 0 & \frac{1}{4} & \frac{1}{4} & \frac{1}{2} \end{bmatrix} \nonumber \\
+ \obscov   & = & \sigma_y^2 \begin{bmatrix} 1 & \frac{4}{5} \\ \frac{4}{5} & 1 \end{bmatrix} \nonumber      ,
+\end{IEEEeqnarray}
+%
+with the following parameters,
+%
+\begin{IEEEeqnarray}{rCl}
+ T          & = & 1     \nonumber \\
+ \sigma_x^2 & = & 10^2  \nonumber \\
+ \sigma_y^2 & = & 0.1^2 \nonumber     .
+\end{IEEEeqnarray}
 
+Point estimates are made by taking the weighted average of the particle states, which gives the minimum mean squared error (MMSE) estimator. Performance is compared by examining the root mean square error (RMSE) of this estimate, the effective sample size (ESS) and the running time (RT) for each algorithm. Each particle filter was run on {\meta ADD NUMBER} simulated data sets, each of {\meta ADD NUMBER} time steps. The results are summarised in table~\ref{}.
 
+{\meta Lovely table of numbers here.}
+
+Performance on all three metrics is nigh-on identical. The SUPF with $\lfdiffsf=0$ is slightly faster than the conventional OID particle filter, due to pre-calculation of various flow matrixes which are common to all particles. With $\lfdiffsf > 0$, the SUPF is slightly slower due to the necessity of sampling an additional random variable.
 
 \subsection{A Nonlinear Model}
-\subsubsection{Gaussian Noise}
-\subsubsection{Student-t Noise}
 
+\subsubsection{Model Description}
 
+Next we test the SUPF on a particularly unpleasant model designed to challenge conventional particle filters,
+%
+\begin{IEEEeqnarray}{rCl}
+ p(\ls{\rt} | \ls{\rt-1}) & = & \normal{\ls{\rt}}{\transfun(\ls{\rt-1})}{\transcov} \nonumber \\
+ p(\ob{\rt} | \ls{\rt})   & = & \studentt{\ob{\rt}}{\dof}{\obsfun(\ls{\rt})}{\obscov} \nonumber     ,
+\end{IEEEeqnarray}
+%
+where $\studentt{\ob{\rt}}{\dof}{\obsfun(\ls{\rt})}{\obscov}$ is a non-standard multivariate student-t distribution with mean $\obsfun(\ls{\rt})$, spread $\obscov$, and $\dof$ degrees of freedom,
+%
+\begin{IEEEeqnarray}{rCl}
+ \studentt{\ob{\rt}}{\nu}{\obsfun(\ls{\rt})}{\obscov} & = & \frac{ \Gamma(\frac{\dof+1}{2}) }{ \Gamma(\frac{\dof}{2}) } \left|\dof \pi \obscov\right|^{-\frac{1}{2}} \left[ 1+\frac{1}{\dof} (\ob{\rt}-\obsfun(\ls{\rt})))^T \obscov^{-1} (\ob{\rt}-\obsfun(\ls{\rt})) \right]^{-\frac{1}{2}(\dof+d)} \nonumber     ,
+\end{IEEEeqnarray}
+%
+where $d$ is the number of dimensions of $\ob{\rt}$ and $\Gamma$ is the gamma function.
 
+We use the transition function suggested in \cite{Mihaylova2011}, but with modified coefficients. This is a multivariate extension of a popular particle filter test model. The $j$th component is given by,
+%
+\begin{IEEEeqnarray}{rCl}
+ \transfun(\ls{\rt-1})_j & = & \beta_1 \ls{\rt-1,j} + \beta_2 \frac{\sum_i \ls{\rt-1,i}}{1 + \left( \sum_i \ls{\rt-1,i} \right)^2} + \beta_3 \cos(1.2 \rt)     .
+\end{IEEEeqnarray}
+%
+The observation function used was more challenging than that in \cite{Mihaylova2011}, with only half the number of observations as states. The $j$th component is given by,
+%
+\begin{IEEEeqnarray}{rCl}
+ \obsfun(\ls{\rt})_j & = & \alpha \left( \ls{\rt,2j-1}^2 + \ls{\rt,2j}^2 \right)     .
+\end{IEEEeqnarray}
+%
+The covariance matrixes were chosen to be,
+%
+\begin{IEEEeqnarray}{rCl}
+ \transcov & = & \sigma_x^2 I \nonumber \\
+ \obscov   & = & \sigma_y^2 I \nonumber      ,
+\end{IEEEeqnarray}
+%
+and the parameter values used in our tests were,
+%
+\begin{IEEEeqnarray}{rCl}
+ d       & = & 5 \nonumber \\
+ \beta_1 & = & \frac{1}{2} \nonumber \\
+ \beta_2 & = & 25 \nonumber \\
+ \beta_3 & = & 8 \nonumber \\
+ \alpha  & = & \frac{1}{20} \nonumber \\
+ \sigma_x^2 & = & 10^2 \nonumber \\
+ \sigma_y^2 & = & 1^2 \nonumber     .
+\end{IEEEeqnarray}
 
+A geometrical interpretation of this model is that we are measuring the squared lengths of a set of two-component sub-vectors of the state. This means that the maximum of the likelihood function is not at a single point, but is the surface of a hyper-sphere. This leads to highly non-Gaussian posteriors --- especially if $\magdet{\transcov}$ is large --- and causes conventional particle filters to perform poorly.
+
+Assessing particle filter outputs is a challenging task for such nonlinear models. RMSE values using MMSE point estimates can be highly misleading. If a posterior mode is highly curved, then the average of the particle states may be further from the true value even though the particles form a better representation of the posterior distribution. However, in the absence of anything decisively better, we present RMSE, ESS and RT values here. Each particle filter was run on {\meta ADD NUMBER} simulated data sets, each of {\meta ADD NUMBER} time steps.
+
+\subsubsection{Algorithm Settings}
+
+The SUPF with various choices of $\lfdiffsf$ was compared with a bootstrap filter and a conventional particle filter using the method of \cite{Doucet2000a}. This samples from a Gaussian approximation to the OID by first using an optimisation routine to find a local maximum in the OID and then linearising about this point. In our tests, optimisation is conducted using the MATLAB \texttt{fminunc} function. Particle filters using extended and unscented Kalman filter proposal densities were also tested but performed very poorly, and are therefore omitted.
+
+The SUPF requires pseudo-time to be divided up into intervals. For these tests, the intervals are predetermined using a geometric progression,
+%
+\begin{IEEEeqnarray}{rCl}
+ \Delta\pt_k & \propto & r^k \nonumber      .
+\end{IEEEeqnarray}
+%
+The number of steps, $L$, and the ratio, $r$, were determined by monitoring the round-trip error and ensuring it remained steady throughout the pseudo-time interval. For these tests, the following values were used,
+%
+\begin{IEEEeqnarray}{rCl}
+ L & = & 50 \nonumber \\
+ r & = & 1.2 \nonumber     .
+\end{IEEEeqnarray}
+
+All the particle filters use resampling at every step
+
+\subsubsection{Results: Gaussian Noise}
+
+Table~\ref{} shows results for the case, $\dof = \infty$, in which limiting case the student-t distribution becomes normal.
+
+{\meta Pretty table}
+
+The SUPF outperforms both the bootstrap and linearised-OID particle filters. {\meta Some more analysis, including how performance declines after a point as $\lfdiffsf$ increases because the discretisation is too coarse.}
+
+\subsubsection{Results: Student-t Noise}
+
+Next we test the algorithms for the case $\dof = 3$, using the scale mixture of normals representation of the student-t distribution. The results are shown in table~\ref{}.
+
+{\meta Pretty table}
 
 
 \section{Desirable Extensions}
@@ -1163,11 +1276,11 @@ Thus, the stochastic term in the solution is also a normally distributed random 
 Putting all this together gives us a proposal density corresponding to optimal stochastic flow for a linear Gaussian model,
 %
 \begin{IEEEeqnarray}{rCl}
- \impden(\ls{\pt_1} | \ls{\pt_0}) & = & \normal{\ls{\pt_1}}{\Gamma \ls{\pt_0} + \nu}{\Omega} \\
- \Gamma & = & \exp\left\{ -\frac{1}{2} \lfdiffsf \left( \pt_1 - \pt_0 \right) \right\} \lginterm{\pt_1}^{-\frac{1}{2}} \lginterm{\pt_0}^{\frac{1}{2}} \nonumber \\
- \nu    & = & \exp\left\{ -\frac{1}{2} \lfdiffsf \left( \pt_1 - \pt_0 \right) \right\} \lginterm{\pt_1}^{-\frac{1}{2}} \lginterm{\pt_0}^{\frac{1}{2}} \left[ \obsmat^+ \ob{\rt} - \lginterm{\pt_0}^{-1} \left( \obsmat^+ \ob{\rt} - \transmean \right) \right] \nonumber \\
-        &   & + \: \obsmat^+ \ob{\rt} - \lginterm{\pt_1}^{-1} \left( \obsmat^+ \ob{\rt} - \transmean \right) \nonumber \\
- \Omega & = & \left[ 1 - \exp\left\{ - \lfdiffsf \left(\pt_1 - \pt_0\right) \right\} \right] \lgoicov{\pt_1}
+ \impden(\ls{\pt_1} | \ls{\pt_0}) & = & \normal{\ls{\pt_1}}{\lfmapmat \ls{\pt_0} + \lfmapshift}{\lfmapcov} \\
+ \lfmapmat   & = & \exp\left\{ -\frac{1}{2} \lfdiffsf \left( \pt_1 - \pt_0 \right) \right\} \lginterm{\pt_1}^{-\frac{1}{2}} \lginterm{\pt_0}^{\frac{1}{2}} \nonumber \\
+ \lfmapshift & = & \exp\left\{ -\frac{1}{2} \lfdiffsf \left( \pt_1 - \pt_0 \right) \right\} \lginterm{\pt_1}^{-\frac{1}{2}} \lginterm{\pt_0}^{\frac{1}{2}} \left[ \lginterm{\pt_0}^{-1} \left( \obsmat^+ \ob{\rt} - \transmean \right) - \obsmat^+ \ob{\rt} \right] \nonumber \\
+             &   & + \: \obsmat^+ \ob{\rt} - \lginterm{\pt_1}^{-1} \left( \obsmat^+ \ob{\rt} - \transmean \right) \nonumber \\
+ \lfmapcov   & = & \left[ 1 - \exp\left\{ - \lfdiffsf \left(\pt_1 - \pt_0\right) \right\} \right] \lgoicov{\pt_1}
 \end{IEEEeqnarray}
 
 
