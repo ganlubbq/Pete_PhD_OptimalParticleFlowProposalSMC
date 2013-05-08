@@ -1,13 +1,15 @@
-function [ m, P ] = gaussian_match_prior( x, Dp, D2p )
+function [ y, Q ] = gaussian_match_prior( x, p, Dp_p )
 %gaussian_match_prior Select a Gaussian for the prior density with a
-%particular gradient and Hessian of the log-density at point x.
+%particular value and gradient at point x.
 
-% Covariance
-P = -inv(D2p);
+% p is the density and Dp_p the ratio grad(density)/density
 
-assert(isposdef(P));
+ds = length(x);
 
-% Mean
-m = x - D2p\Dp; 
+DTD = Dp_p'*Dp_p;
+
+sig = ds*numerical_lambertw(DTD*p^(-2/ds)/(2*pi*ds))/DTD;
+Q = sig*eye(ds);
+y = x + sig*Dp_p;
 
 end

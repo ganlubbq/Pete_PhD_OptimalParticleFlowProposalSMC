@@ -6,6 +6,16 @@ y = obs;
 H = model.H;
 R = model.R;
 
+% What prior?
+if isempty(prev_state)
+    P = model.P1;
+else
+    P = model.Q;
+end
+
+% Integrated flow matrixes
+[ x0_mat, m_mat, Hy_vec, x_cov, wt_jac ] = lg_linearflowmatrixes( P, H, R, y, algo.Dscale );
+
 % Arrays
 state = zeros(model.ds, algo.N);
 
@@ -15,21 +25,19 @@ for ii = 1:algo.N
     % What prior?
     if isempty(prev_state)
         m = model.m1;
-        P = model.P1;
     else
         m = model.A*prev_state(:,ii);
-        P = model.Q;
     end
     
     % Sample prior
-        if ~isempty(prev_state)
-            [x0, ppsl_prob] = feval(fh.transition, model, prev_state(:,ii));
-        else
-            [x0, ppsl_prob] = feval(fh.stateprior, model);
-        end
+    if ~isempty(prev_state)
+        [x0, prior_prob] = feval(fh.transition, model, prev_state(:,ii));
+    else
+        [x0, prior_prob] = feval(fh.stateprior, model);
+    end
     
-    % Analytical flow
-    [ x, wt_jac, prob_ratio] = linear_flow_move( 1, 0, x0, m, P, y, H, R, algo.Dscale );
+    % Analytical flow using pre-calculated matrixes
+    [ x, ppsl_prob] = lg_move( x0, m, P, x0_mat, m_mat, Hy_vec, x_cov );
     
     % Store state
     state(:,ii) = x;
@@ -44,9 +52,9 @@ for ii = 1:algo.N
 
     % Weight update
     if algo.Dscale == 0
-        weight(ii) = weight(ii) + lhood_prob + trans_prob - ppsl_prob + log(wt_jac);
+        weight(ii) = weight(ii) + lhood_prob + trans_prob - prior_prob + log(wt_jac);
     else
-        weight(ii) = weight(ii) + lhood_prob + trans_prob - ppsl_prob + prob_ratio;
+        weight(ii) = weight(ii) + lhood_prob + trans_prob - ppsl_prob;
     end
 
 end

@@ -17,7 +17,7 @@ if ~exist('test.flag_batch', 'var') || (~test.flag_batch)
     %%% SETTINGS %%%
     
     % DEFINE RANDOM SEED
-    rand_seed = 3;
+    rand_seed = 0;
     
     % Which model?
     model_flag = 2;     % 1 = linear Gaussian
@@ -79,7 +79,7 @@ if ~exist('test.flag_batch', 'var') || (~test.flag_batch)
         display.h_pf(2) = figure;
     end
     display.plot_after = true;
-    display.plot_particle_paths = true;
+    display.plot_particle_paths = false;
     display.plot_colours = {'k', 'b', 'c', 'm', 'g'};
     
     % Set test options
@@ -89,9 +89,8 @@ if ~exist('test.flag_batch', 'var') || (~test.flag_batch)
                                     % 3 = UKF proposal
                                     % 4 = linearised OID proposal
                                     % 5 = SUPF
-%     test.num_filt_pts = [10000, 5000, 1700, 30, 100];
-%     test.num_filt_pts = [15000, 9000, 6000, 300, 100];
-    test.num_filt_pts = 100*ones(1,5);
+    test.num_filt_pts = [20271, 1000, 1000, 92, 126];
+%     test.num_filt_pts = 100*ones(1,5);
                                     % Number of particles to use with each algorithm
     
     

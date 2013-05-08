@@ -1,12 +1,15 @@
 function [ state, weight ] = ha_smoothupdate( display, algo, model, fh, obs, prev_state, weight)
 %ha_smoothupdate Apply a smooth update for the heartbeat alignment model.
 
-% Define resampling points
-lam_resam = [0 1E-5 1E-4 1E-3 1E-2 1E-1  0.5 1];
-% lam_resam = [0 1];
+% Set up integration schedule
+ratio = 1.2;
+num_steps = 40;
+scale_fact = (1-ratio)/(ratio*(1-ratio^num_steps));
+lam_rng = cumsum([0 scale_fact*ratio.^(1:num_steps)]);
+L = length(lam_rng);
 
 % Initialise particle filter structure
-pf = repmat(struct('state', [], 'ancestor', [], 'weight', []), 1, length(lam_resam));
+pf = repmat(struct('state', [], 'ancestor', [], 'weight', []), 1, L);
 
 % Sample prior
 init_weight = weight;
@@ -20,23 +23,22 @@ for ii = 1:algo.N
     end
 end
 
-last_prob = init_trans_prob;
-
+% Initialise pf structure
 pf(1).state = init_state;
 pf(1).weight = init_weight;
 pf(1).origin = 1:algo.N;
 
-% Set up for plotting
-if display.plot_particle_paths
-    figure(1); clf; hold on;
-end
+% Loop initialisation
+last_prob = init_trans_prob;
 
-% Loop over resampling intervals
-for ll = 1:length(lam_resam)-1
+% errors = zeros(algo.N, L);
+
+% Pseudo-time loop
+for ll = 1:L-1
     
-    % Timing
-    start_lam = lam_resam(ll);
-    stop_lam = lam_resam(ll+1);
+    % Pseudo-time
+    lam0 = lam_rng(ll);
+    lam = lam_rng(ll+1);
     
     % Initialise state and weight arrays
     pf(ll+1).state = zeros(model.ds, algo.N);
@@ -44,15 +46,13 @@ for ll = 1:length(lam_resam)-1
     prob = zeros(1, algo.N);
     
     % Resampling
-    if algo.flag_intermediate_resample
+    if algo.flag_intermediate_resample && (calc_ESS(pf(ll).weight)<(0.5*algo.N))
         pf(ll+1).ancestor = sample_weights(pf(ll).weight, algo.N, 2);
-        last_weights = zeros(1,algo.N);
     else
         pf(ll+1).ancestor = 1:algo.N;
-        last_weights = pf(ll).weight;
     end
     
-    % Loop over particles
+    % Particle loop
     for ii = 1:algo.N
         
         % Origin
@@ -66,14 +66,63 @@ for ll = 1:length(lam_resam)-1
         end
         
         % Starting point
-        start_x = pf(ll).state(:,pf(ll+1).ancestor(ii));
+        state = pf(ll).state(:,pf(ll+1).ancestor(ii));
+        x0 = state(1:end);
         
-        % Numerically integrate over the interval
-        [lam_evo, x_evo, jac_evo] = RK45int(start_lam, stop_lam, start_x, model, obs, A_mn, A_vr, D);
+        % Observation mean
+        obs_mn = ha_h(model, x0);
+        
+        % Linearise observation model around the current point
+        H = ha_obsjacobian(model, x0);
+        y = obs - obs_mn + H*x0;
+        
+        % SMoN scaling.
+        if ~isinf(model.dfy)
+            xi = chi2rnd(model.dfy);
+        else
+            xi = 1;
+        end
+        R = model.R / xi;
+        
+        % Calculate value and gradient of the tau prior density
+        tau = x0(1);
+        pdf = gampdf(tau-model.tau_shift, model.tau_shape, model.tau_scale);
+        Dpdf_pdf = (model.tau_shape-1)/(tau-model.tau_shift) - 1/model.tau_scale;
+        
+        % Match a Gaussian to these
+        if (tau > model.tau_shift) && (pdf > 0)
+            [tau_mn, tau_vr] = gaussian_match_prior(tau, pdf, Dpdf_pdf);
+        else
+            tau_mn = model.tau_shape * model.tau_scale;
+            tau_vr = model.tau_shape * model.tau_scale^2;
+        end
+        
+        % Matched prior Gaussian
+        m = [tau_mn; A_mn];
+        P = diag([tau_vr, A_vr]);
+        
+        % Analytical flow
+        [ x, wt_jac, prob_ratio] = linear_flow_move( lam, lam0, x0, m, P, y, H, R, algo.Dscale );
+        
+%         % Reverse transform
+%         obs_mn_rev = ha_h(model, x);
+%         H_rev = ha_obsjacobian(model, x);
+%         R_rev = R;
+%         y_rev = obs - obs_mn_rev + H*x;
+%         tau = x(1);
+%         pdf = gampdf(tau-model.tau_shift, model.tau_shape, model.tau_scale);
+%         Dpdf_pdf = (model.tau_shape-1)/(tau-model.tau_shift) - 1/model.tau_scale;
+%         if (tau > model.tau_shift) && (pdf > 0)
+%             [tau_mn, tau_vr] = gaussian_match_prior(tau, pdf, Dpdf_pdf);
+%         else
+%             tau_mn = model.tau_shape * model.tau_scale;
+%             tau_vr = model.tau_shape * model.tau_scale^2;
+%         end
+%         [ x0_rev, ~, ~] = linear_flow_move( lam0, lam, x, m, P, y_rev, H_rev, R_rev, algo.Dscale );
+%         errors(ii,ll+1) = norm(x0 - x0_rev);
         
         % Store state
-        state = x_evo(:,end);
-        pf(ll+1).state(:,ii) = state;
+        pf(ll+1).state(:,ii) = x;
         
         % Densities
         if ~isempty(prev_state)
@@ -82,28 +131,23 @@ for ll = 1:length(lam_resam)-1
             [~, trans_prob] = feval(fh.stateprior, model, state);
         end
         [~, lhood_prob] = feval(fh.observation, model, state, obs);
-        prob(ii) = trans_prob + stop_lam*lhood_prob;
+        prob(ii) = trans_prob + lam*lhood_prob;
         
         % Weight update
-        if isreal(log(jac_evo(end)))
-            pf(ll+1).weight(ii) = last_weights(pf(ll+1).ancestor(ii)) + log(jac_evo(end)) + prob(ii) - last_prob(pf(ll+1).ancestor(ii));
-%             pf(ll+1).weight(ii) = last_weights(pf(ll+1).ancestor(ii)) + prob(ii) - last_prob(pf(ll+1).ancestor(ii));
+        if algo.Dscale == 0
+            pf(ll+1).weight(ii) = pf(ll).weight(pf(ll+1).ancestor(ii)) + prob(ii) - last_prob(pf(ll+1).ancestor(ii)) + log(wt_jac);
         else
+            pf(ll+1).weight(ii) = pf(ll).weight(pf(ll+1).ancestor(ii)) + prob(ii) - last_prob(pf(ll+1).ancestor(ii)) + prob_ratio;%log(wt_jac);%
+        end
+        
+        if ~isreal(pf(ll+1).weight(ii))
+            pf(ll+1).weight(ii) = -inf;
+        end
+        if isinf(last_prob(pf(ll+1).ancestor(ii)))
             pf(ll+1).weight(ii) = -inf;
         end
         
-        if isnan(pf(ll+1).weight(ii))
-            pf(ll+1).weight(ii) = -inf;
-        end
-        
-        % Plot
-        if display.plot_particle_paths
-            plot(x_evo(1,:), x_evo(2,:));
-            if ll == length(lam_resam)-1
-                plot(state(1), state(2), 'o');
-            end
-            drawnow;
-        end
+        assert(~isnan(pf(ll+1).weight(ii)));
         
     end
     
@@ -111,10 +155,158 @@ for ll = 1:length(lam_resam)-1
     
 end
 
-state = pf(end).state;
-weight = pf(end).weight;
+state = pf(L).state;
+weight = pf(L).weight;
+
+state_evo = cat(3,pf.state);
+weight_evo = cat(1,pf.weight);
+
+% Plot particle paths (first state only)
+if display.plot_particle_paths
+    figure(1), clf, hold on
+    xlim([0 1]);
+    for ii = 1:algo.N
+        plot(lam_rng, squeeze(state_evo(2,ii,:)));
+    end
+    figure(2), clf, hold on
+    for ii = 1:algo.N
+        plot(squeeze(state_evo(1,ii,:)), squeeze(state_evo(2,ii,:)));
+        plot(squeeze(state_evo(1,ii,end)), squeeze(state_evo(2,ii,end)), 'o');
+    end
+    figure(3), clf, hold on
+    for ii = 1:algo.N
+        plot(lam_rng, weight_evo(:,ii));
+    end
+    drawnow;
+end
+
+% figure(4), plot(errors'), drawnow;
 
 end
+
+
+
+
+
+
+
+% function [ state, weight ] = ha_smoothupdate( display, algo, model, fh, obs, prev_state, weight)
+% %ha_smoothupdate Apply a smooth update for the heartbeat alignment model.
+% 
+% % Define resampling points
+% lam_resam = [0 1E-5 1E-4 1E-3 1E-2 1E-1  0.5 1];
+% % lam_resam = [0 1];
+% 
+% % Initialise particle filter structure
+% pf = repmat(struct('state', [], 'ancestor', [], 'weight', []), 1, length(lam_resam));
+% 
+% % Sample prior
+% init_weight = weight;
+% init_trans_prob = zeros(1, algo.N);
+% init_state = zeros(model.ds, algo.N);
+% for ii = 1:algo.N
+%     if ~isempty(prev_state)
+%         [init_state(:,ii), init_trans_prob(ii)] = feval(fh.transition, model, prev_state(:,ii));
+%     else
+%         [init_state(:,ii), init_trans_prob(ii)] = feval(fh.stateprior, model);
+%     end
+% end
+% 
+% last_prob = init_trans_prob;
+% 
+% pf(1).state = init_state;
+% pf(1).weight = init_weight;
+% pf(1).origin = 1:algo.N;
+% 
+% % Set up for plotting
+% if display.plot_particle_paths
+%     figure(1); clf; hold on;
+% end
+% 
+% % Loop over resampling intervals
+% for ll = 1:length(lam_resam)-1
+%     
+%     % Timing
+%     start_lam = lam_resam(ll);
+%     stop_lam = lam_resam(ll+1);
+%     
+%     % Initialise state and weight arrays
+%     pf(ll+1).state = zeros(model.ds, algo.N);
+%     pf(ll+1).weight = zeros(1, algo.N);
+%     prob = zeros(1, algo.N);
+%     
+%     % Resampling
+%     if algo.flag_intermediate_resample
+%         pf(ll+1).ancestor = sample_weights(pf(ll).weight, algo.N, 2);
+%         last_weights = zeros(1,algo.N);
+%     else
+%         pf(ll+1).ancestor = 1:algo.N;
+%         last_weights = pf(ll).weight;
+%     end
+%     
+%     % Loop over particles
+%     for ii = 1:algo.N
+%         
+%         % Origin
+%         pf(ll+1).origin(ii) = pf(ll).origin(pf(ll+1).ancestor(ii));
+%         if isempty(prev_state)
+%             A_mn = model.A1_mn;
+%             A_vr = model.A1_vr;
+%         else
+%             A_mn = prev_state(2,pf(ll+1).origin(ii));
+%             A_vr = model.A_vr;
+%         end
+%         
+%         % Starting point
+%         start_x = pf(ll).state(:,pf(ll+1).ancestor(ii));
+%         
+%         % Numerically integrate over the interval
+%         [lam_evo, x_evo, jac_evo] = RK45int(start_lam, stop_lam, start_x, model, obs, A_mn, A_vr, D);
+%         
+%         % Store state
+%         state = x_evo(:,end);
+%         pf(ll+1).state(:,ii) = state;
+%         
+%         % Densities
+%         if ~isempty(prev_state)
+%             [~, trans_prob] = feval(fh.transition, model, prev_state(:,pf(ll+1).origin(ii)), state);
+%         else
+%             [~, trans_prob] = feval(fh.stateprior, model, state);
+%         end
+%         [~, lhood_prob] = feval(fh.observation, model, state, obs);
+%         prob(ii) = trans_prob + stop_lam*lhood_prob;
+%         
+%         % Weight update
+%         if isreal(log(jac_evo(end)))
+%             pf(ll+1).weight(ii) = last_weights(pf(ll+1).ancestor(ii)) + log(jac_evo(end)) + prob(ii) - last_prob(pf(ll+1).ancestor(ii));
+% %             pf(ll+1).weight(ii) = last_weights(pf(ll+1).ancestor(ii)) + prob(ii) - last_prob(pf(ll+1).ancestor(ii));
+%         else
+%             pf(ll+1).weight(ii) = -inf;
+%         end
+%         
+%         if isnan(pf(ll+1).weight(ii))
+%             pf(ll+1).weight(ii) = -inf;
+%         end
+%         
+%         % Plot
+%         if display.plot_particle_paths
+%             plot(x_evo(1,:), x_evo(2,:));
+%             if ll == length(lam_resam)-1
+%                 plot(state(1), state(2), 'o');
+%             end
+%             drawnow;
+%         end
+%         
+%     end
+%     
+%     last_prob = prob;
+%     
+% end
+% 
+% state = pf(end).state;
+% weight = pf(end).weight;
+% 
+% end
 
 function [lam_evo, x_evo, jac_evo] = RK45int(lam0, lamf, x0, model, obs, A_mn, A_vr, D)
 

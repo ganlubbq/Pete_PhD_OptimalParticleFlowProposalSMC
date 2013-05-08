@@ -11,9 +11,9 @@ algo.flag_intermediate_resample = true;
 % Stochastic smooth update?
 algo.flag_stochastic = true;
 if algo.flag_stochastic
-    algo.D = 1E-5*eye(model.ds);
+    algo.Dscale = 0.01;
 else
-    algo.D = zeros(model.ds);
+    algo.Dscale = 0;
 end
 
 end

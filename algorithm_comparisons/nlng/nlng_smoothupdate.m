@@ -3,7 +3,7 @@ function [ state, weight ] = nlng_smoothupdate( display, algo, model, fh, obs, p
 %benchmark model.
 
 % Set up integration schedule
-ratio = 1.05;
+ratio = 1.2;
 num_steps = 50;
 scale_fact = (1-ratio)/(ratio*(1-ratio^num_steps));
 lam_rng = cumsum([0 scale_fact*ratio.^(1:num_steps)]);
@@ -43,6 +43,8 @@ last_prob = init_trans_prob;
 % if display.plot_particle_paths
 %     figure(1), clf, hold on
 % end
+
+% errors = zeros(algo.N, L);
 
 % Pseudo-time loop
 for ll = 1:L-1
@@ -106,13 +108,10 @@ for ll = 1:L-1
 %         % Reverse transform
 %         obs_mn_rev = nlng_h(model, x);
 %         H_rev = nlng_obsjacobian(model, x);
-%         p = mvnstpdf(obs', obs_mn_rev', model.R, model.dfy);
-%         Dp_p = (model.dfy+model.do)*(H_rev'/model.R)*(obs-obs_mn_rev)/(model.dfy + (obs-obs_mn_rev)'*(model.R\(obs-obs_mn_rev)));
-%         [y_rev, H_rev, R_rev] = gaussian_match_obs(x0, p, Dp_p, H_rev);
-% %         R_rev = model.R;
-% %         y_rev = obs - obs_mn_rev + H*x;
+%         R_rev = R;
+%         y_rev = obs - obs_mn_rev + H*x;
 %         [ x0_rev, ~, ~] = linear_flow_move( lam0, lam, x, m, P, y_rev, H_rev, R_rev, algo.Dscale );
-%         err = norm(x0 - x0_rev);
+%         errors(ii,ll+1) = norm(x0 - x0_rev);
         
         % Store state
         state = [kk; x];
@@ -179,6 +178,8 @@ if display.plot_particle_paths
     end
     drawnow;
 end
+
+% figure(4), plot(errors'), drawnow;
 
 end
 
