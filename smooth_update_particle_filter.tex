@@ -47,6 +47,7 @@
 % Particle shizzle
 \newcommand{\pss}[2][]{^{(#2)#1}}               % Particle superscript
 \newcommand{\pw}[1]{w_{#1}}                     % Particle weight
+\newcommand{\predpw}[1]{w_{#1}}                 % Predictive particle weight
 \newcommand{\npw}[1]{\bar{w}_{#1}}              % Normalised particle weight
 \newcommand{\naw}[1]{\bar{v}_{#1}}              % Normalised auxiliary weight
 \newcommand{\anc}[1]{a_{#1}}                    % Particle ancestor
@@ -235,7 +236,7 @@ The operations of the particle filter can be divided up into a prediction step a
 In the predict step of the bootstrap filter, a new state is sampled for each particle from the transition density, $p(\ls{\rt}|\ls{\rt-1}\pss{\anc{j}})$. The extended particles formed in this process form an approximation to the predictive distribution, $p(\ls{1:\rt}|\ob{1:\rt-1})$, using the associated weights,
 %
 \begin{IEEEeqnarray}{rCl}
- \pw{\rt}\pss{j} & \propto & \frac{\npw{\rt-1}\pss{j}}{\naw{\rt-1}\pss{j}}       .
+ \predpw{\rt}\pss{j} & \propto & \frac{\npw{\rt-1}\pss{j}}{\naw{\rt-1}\pss{j}}       .
 \end{IEEEeqnarray}
 
 In the update step, the effects of the new observation, $\ob{\rt}$, are introduced by assigning a new weight according to \eqref{eq:weight_update_bootstrap}. The problems of filter degeneracy originate solely in the update step. The new algorithm modifies this step so that both state and weight are changed.
@@ -381,7 +382,7 @@ This results in a cancellation, and hence the following weight update equation,
 When $\flowdiffuse{\pt}\ne0$, we can use \eqref{eq:general_weight_update} directly. The importance density is found by integrating the stochastic differential equation governing the flow \eqref{eq:flow} using the selected values of $\flowdrift{\pt}$ and $\flowdiffuse{\pt}$. The optimal choice for the artificial conditional density (in the sense of minimising the weight variance) is shown in \cite{DelMoral2006} to be,
 %
 \begin{IEEEeqnarray}{rCl}
- \artden(\ls{\rt,\pt_0}\pss{j} | \ls{\rt,\pt_1}\pss{j}) & = & \frac{ \oiden{\pt_0}(\ls{\rt,\pt_0} | \ls{\rt-1}) \impden(\ls{\rt,\pt_1} | \ls{\rt,\pt_0}) }{ \int \oiden{\pt_0}(\ls{} | \ls{\rt-1}) \impden(\ls{\rt,\pt_1} | \ls{}) d\ls{} }     .
+ \artden(\ls{\rt,\pt_0}\pss{j} | \ls{\rt,\pt_1}\pss{j}) & = & \frac{ \oiden{\pt_0}(\ls{\rt,\pt_0} | \ls{\rt-1}) \impden(\ls{\rt,\pt_1} | \ls{\rt,\pt_0}) }{ \int \oiden{\pt_0}(\ls{} | \ls{\rt-1}) \impden(\ls{\rt,\pt_1} | \ls{}) d\ls{} } \label{eq:optimal_artificial_density}     .
 \end{IEEEeqnarray}
 
 
@@ -488,7 +489,7 @@ where $\lfdiffsf$ is a positive scale factor. This choice encourages particles t
 For these choices of $\flowdrift{\pt}$ and $\flowdiffuse{\pt}$, the importance density associated with a transition form $\pt_0$ to $\pt_1$ is,
 %
 \begin{IEEEeqnarray}{rCl}
- \impden(\ls{\pt_1} | \ls{\pt_0}) & = & \normal{\ls{\pt_1}}{\lfmapmat \ls{\pt_0} + \lfmapshift}{\lfmapcov} \\
+ \impden(\ls{\pt_1} | \ls{\pt_0}) & = & \normal{\ls{\pt_1}}{\lfmapmat \ls{\pt_0} + \lfmapshift}{\lfmapcov} \label{eq:lg_stochastic_flow_importance_density} \\
  \lfmapmat   & = & \exp\left\{ -\frac{1}{2} \lfdiffsf \left( \pt_1 - \pt_0 \right) \right\} \lginterm{\pt_1}^{-\frac{1}{2}} \lginterm{\pt_0}^{\frac{1}{2}} \nonumber \\
  \lfmapshift & = & \lfmapmat \left[ \lginterm{\pt_0}^{-1} \left( \obsmat^+ \ob{\rt} - \transmean \right) - \obsmat^+ \ob{\rt} \right] \nonumber \\
              &   & + \: \obsmat^+ \ob{\rt} - \lginterm{\pt_1}^{-1} \left( \obsmat^+ \ob{\rt} - \transmean \right) \nonumber \\
@@ -503,23 +504,52 @@ where,
 %
 For proof see Appendix~\ref{app:optimal_importance_density_linear_Gaussian}.
 
-The optimal artificial density for this is given by the Kalman filter update equations,
+For this model, the OID is a Gaussian,
 %
 \begin{IEEEeqnarray}{rCl}
- \artden(\ls{\pt_0} | \ls{\pt_1}) & = & \frac{ \oiden{\pt_0}(\ls{\rt,\pt_0} | \ls{\rt-1}) \impden(\ls{\rt,\pt_1} | \ls{\rt,\pt_0}) }{ \int \oiden{\pt_0}(\ls{} | \ls{\rt-1}) \impden(\ls{\rt,\pt_1} | \ls{}) d\ls{} } \nonumber \\
- & \propto & \normal{\ls{\pt_0}}{\lgoimean{\pt_0}}{\lgoicov{\pt_0}} \normal{\ls{\pt_1}}{\lfmapmat \ls{\pt_0} + \lfmapshift}{\lfmapmat} \nonumber \\
- & = & \normal{\ls{\pt_0}}{\lgoimean{\pt_0} + \lgoicov{\pt_0} \lfmapmat^T\left(\lfmapmat \lgoicov{\pt_0} \lfmapmat^T + \lfmapcov\right)^{-1}\left(\ls{\pt_1} - \lfmapmat \lgoimean{\pt_0} - \lfmapshift \right)}{\lgoicov{\pt_0} - \lgoicov{\pt_0} \lfmapmat^T\left(\lfmapmat \lgoicov{\pt_0} \lfmapmat^T + \lfmapcov\right)^{-1} \lgoicov{\pt_0}}     .
+ \oiden{\pt}(\ls{\pt}) & = & \mathcal{N}(\ls{\pt}|\lgoimean{\pt},\lgoicov{\pt}) \nonumber    ,
+\end{IEEEeqnarray}
+%
+and thus it is possible to use the optimal artificial density specified by~\eqref{eq:optimal_artificial_density}. The ratio between this optimal artificial density and the importance density is now,
+%
+\begin{IEEEeqnarray}{rCl}
+ \frac{ \artden(\ls{\pt_0} | \ls{\pt_1}) }{ \impden(\ls{\pt_1} | \ls{\pt_0}) } & = & \frac{ \oiden{\pt_0}(\ls{\pt_0} | \ls{\rt-1}) \impden(\ls{\pt_1} | \ls{\pt_0}) }{ \int \oiden{\pt_0}(\ls{} | \ls{\rt-1}) \impden(\ls{\pt_1} | \ls{}) d\ls{} \: \impden(\ls{\pt_1} | \ls{\pt_0}) } \nonumber \\
+  & = & \frac{ \oiden{\pt_0}(\ls{\rt,\pt_0} | \ls{\rt-1}) }{ \int \oiden{\pt_0}(\ls{} | \ls{\rt-1}) \impden(\ls{\rt,\pt_1} | \ls{}) d\ls{} } \nonumber \\
+  & = & \frac{ \normal{\ls{\pt_0}}{\lgoimean{\pt_0}}{\lgoicov{\pt_0}} }{ \int \normal{\ls{}}{\lgoimean{\pt_0}}{\lgoicov{\pt_0}} \normal{\ls{\pt_1}}{\lfmapmat \ls{} + \lfmapshift}{\lfmapcov} d\ls{} } \nonumber \\
+  & = & \frac{ \normal{\ls{\pt_0}}{\lgoimean{\pt_0}}{\lgoicov{\pt_0}} }{ \normal{\ls{\pt_1}}{\lfmapmat \lgoimean{\pt_0} + \lfmapshift}{\lfmapmat\lgoicov{\pt_0}\lfmapmat^T + \lfmapcov} } \nonumber \\
+\end{IEEEeqnarray}
+%
+The weight update formula then simplifies to,
+%
+\begin{IEEEeqnarray}{rCl}
+ \pw{\pt_1} & = & \pw{\pt_0} \frac{ \normal{\ob{\rt}}{\obsmat \ls{\pt_1}}{\frac{\obscov}{\pt_1}} \normal{\ls{\pt_1}}{\lgoimean{\pt_1}}{\lgoicov{\pt_1}} }{ \normal{\ls{\pt_1}}{\lfmapmat \lgoimean{\pt_0} + \lfmapshift}{\lfmapmat \lgoicov{\pt_0} \lfmapmat^T + \lfmapcov} } \nonumber     .
 \end{IEEEeqnarray}
 
-{\meta Betcha this simplifies. Also, that we can show that as $\lfdiffsf\rightarrow0$ then the stochastic case limits into the deterministic case.} \\
-{\meta Change this to the ratio and show the cancellation in the complete expression.}
 
 
 \subsection{Optimal SUPF for the Linear Gaussian Model}
 
-Using the derived equations for the linear Gaussian model, an optimal SUPF algorithm can be implemented, as detailed in algorithm~\ref{}, using a single step to advance all the way through pseudo-time from $\pt=0$ to $\pt=1$.
+Using the derived equations for the linear Gaussian model, an optimal SUPF algorithm can be implemented, as detailed in algorithm~\ref{alg:lg_SUPF}, using a single step to advance all the way through pseudo-time from $\pt=0$ to $\pt=1$.
 
-{\meta Put a pseudo-code algorithm here.}
+\begin{algorithm} \label{alg:lg_SUPF}
+\begin{algorithmic}[1]
+  \FOR{$t=1,2,\dots$}
+    \FOR{$i=1,\dots,N_F$}
+      \IF{$t>1$ and $\ess{\rt-1}$ less than threshold}
+        \STATE Select an ancestor, $a_i=j$, with probability $\naw{\rt-1}\pss{j}$
+        \STATE Calculate predictive particle weight, $\pw{\rt,0}\pss{i} = \npw{\rt-1}\pss{a_i} / \naw{\rt-1}\pss{a_i}$.
+      \ELSE
+        \STATE Initialise weights, $\pw{\rt,0}\pss{i} = 1$.
+      \ENDIF
+      \STATE Sample a predictive state value from the transition/prior density, $\ls{\rt,0} \sim p(\ls{\rt} | \ls{\rt-1})$ or $\ls{\rt,0} \sim p(\ls{\rt})$.
+      \STATE Sample an updated state value from the smooth update importance density given by \eqref{eq:lg_stochastic_flow_importance_density}, $\ls{\rt,1} \sim \impden(\ls{\rt,1} | \ls{\rt,0})$.
+      \STATE Update particle weight, $\pw{\rt,1}\pss{i}$ using \eqref{eq:deterministic_weight_update} or \eqref{eq:general_weight_update}.
+      \STATE Finalise, $\ls{\rt}\pss{i} = \ls{\rt,1}\pss{i}$, $\pw{\rt}\pss{i} = \pw{\rt,1}\pss{i}$.
+    \ENDFOR
+    \STATE Normalise weights, $\npw{\rt} = \pw{\rt}\pss{i} / \sum_j \pw{\rt}\pss{j}$ .
+  \ENDFOR
+\end{algorithmic}
+\end{algorithm}
 
 
 
@@ -527,11 +557,19 @@ Using the derived equations for the linear Gaussian model, an optimal SUPF algor
 
 So far, the only model considered is linear (in the observation function) and Gaussian. This is in fact not useful, since it is already possible to sample from the optimal importance distribution directly for this case, and the resulting weights may be calculated in closed form. However, we can now employ our analytical solutions for the flow in this nice case to approximate optimal flows for other models. Note the required approximations occur only in the choice of importance density. The resulting particle filter is therefore still ``exact'' in the asymptotic sense usual for particle filters, although only ``approximately optimal''.
 
-\subsection{Weight Updates}
+The major change for nonlinear, non-Gaussian models is that we can no longer calculate $\oiden{\pt}$ analytically. Instead, we form a Gaussian approximation, denoted $\approxoiden{\pt}$ (with mean and covariance still written $\lgoimean{\pt}$ and $\lgoicov{\pt}$), and use this to calculate state and weight updates using the same formulas as before. Rather than performing a single update from $\pt_0=0$ to $\pt_1=1$, pseudo-time is divided up into short intervals, and a new approximation to $\oiden{\pt}$ is formed for each one. In this section, we discuss various ways in which such approximations may be made.
 
-In the stochastic case, $\flowdiffuse \ne 0$, the weight update formula will differ slightly to that used when the model was linear Gaussian, since the OID is no longer a Gaussian. $\impden$ and $\artden$ are calculated based on a Gaussian approximation to $\oiden{\pt_0}$, which we will denote $\approxoiden{\pt_0}$. Hence, the weight update becomes,
+In the stochastic case, the weight update formula will differ slightly to that used when the model was linear Gaussian. Since the OID is no longer a Gaussian, we cannot calculate the optimal artificial conditional density. Instead, we use the approximately optimal form,
+%
+\begin{IEEEeqnarray}{rCl}
+ \frac{ \artden(\ls{\pt_0} | \ls{\pt_1}) }{ \impden(\ls{\pt_1} | \ls{\pt_0}) } & = & \frac{ \approxoiden{\pt_0}(\ls{\rt,\pt_0} | \ls{\rt-1}) }{ \int \approxoiden{\pt_0}(\ls{} | \ls{\rt-1}) \impden(\ls{\rt,\pt_1} | \ls{}) d\ls{} } \nonumber \\
+  & = & \frac{ \normal{\ls{\pt_0}}{\lgoimean{\pt_0}}{\lgoicov{\pt_0}} }{ \int \normal{\ls{}}{\lgoimean{\pt_0}}{\lgoicov{\pt_0}} \normal{\ls{\pt_1}}{\lfmapmat \ls{} + \lfmapshift}{\lfmapcov} d\ls{} } \nonumber \\
+  & = & \frac{ \normal{\ls{\pt_0}}{\lgoimean{\pt_0}}{\lgoicov{\pt_0}} }{ \normal{\ls{\pt_1}}{\lfmapmat \lgoimean{\pt_0} + \lfmapshift}{\lfmapmat\lgoicov{\pt_0}\lfmapmat^T + \lfmapcov} } \nonumber       .
+\end{IEEEeqnarray}
+%
+This is used in conjunction with~\eqref{eq:general_weight_update}. Note that from this formula it is easy to show that the stochastic flow weight update formula becomes equal to the deterministic flow weight update formula when $\lfdiffsf\rightarrow0$ (see appendix~\ref{app:limiting_case}).
 
-{\meta Fill this in, examining the ratio ${\rho}{q}$.}
+
 
 \subsection{Linearisation}
 
@@ -649,9 +687,30 @@ When using an approximately-optimal SUPF for a nonlinear non-Gaussian model, it 
 
 \subsection{Approximately Optimal SUPF for Nonlinear Non-Gaussian Models}
 
-For nonlinear or non-Gaussian models, the SUPF is still an exact particle filter, but is only approximately optimal. Unlike the linear-Gaussian case, it is necessary to divide up pseudo-time into short intervals and make use of one of the Gaussian approximations for each interval. A summary is shown in algorithm~\ref{}.
+For nonlinear or non-Gaussian models, the SUPF is still an exact particle filter, but is only approximately optimal. Unlike the linear-Gaussian case, it is necessary to divide up pseudo-time into short intervals and make use of one of the Gaussian approximations for each interval. A summary is shown in algorithm~\ref{alg:nlg_SUPF}.
 
-{\meta Put another pseudo-code algorithm here.}
+\begin{algorithm} \label{alg:nlg_SUPF}
+\begin{algorithmic}[1]
+  \FOR{$t=1,2,\dots$}
+    \FOR{$i=1,\dots,N_F$}
+      \IF{$t>1$ and $\ess{\rt-1}$ less than threshold}
+        \STATE Select an ancestor, $a_i=j$, with probability $\naw{\rt-1}\pss{j}$
+        \STATE Calculate predictive particle weight, $\pw{\rt,0}\pss{i} = \npw{\rt-1,1}\pss{a_i} / \naw{\rt-1}\pss{a_i}$.
+      \ELSE
+        \STATE Initialise weights, $\pw{\rt,0}\pss{i} = 1$.
+      \ENDIF
+      \STATE Sample a predictive state value from the transition/prior density, $\ls{\rt,0} \sim p(\ls{\rt} | \ls{\rt-1})$ or $\ls{\rt,0} \sim p(\ls{\rt})$.
+      \FOR{$l=1,2,...,L$, where $\pt{0}=0$, $\pt{L}=1$}
+        \STATE Calculate suitable local approximations for $\transmean$, $\transcov$, $\ob{\rt}$, $\obsmat$, $\obscov$ using linearisation, mixing variable sampling, or gradient matching.
+        \STATE Sample a state value from the smooth update importance density given by \eqref{eq:lg_stochastic_flow_importance_density}, $\ls{\rt,\pt{l}} \sim \impden(\ls{\rt,\pt{l}} | \ls{\rt,\pt{l-1}})$.
+        \STATE Update particle weight, $\pw{\rt,\pt{l}}\pss{i}$ using \eqref{eq:deterministic_weight_update} or \eqref{eq:general_weight_update}.
+      \ENDFOR
+      \STATE Finalise, $\ls{\rt}\pss{i} = \ls{\rt,1}\pss{i}$, $\pw{\rt}\pss{i} = \pw{\rt,1}\pss{i}$.
+    \ENDFOR
+    \STATE Normalise weights, $\npw{\rt} = \pw{\rt}\pss{i} / \sum_j \pw{\rt}\pss{j}$ .
+  \ENDFOR
+\end{algorithmic}
+\end{algorithm}
 
 
 
@@ -1285,12 +1344,33 @@ Putting all this together gives us a proposal density corresponding to optimal s
 
 
 
+\section{The Limiting Case of the Stochastic Flow}\label{app:limiting_case}
 
-
-
-
-
-
+Intuitively, we expect the stochastic flow to become the deterministic flow in the limit $\lfdiffsf\rightarrow0$. To show that this is the case, first consider the state updates. The importance density is,
+%
+\begin{IEEEeqnarray}{rCl}
+ \impden(\ls{\pt_1} | \ls{\pt_0}) & = & \normal{\ls{\pt_1}}{\lfmapmat \ls{\pt_0} + \lfmapshift}{\lfmapcov} \nonumber     .
+\end{IEEEeqnarray}
+%
+When $\lfdiffsf\rightarrow0$, $\lfmapmat\rightarrow0$, so this becomes a deterministic mapping. We also find very simply that,
+%
+\begin{IEEEeqnarray}{rCl}
+ \lfmapmat \ls{\pt_0} + \lfmapshift & \rightarrow & \flowmap{\pt_0}{\pt_1}(\ls{\pt_0}) \nonumber      ,
+\end{IEEEeqnarray}
+%
+and hence the state updates are identical. Examining the weight update and using $\ls{\pt_1} = \lfmapmat \ls{\pt_0} + \lfmapshift$, we find,
+%
+\begin{IEEEeqnarray}{rCl}
+ \frac{ \artden(\ls{\pt_0} | \ls{\pt_1}) }{ \impden(\ls{\pt_1} | \ls{\pt_0}) } & = & \frac{ \normal{\ls{\pt_0}}{\lgoimean{\pt_0}}{\lgoicov{\pt_0}} }{ \normal{\ls{\pt_1}}{\lfmapmat \lgoimean{\pt_0} + \lfmapshift}{\lfmapmat\lgoicov{\pt_0}\lfmapmat^T + \lfmapcov} } \nonumber \\
+ & = & \frac{ \magdet{2 \pi \lgoicov{\pt_0}}^{-\frac{1}{2}} \exp\left\{ -\frac{1}{2} \left[ (\ls{\pt_1} - \lgoimean{\pt_0})^T \lgoicov{\pt_0}^{-1} (\ls{\pt_0} - \lgoimean{\pt_0}) \right] \right\} }{ \magdet{2 \pi \left( \lfmapmat \lgoicov{\pt_0} \lfmapmat^T + \lfmapcov \right)}^{-\frac{1}{2}} \exp\left\{ -\frac{1}{2} \left[ (\ls{\pt_0} - \lfmapmat \lgoimean{\pt_0} - \lfmapshift)^T \left( \lfmapmat \lgoicov{\pt_0} \lfmapmat^T + \lfmapcov \right)^{-1} (\ls{\pt_1} - \lfmapmat \lgoimean{\pt_0} - \lfmapshift) \right] \right\} } \nonumber \\
+ & \rightarrow & \frac{ \magdet{2 \pi \lgoicov{\pt_0}}^{-\frac{1}{2}} \exp\left\{ -\frac{1}{2} \left[ (\ls{\pt_0} - \lgoimean{\pt_0})^T \lgoicov{\pt_0}^{-1} (\ls{\pt_0} - \lgoimean{\pt_0}) \right] \right\} }{ \magdet{2 \pi \left( \lfmapmat \lgoicov{\pt_0} \lfmapmat^T \right)}^{-\frac{1}{2}} \exp\left\{ -\frac{1}{2} \left[ (\ls{\pt_1} - \lfmapmat \lgoimean{\pt_0} - \lfmapshift)^T \left( \lfmapmat \lgoicov{\pt_0} \lfmapmat^T \right)^{-1} (\ls{\pt_1} - \lfmapmat \lgoimean{\pt_0} - \lfmapshift) \right] \right\} } \nonumber \\
+ & = & \frac{ \exp\left\{ -\frac{1}{2} \left[ (\ls{\pt_0} - \lgoimean{\pt_0})^T \lgoicov{\pt_0}^{-1} (\ls{\pt_0} - \lgoimean{\pt_0}) \right] \right\} }{ \magdet{\lfmapmat^T \lfmapmat}^{-\frac{1}{2}} \exp\left\{ -\frac{1}{2} \left[ (\lfmapmat^{-1} \ls{\pt_1} - \lgoimean{\pt_0} - \lfmapmat^{-1} \lfmapshift)^T \lgoicov{\pt_0}^{-1} (\lfmapmat^{-1} \ls{\pt_1} - \lgoimean{\pt_0} - \lfmapmat^{-1} \lfmapshift) \right] \right\} } \nonumber \\
+ & = & \magdet{\lfmapmat^T \lfmapmat}^{\frac{1}{2}} \nonumber \\
+ & = & \magdet{ \lginterm{\pt_1}^{-\frac{1}{2}} \lginterm{\pt_0}^{\frac{1}{2}} } \nonumber \\
+ & = & \sqrt{ \frac{\magdet{\lginterm{\pt_0}}}{\magdet{\lginterm{\pt_1}}} }     ,
+\end{IEEEeqnarray}
+%
+which also matches the deterministic case.
 
 
 
