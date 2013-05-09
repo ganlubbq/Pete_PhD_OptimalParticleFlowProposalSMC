@@ -78,9 +78,9 @@
 \newcommand{\lfmat}[1]{A_{#1}}                  % Linear flow matrix
 \newcommand{\lfshift}[1]{b_{#1}}                % Linear flow shift
 \newcommand{\lfdiffsf}{\gamma}                  % Linear flow diffusion matrix scale factor
-\newcommand{\lfmapmat}{\Gamma}                  % Linear flow map matrix
-\newcommand{\lfmapshift}{g}                     % Linear flow map shift
-\newcommand{\lfmapcov}{\Omega}                  % Linear flow map covariance
+\newcommand{\lfmapmat}[1]{\Gamma_{#1}}          % Linear flow map matrix
+\newcommand{\lfmapshift}[1]{g_{#1}}             % Linear flow map shift
+\newcommand{\lfmapcov}[1]{\Omega_{#1}}          % Linear flow map covariance
 
 % Models
 \newcommand{\transfun}{f}                       % Transition function
@@ -96,6 +96,9 @@
 \newcommand{\lgoimean}[1]{\mu_{#1}}             % Linear Gaussian optimal importance density mean
 \newcommand{\lgoicov}[1]{\Sigma_{#1}}           % Linear Gaussian optimal importance density covariance
 \newcommand{\lginterm}[1]{S_{#1}}               % Useful intermediate term equal to \transcov / \lgoicov
+
+% Miscellany
+\newcommand{\bels}[1]{\hat{x}_{#1}}             % Backwards estimate of linear state (for step-size control)
 
 
 
@@ -489,11 +492,11 @@ where $\lfdiffsf$ is a positive scale factor. This choice encourages particles t
 For these choices of $\flowdrift{\pt}$ and $\flowdiffuse{\pt}$, the importance density associated with a transition form $\pt_0$ to $\pt_1$ is,
 %
 \begin{IEEEeqnarray}{rCl}
- \impden(\ls{\pt_1} | \ls{\pt_0}) & = & \normal{\ls{\pt_1}}{\lfmapmat \ls{\pt_0} + \lfmapshift}{\lfmapcov} \label{eq:lg_stochastic_flow_importance_density} \\
- \lfmapmat   & = & \exp\left\{ -\frac{1}{2} \lfdiffsf \left( \pt_1 - \pt_0 \right) \right\} \lginterm{\pt_1}^{-\frac{1}{2}} \lginterm{\pt_0}^{\frac{1}{2}} \nonumber \\
- \lfmapshift & = & \lfmapmat \left[ \lginterm{\pt_0}^{-1} \left( \obsmat^+ \ob{\rt} - \transmean \right) - \obsmat^+ \ob{\rt} \right] \nonumber \\
+ \impden(\ls{\pt_1} | \ls{\pt_0}) & = & \normal{\ls{\pt_1}}{\lfmapmat{\pt_0,\pt_1} \ls{\pt_0} + \lfmapshift{\pt_0,\pt_1}}{\lfmapcov{\pt_0,\pt_1}} \label{eq:lg_stochastic_flow_importance_density} \\
+ \lfmapmat{\pt_0,\pt_1}   & = & \exp\left\{ -\frac{1}{2} \lfdiffsf \left( \pt_1 - \pt_0 \right) \right\} \lginterm{\pt_1}^{-\frac{1}{2}} \lginterm{\pt_0}^{\frac{1}{2}} \nonumber \\
+ \lfmapshift{\pt_0,\pt_1} & = & \lfmapmat{\pt_0,\pt_1} \left[ \lginterm{\pt_0}^{-1} \left( \obsmat^+ \ob{\rt} - \transmean \right) - \obsmat^+ \ob{\rt} \right] \nonumber \\
              &   & + \: \obsmat^+ \ob{\rt} - \lginterm{\pt_1}^{-1} \left( \obsmat^+ \ob{\rt} - \transmean \right) \nonumber \\
- \lfmapcov   & = & \left[ 1 - \exp\left\{ - \lfdiffsf \left(\pt_1 - \pt_0\right) \right\} \right] \lgoicov{\pt_1}
+ \lfmapcov{\pt_0,\pt_1}   & = & \left[ 1 - \exp\left\{ - \lfdiffsf \left(\pt_1 - \pt_0\right) \right\} \right] \lgoicov{\pt_1}
 \end{IEEEeqnarray}
 %
 where,
@@ -515,14 +518,14 @@ and thus it is possible to use the optimal artificial density specified by~\eqre
 \begin{IEEEeqnarray}{rCl}
  \frac{ \artden(\ls{\pt_0} | \ls{\pt_1}) }{ \impden(\ls{\pt_1} | \ls{\pt_0}) } & = & \frac{ \oiden{\pt_0}(\ls{\pt_0} | \ls{\rt-1}) \impden(\ls{\pt_1} | \ls{\pt_0}) }{ \int \oiden{\pt_0}(\ls{} | \ls{\rt-1}) \impden(\ls{\pt_1} | \ls{}) d\ls{} \: \impden(\ls{\pt_1} | \ls{\pt_0}) } \nonumber \\
   & = & \frac{ \oiden{\pt_0}(\ls{\rt,\pt_0} | \ls{\rt-1}) }{ \int \oiden{\pt_0}(\ls{} | \ls{\rt-1}) \impden(\ls{\rt,\pt_1} | \ls{}) d\ls{} } \nonumber \\
-  & = & \frac{ \normal{\ls{\pt_0}}{\lgoimean{\pt_0}}{\lgoicov{\pt_0}} }{ \int \normal{\ls{}}{\lgoimean{\pt_0}}{\lgoicov{\pt_0}} \normal{\ls{\pt_1}}{\lfmapmat \ls{} + \lfmapshift}{\lfmapcov} d\ls{} } \nonumber \\
-  & = & \frac{ \normal{\ls{\pt_0}}{\lgoimean{\pt_0}}{\lgoicov{\pt_0}} }{ \normal{\ls{\pt_1}}{\lfmapmat \lgoimean{\pt_0} + \lfmapshift}{\lfmapmat\lgoicov{\pt_0}\lfmapmat^T + \lfmapcov} } \nonumber \\
+  & = & \frac{ \normal{\ls{\pt_0}}{\lgoimean{\pt_0}}{\lgoicov{\pt_0}} }{ \int \normal{\ls{}}{\lgoimean{\pt_0}}{\lgoicov{\pt_0}} \normal{\ls{\pt_1}}{\lfmapmat{\pt_0,\pt_1} \ls{} + \lfmapshift{\pt_0,\pt_1}}{\lfmapcov{\pt_0,\pt_1}} d\ls{} } \nonumber \\
+  & = & \frac{ \normal{\ls{\pt_0}}{\lgoimean{\pt_0}}{\lgoicov{\pt_0}} }{ \normal{\ls{\pt_1}}{\lfmapmat{\pt_0,\pt_1} \lgoimean{\pt_0} + \lfmapshift{\pt_0,\pt_1}}{\lfmapmat{\pt_0,\pt_1}\lgoicov{\pt_0}\lfmapmat{\pt_0,\pt_1}^T + \lfmapcov{\pt_0,\pt_1}} } \nonumber \\
 \end{IEEEeqnarray}
 %
 The weight update formula then simplifies to,
 %
 \begin{IEEEeqnarray}{rCl}
- \pw{\pt_1} & = & \pw{\pt_0} \frac{ \normal{\ob{\rt}}{\obsmat \ls{\pt_1}}{\frac{\obscov}{\pt_1}} \normal{\ls{\pt_1}}{\lgoimean{\pt_1}}{\lgoicov{\pt_1}} }{ \normal{\ls{\pt_1}}{\lfmapmat \lgoimean{\pt_0} + \lfmapshift}{\lfmapmat \lgoicov{\pt_0} \lfmapmat^T + \lfmapcov} } \nonumber     .
+ \pw{\pt_1} & = & \pw{\pt_0} \frac{ \normal{\ob{\rt}}{\obsmat \ls{\pt_1}}{\frac{\obscov}{\pt_1}} \normal{\ls{\pt_1}}{\lgoimean{\pt_1}}{\lgoicov{\pt_1}} }{ \normal{\ls{\pt_1}}{\lfmapmat{\pt_0,\pt_1} \lgoimean{\pt_0} + \lfmapshift{\pt_0,\pt_1}}{\lfmapmat{\pt_0,\pt_1} \lgoicov{\pt_0} \lfmapmat{\pt_0,\pt_1}^T + \lfmapcov{\pt_0,\pt_1}} } \nonumber     .
 \end{IEEEeqnarray}
 
 
@@ -563,8 +566,8 @@ In the stochastic case, the weight update formula will differ slightly to that u
 %
 \begin{IEEEeqnarray}{rCl}
  \frac{ \artden(\ls{\pt_0} | \ls{\pt_1}) }{ \impden(\ls{\pt_1} | \ls{\pt_0}) } & = & \frac{ \approxoiden{\pt_0}(\ls{\rt,\pt_0} | \ls{\rt-1}) }{ \int \approxoiden{\pt_0}(\ls{} | \ls{\rt-1}) \impden(\ls{\rt,\pt_1} | \ls{}) d\ls{} } \nonumber \\
-  & = & \frac{ \normal{\ls{\pt_0}}{\lgoimean{\pt_0}}{\lgoicov{\pt_0}} }{ \int \normal{\ls{}}{\lgoimean{\pt_0}}{\lgoicov{\pt_0}} \normal{\ls{\pt_1}}{\lfmapmat \ls{} + \lfmapshift}{\lfmapcov} d\ls{} } \nonumber \\
-  & = & \frac{ \normal{\ls{\pt_0}}{\lgoimean{\pt_0}}{\lgoicov{\pt_0}} }{ \normal{\ls{\pt_1}}{\lfmapmat \lgoimean{\pt_0} + \lfmapshift}{\lfmapmat\lgoicov{\pt_0}\lfmapmat^T + \lfmapcov} } \nonumber       .
+  & = & \frac{ \normal{\ls{\pt_0}}{\lgoimean{\pt_0}}{\lgoicov{\pt_0}} }{ \int \normal{\ls{}}{\lgoimean{\pt_0}}{\lgoicov{\pt_0}} \normal{\ls{\pt_1}}{\lfmapmat{\pt_0,\pt_1} \ls{} + \lfmapshift{\pt_0,\pt_1}}{\lfmapcov{\pt_0,\pt_1}} d\ls{} } \nonumber \\
+  & = & \frac{ \normal{\ls{\pt_0}}{\lgoimean{\pt_0}}{\lgoicov{\pt_0}} }{ \normal{\ls{\pt_1}}{\lfmapmat{\pt_0,\pt_1} \lgoimean{\pt_0} + \lfmapshift{\pt_0,\pt_1}}{\lfmapmat{\pt_0,\pt_1}\lgoicov{\pt_0}\lfmapmat{\pt_0,\pt_1}^T + \lfmapcov{\pt_0,\pt_1}} } \nonumber       .
 \end{IEEEeqnarray}
 %
 This is used in conjunction with~\eqref{eq:general_weight_update}. Note that from this formula it is easy to show that the stochastic flow weight update formula becomes equal to the deterministic flow weight update formula when $\lfdiffsf\rightarrow0$ (see appendix~\ref{app:limiting_case}).
@@ -679,9 +682,19 @@ Other methods of matching are possible, for example choosing the Gaussian with t
 
 \subsection{Step Size Control}
 
-When using an approximately-optimal SUPF for a nonlinear non-Gaussian model, it is necessary to divide up the pseudo-time interval into small steps. In some cases, it may be sufficient to do this with fixed step sizes or according to some predetermined pseudo-time grid. (For example, shorter time steps early on when particles are moving more quickly.) However, it would be desirable to have an automatic scheme for selecting step sizes as we go on.
+When using an approximately-optimal SUPF for a nonlinear non-Gaussian model, it is necessary to divide up the pseudo-time interval into small steps. In some cases, it may be sufficient to do this with fixed step sizes or according to some predetermined pseudo-time grid. (For example, shorter time steps early on when particles are moving more quickly.) However, it would be desirable to have an automatic scheme for selecting step sizes as we go.
 
-{\meta Put something in about automatic step-size control based on $\left( I - \Gamma_{\pt_1}^{-1} \Gamma_{\pt_0} \right) \ls{\pt_1} + \Gamma_{\pt_1} \left( \nu_{\pt_0} - \nu_{\pt_1} \right)$, i.e. the round-trip movement.}
+We can design a system for adaptive step-size control using the concept of ``round-trip displacements''. Say the state has just been advanced deterministically from $\ls{\pt_0}$ to $\ls{\pt_1}$. We can then calculated the transformation required to move backwards in pseudo time to $\pt_0$ again. If the model were exactly linear Gaussian, then this would return us to $\ls{\pt_0}$ again. However, if we are using a Gaussian approximation then the move will not be precisely reversed, and we will reach a different location, $\bels{\pt_0}$. The larger the discrepancy between the Gaussian and the density it approximates, the larger will be the difference between $\ls{\pt_0}$ and $\bels{\pt_0}$, and also the further from optimal will be the flow. Thus, we can implement a system of step-size control by adjusting the interval lengths such that $\magdet{\ls{\pt_0} - \bels{\pt_0}}$ remains below a chosen threshold.
+
+Note that,
+%
+\begin{IEEEeqnarray}{rCl}
+ \ls{\pt_0} - \bels{\pt_0} & = & \ls{\pt_0} -  \left[ \lfmapmat{\pt_1,\pt_0} \ls{\pt_1} + \lfmapshift{\pt_1,\pt_0} \right] \nonumber \\
+ & = & \ls{\pt_0} -  \left[ \lfmapmat{\pt_1,\pt_0} \left( \lfmapmat{\pt_0,\pt_1} \ls{\pt_0} + \lfmapshift{\pt_0,\pt_1} \right) + \lfmapshift{\pt_1,\pt_0} \right] \nonumber \\
+ & = & \left[ I - \lfmapmat{\pt_1,\pt_0} \lfmapmat{\pt_0,\pt_1} \right] \ls{\pt_0} - \lfmapmat{\pt_1,\pt_0} \lfmapshift{\pt_0,\pt_1} - \lfmapshift{\pt_1,\pt_0}     .
+\end{IEEEeqnarray}
+
+{\meta This is not yet implemented, but monitoring the diagnostic suggests it should work. Mention how to cope with stochastic case --- use the mean rather than the sampled value.}
 
 
 
@@ -700,10 +713,10 @@ For nonlinear or non-Gaussian models, the SUPF is still an exact particle filter
         \STATE Initialise weights, $\pw{\rt,0}\pss{i} = 1$.
       \ENDIF
       \STATE Sample a predictive state value from the transition/prior density, $\ls{\rt,0} \sim p(\ls{\rt} | \ls{\rt-1})$ or $\ls{\rt,0} \sim p(\ls{\rt})$.
-      \FOR{$l=1,2,...,L$, where $\pt{0}=0$, $\pt{L}=1$}
+      \FOR{$l=1,2,...,L$, where $\pt_{0}=0$, $\pt_{L}=1$}
         \STATE Calculate suitable local approximations for $\transmean$, $\transcov$, $\ob{\rt}$, $\obsmat$, $\obscov$ using linearisation, mixing variable sampling, or gradient matching.
-        \STATE Sample a state value from the smooth update importance density given by \eqref{eq:lg_stochastic_flow_importance_density}, $\ls{\rt,\pt{l}} \sim \impden(\ls{\rt,\pt{l}} | \ls{\rt,\pt{l-1}})$.
-        \STATE Update particle weight, $\pw{\rt,\pt{l}}\pss{i}$ using \eqref{eq:deterministic_weight_update} or \eqref{eq:general_weight_update}.
+        \STATE Sample a state value from the smooth update importance density given by \eqref{eq:lg_stochastic_flow_importance_density}, $\ls{\rt,\pt{l}} \sim \impden(\ls{\rt,\pt_{l}} | \ls{\rt,\pt_{l-1}})$.
+        \STATE Update particle weight, $\pw{\rt,\pt_{l}}\pss{i}$ using \eqref{eq:deterministic_weight_update} or \eqref{eq:general_weight_update}.
       \ENDFOR
       \STATE Finalise, $\ls{\rt}\pss{i} = \ls{\rt,1}\pss{i}$, $\pw{\rt}\pss{i} = \pw{\rt,1}\pss{i}$.
     \ENDFOR
@@ -1335,11 +1348,11 @@ Thus, the stochastic term in the solution is also a normally distributed random 
 Putting all this together gives us a proposal density corresponding to optimal stochastic flow for a linear Gaussian model,
 %
 \begin{IEEEeqnarray}{rCl}
- \impden(\ls{\pt_1} | \ls{\pt_0}) & = & \normal{\ls{\pt_1}}{\lfmapmat \ls{\pt_0} + \lfmapshift}{\lfmapcov} \\
- \lfmapmat   & = & \exp\left\{ -\frac{1}{2} \lfdiffsf \left( \pt_1 - \pt_0 \right) \right\} \lginterm{\pt_1}^{-\frac{1}{2}} \lginterm{\pt_0}^{\frac{1}{2}} \nonumber \\
- \lfmapshift & = & \exp\left\{ -\frac{1}{2} \lfdiffsf \left( \pt_1 - \pt_0 \right) \right\} \lginterm{\pt_1}^{-\frac{1}{2}} \lginterm{\pt_0}^{\frac{1}{2}} \left[ \lginterm{\pt_0}^{-1} \left( \obsmat^+ \ob{\rt} - \transmean \right) - \obsmat^+ \ob{\rt} \right] \nonumber \\
+ \impden(\ls{\pt_1} | \ls{\pt_0}) & = & \normal{\ls{\pt_1}}{\lfmapmat{\pt_0,\pt_1} \ls{\pt_0} + \lfmapshift{\pt_0,\pt_1}}{\lfmapcov{\pt_0,\pt_1}} \\
+ \lfmapmat{\pt_0,\pt_1}   & = & \exp\left\{ -\frac{1}{2} \lfdiffsf \left( \pt_1 - \pt_0 \right) \right\} \lginterm{\pt_1}^{-\frac{1}{2}} \lginterm{\pt_0}^{\frac{1}{2}} \nonumber \\
+ \lfmapshift{\pt_0,\pt_1} & = & \exp\left\{ -\frac{1}{2} \lfdiffsf \left( \pt_1 - \pt_0 \right) \right\} \lginterm{\pt_1}^{-\frac{1}{2}} \lginterm{\pt_0}^{\frac{1}{2}} \left[ \lginterm{\pt_0}^{-1} \left( \obsmat^+ \ob{\rt} - \transmean \right) - \obsmat^+ \ob{\rt} \right] \nonumber \\
              &   & + \: \obsmat^+ \ob{\rt} - \lginterm{\pt_1}^{-1} \left( \obsmat^+ \ob{\rt} - \transmean \right) \nonumber \\
- \lfmapcov   & = & \left[ 1 - \exp\left\{ - \lfdiffsf \left(\pt_1 - \pt_0\right) \right\} \right] \lgoicov{\pt_1}
+ \lfmapcov{\pt_0,\pt_1}   & = & \left[ 1 - \exp\left\{ - \lfdiffsf \left(\pt_1 - \pt_0\right) \right\} \right] \lgoicov{\pt_1}
 \end{IEEEeqnarray}
 
 
@@ -1349,23 +1362,23 @@ Putting all this together gives us a proposal density corresponding to optimal s
 Intuitively, we expect the stochastic flow to become the deterministic flow in the limit $\lfdiffsf\rightarrow0$. To show that this is the case, first consider the state updates. The importance density is,
 %
 \begin{IEEEeqnarray}{rCl}
- \impden(\ls{\pt_1} | \ls{\pt_0}) & = & \normal{\ls{\pt_1}}{\lfmapmat \ls{\pt_0} + \lfmapshift}{\lfmapcov} \nonumber     .
+ \impden(\ls{\pt_1} | \ls{\pt_0}) & = & \normal{\ls{\pt_1}}{\lfmapmat{\pt_0,\pt_1} \ls{\pt_0} + \lfmapshift{\pt_0,\pt_1}}{\lfmapcov{\pt_0,\pt_1}} \nonumber     .
 \end{IEEEeqnarray}
 %
-When $\lfdiffsf\rightarrow0$, $\lfmapmat\rightarrow0$, so this becomes a deterministic mapping. We also find very simply that,
+When $\lfdiffsf\rightarrow0$, $\lfmapcov{\pt_0,\pt_1}\rightarrow0$, so this becomes a deterministic mapping. It is also plain that,
 %
 \begin{IEEEeqnarray}{rCl}
- \lfmapmat \ls{\pt_0} + \lfmapshift & \rightarrow & \flowmap{\pt_0}{\pt_1}(\ls{\pt_0}) \nonumber      ,
+ \lfmapmat{\pt_0,\pt_1} \ls{\pt_0} + \lfmapshift{\pt_0,\pt_1} & \rightarrow & \flowmap{\pt_0}{\pt_1}(\ls{\pt_0}) \nonumber      ,
 \end{IEEEeqnarray}
 %
-and hence the state updates are identical. Examining the weight update and using $\ls{\pt_1} = \lfmapmat \ls{\pt_0} + \lfmapshift$, we find,
+and hence the state updates are identical. Examining the weight update and using $\ls{\pt_1} = \lfmapmat{\pt_0,\pt_1} \ls{\pt_0} + \lfmapshift{\pt_0,\pt_1}$, we find (omitting subscripts on $\lfmapmat{}$, $\lfmapshift{}$ and $\lfmapcov{}$ for clarity),
 %
 \begin{IEEEeqnarray}{rCl}
- \frac{ \artden(\ls{\pt_0} | \ls{\pt_1}) }{ \impden(\ls{\pt_1} | \ls{\pt_0}) } & = & \frac{ \normal{\ls{\pt_0}}{\lgoimean{\pt_0}}{\lgoicov{\pt_0}} }{ \normal{\ls{\pt_1}}{\lfmapmat \lgoimean{\pt_0} + \lfmapshift}{\lfmapmat\lgoicov{\pt_0}\lfmapmat^T + \lfmapcov} } \nonumber \\
- & = & \frac{ \magdet{2 \pi \lgoicov{\pt_0}}^{-\frac{1}{2}} \exp\left\{ -\frac{1}{2} \left[ (\ls{\pt_1} - \lgoimean{\pt_0})^T \lgoicov{\pt_0}^{-1} (\ls{\pt_0} - \lgoimean{\pt_0}) \right] \right\} }{ \magdet{2 \pi \left( \lfmapmat \lgoicov{\pt_0} \lfmapmat^T + \lfmapcov \right)}^{-\frac{1}{2}} \exp\left\{ -\frac{1}{2} \left[ (\ls{\pt_0} - \lfmapmat \lgoimean{\pt_0} - \lfmapshift)^T \left( \lfmapmat \lgoicov{\pt_0} \lfmapmat^T + \lfmapcov \right)^{-1} (\ls{\pt_1} - \lfmapmat \lgoimean{\pt_0} - \lfmapshift) \right] \right\} } \nonumber \\
- & \rightarrow & \frac{ \magdet{2 \pi \lgoicov{\pt_0}}^{-\frac{1}{2}} \exp\left\{ -\frac{1}{2} \left[ (\ls{\pt_0} - \lgoimean{\pt_0})^T \lgoicov{\pt_0}^{-1} (\ls{\pt_0} - \lgoimean{\pt_0}) \right] \right\} }{ \magdet{2 \pi \left( \lfmapmat \lgoicov{\pt_0} \lfmapmat^T \right)}^{-\frac{1}{2}} \exp\left\{ -\frac{1}{2} \left[ (\ls{\pt_1} - \lfmapmat \lgoimean{\pt_0} - \lfmapshift)^T \left( \lfmapmat \lgoicov{\pt_0} \lfmapmat^T \right)^{-1} (\ls{\pt_1} - \lfmapmat \lgoimean{\pt_0} - \lfmapshift) \right] \right\} } \nonumber \\
- & = & \frac{ \exp\left\{ -\frac{1}{2} \left[ (\ls{\pt_0} - \lgoimean{\pt_0})^T \lgoicov{\pt_0}^{-1} (\ls{\pt_0} - \lgoimean{\pt_0}) \right] \right\} }{ \magdet{\lfmapmat^T \lfmapmat}^{-\frac{1}{2}} \exp\left\{ -\frac{1}{2} \left[ (\lfmapmat^{-1} \ls{\pt_1} - \lgoimean{\pt_0} - \lfmapmat^{-1} \lfmapshift)^T \lgoicov{\pt_0}^{-1} (\lfmapmat^{-1} \ls{\pt_1} - \lgoimean{\pt_0} - \lfmapmat^{-1} \lfmapshift) \right] \right\} } \nonumber \\
- & = & \magdet{\lfmapmat^T \lfmapmat}^{\frac{1}{2}} \nonumber \\
+ \frac{ \artden(\ls{\pt_0} | \ls{\pt_1}) }{ \impden(\ls{\pt_1} | \ls{\pt_0}) } & = & \frac{ \normal{\ls{\pt_0}}{\lgoimean{\pt_0}}{\lgoicov{\pt_0}} }{ \normal{\ls{\pt_1}}{\lfmapmat{} \lgoimean{\pt_0} + \lfmapshift{}}{\lfmapmat{}\lgoicov{\pt_0}\lfmapmat{}^T + \lfmapcov{}} } \nonumber \\
+ & = & \frac{ \magdet{2 \pi \lgoicov{\pt_0}}^{-\frac{1}{2}} \exp\left\{ -\frac{1}{2} \left[ (\ls{\pt_1} - \lgoimean{\pt_0})^T \lgoicov{\pt_0}^{-1} (\ls{\pt_0} - \lgoimean{\pt_0}) \right] \right\} }{ \magdet{2 \pi \left( \lfmapmat{} \lgoicov{\pt_0} \lfmapmat{}^T + \lfmapcov{} \right)}^{-\frac{1}{2}} \exp\left\{ -\frac{1}{2} \left[ (\ls{\pt_0} - \lfmapmat{} \lgoimean{\pt_0} - \lfmapshift{})^T \left( \lfmapmat{} \lgoicov{\pt_0} \lfmapmat{}^T + \lfmapcov{} \right)^{-1} (\ls{\pt_1} - \lfmapmat{} \lgoimean{\pt_0} - \lfmapshift{}) \right] \right\} } \nonumber \\
+ & \rightarrow & \frac{ \magdet{2 \pi \lgoicov{\pt_0}}^{-\frac{1}{2}} \exp\left\{ -\frac{1}{2} \left[ (\ls{\pt_0} - \lgoimean{\pt_0})^T \lgoicov{\pt_0}^{-1} (\ls{\pt_0} - \lgoimean{\pt_0}) \right] \right\} }{ \magdet{2 \pi \left( \lfmapmat{} \lgoicov{\pt_0} \lfmapmat{}^T \right)}^{-\frac{1}{2}} \exp\left\{ -\frac{1}{2} \left[ (\ls{\pt_1} - \lfmapmat{} \lgoimean{\pt_0} - \lfmapshift{})^T \left( \lfmapmat{} \lgoicov{\pt_0} \lfmapmat{}^T \right)^{-1} (\ls{\pt_1} - \lfmapmat{} \lgoimean{\pt_0} - \lfmapshift{}) \right] \right\} } \nonumber \\
+ & = & \frac{ \exp\left\{ -\frac{1}{2} \left[ (\ls{\pt_0} - \lgoimean{\pt_0})^T \lgoicov{\pt_0}^{-1} (\ls{\pt_0} - \lgoimean{\pt_0}) \right] \right\} }{ \magdet{\lfmapmat{}^T \lfmapmat{}}^{-\frac{1}{2}} \exp\left\{ -\frac{1}{2} \left[ (\lfmapmat{}^{-1} \ls{\pt_1} - \lgoimean{\pt_0} - \lfmapmat{}^{-1} \lfmapshift{})^T \lgoicov{\pt_0}^{-1} (\lfmapmat{}^{-1} \ls{\pt_1} - \lgoimean{\pt_0} - \lfmapmat{}^{-1} \lfmapshift{}) \right] \right\} } \nonumber \\
+ & = & \magdet{\lfmapmat{}^T \lfmapmat{}}^{\frac{1}{2}} \nonumber \\
  & = & \magdet{ \lginterm{\pt_1}^{-\frac{1}{2}} \lginterm{\pt_0}^{\frac{1}{2}} } \nonumber \\
  & = & \sqrt{ \frac{\magdet{\lginterm{\pt_0}}}{\magdet{\lginterm{\pt_1}}} }     ,
 \end{IEEEeqnarray}
