@@ -6,7 +6,7 @@ function algo = ha_setalgo(test, model, al)
 algo.N = test.num_filt_pts(al);
 
 % Intermediate resampling
-algo.flag_intermediate_resample = true;
+algo.flag_intermediate_resample = false;
 
 % Stochastic smooth update?
 algo.flag_stochastic = true;

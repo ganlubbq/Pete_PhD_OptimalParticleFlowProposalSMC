@@ -16,8 +16,10 @@ for kk = 1:model.K
     
     if display.text
         fprintf(1, '   Time step %u.\n', kk);
-        tic;
     end
+    
+    % Start timer
+    tic;
     
     %%% Particle selection %%% - CUSTOMISE THIS IF NEEDED
     if kk > 1
@@ -167,8 +169,10 @@ for kk = 1:model.K
     diagnostics(kk).ess = calc_ESS(pf(kk).weight);
     diagnostics(kk).se = true_state(:,kk) - pf(kk).mn;
     
-    fprintf(1, '      - Took %fs.\n', diagnostics(kk).rt);
-    fprintf(1, '      - ESS of %fs.\n', diagnostics(kk).ess);
+    if display.text
+        fprintf(1, '      - Took %fs.\n', diagnostics(kk).rt);
+        fprintf(1, '      - ESS of %fs.\n', diagnostics(kk).ess);
+    end
     
 end
 
