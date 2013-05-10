@@ -759,9 +759,23 @@ with the following parameters,
  \sigma_y^2 & = & 0.1^2 \nonumber     .
 \end{IEEEeqnarray}
 
-Point estimates are made by taking the weighted average of the particle states, which gives the minimum mean squared error (MMSE) estimator. Performance is compared by examining the root mean square error (RMSE) of this estimate, the effective sample size (ESS) and the running time (RT) for each algorithm. Each particle filter was run on {\meta ADD NUMBER} simulated data sets, each of {\meta ADD NUMBER} time steps. The results are summarised in table~\ref{}.
+Point estimates are made by taking the weighted average of the particle states, which gives the minimum mean squared error (MMSE) estimator. Performance is compared by examining the root mean square error (RMSE) of this estimate, the effective sample size (ESS) and the running time (RT) for each algorithm. Each particle filter was run on $100$ simulated data sets, each of $100$ time steps. The results are summarised in table~\ref{tab:lg_results}.
 
-{\meta Lovely table of numbers here.}
+\begin{table}
+\centering
+\begin{tabular}{c||c|c|c}
+Algorithm                        & RT  & ESS & RMSE \\
+\hline
+BF ($N_F=100$)                   & 3.3 & 1.0 & 10.9 \\
+BF ($N_F=185$)                   & 5.7 & 1.0 & 9.0 \\
+OID ($N_F=100$)                  & 6.0 & 12.3 & 7.2 \\
+SUPF ($N_F=100, \lfdiffsf=0$)    & 5.5 & 12.2 & 7.1 \\
+SUPF ($N_F=100, \lfdiffsf=0.1$)  & 7.0 & 12.4 & 7.1 \\
+SUPF ($N_F=100, \lfdiffsf=1$)    & 6.9 & 12.3 & 7.1 \\ 
+\end{tabular}
+\caption{Table showing average running times (RT) in seconds, average effective sample sizes (ESS) and average root mean square errors (RMSE) for the bootstrap filter (BF), optimal importance density filter (OID) and smooth update particle filter (SUPF), with various parameters.}
+\label{tab:lg_results}
+\end{table}
 
 Performance on all three metrics is nigh-on identical. The SUPF with $\lfdiffsf=0$ is slightly faster than the conventional OID particle filter, due to pre-calculation of various flow matrixes which are common to all particles. With $\lfdiffsf > 0$, the SUPF is slightly slower due to the necessity of sampling an additional random variable.
 
