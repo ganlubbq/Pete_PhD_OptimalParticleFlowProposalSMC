@@ -20,7 +20,7 @@
 % References
 %\usepackage{harvard}
 
-\graphicspath{{./}}
+\graphicspath{{./plots_for_report/}}
 
 % My environments
 \newenvironment{meta}[0]{\color{red} \em}{}
@@ -34,7 +34,7 @@
 \newcommand{\magdet}[1]{\left|\left| #1 \right|\right|}         % Magnitude of the determinant
 \newcommand{\indic}[1]{\mathbbm{1}_{#1}}                        % Indicator function
 \newcommand{\normal}[3]{\mathcal{N}\left(#1|#2,#3\right)}       % Normal density
-\newcommand{\studentt}[4]{\mathcal{ST}\left(#1|#2,#3,#4\right)} % Student-t density (non-standard)
+\newcommand{\studentt}[4]{\mathcal{ST}\left(#1|#2,#3,#4\right)} % Student-t density
 \DeclareMathOperator{\lambert}{W}                               % Product-log function
 
 % Basics
@@ -771,7 +771,7 @@ BF ($N_F=185$)                   & 5.7 & 1.0 & 9.0 \\
 OID ($N_F=100$)                  & 6.0 & 12.3 & 7.2 \\
 SUPF ($N_F=100, \lfdiffsf=0$)    & 5.5 & 12.2 & 7.1 \\
 SUPF ($N_F=100, \lfdiffsf=0.1$)  & 7.0 & 12.4 & 7.1 \\
-SUPF ($N_F=100, \lfdiffsf=1$)    & 6.9 & 12.3 & 7.1 \\ 
+SUPF ($N_F=100, \lfdiffsf=1$)    & 6.9 & 12.3 & 7.1 \\
 \end{tabular}
 \caption{Table showing average running times (RT) in seconds, average effective sample sizes (ESS) and average root mean square errors (RMSE) for the bootstrap filter (BF), optimal importance density filter (OID) and smooth update particle filter (SUPF), with various parameters.}
 \label{tab:lg_results}
@@ -790,7 +790,7 @@ Next we test the SUPF on a particularly unpleasant model designed to challenge c
  p(\ob{\rt} | \ls{\rt})   & = & \studentt{\ob{\rt}}{\dof}{\obsfun(\ls{\rt})}{\obscov} \nonumber     ,
 \end{IEEEeqnarray}
 %
-where $\studentt{\ob{\rt}}{\dof}{\obsfun(\ls{\rt})}{\obscov}$ is a non-standard multivariate student-t distribution with mean $\obsfun(\ls{\rt})$, spread $\obscov$, and $\dof$ degrees of freedom,
+where $\studentt{\ob{\rt}}{\dof}{\obsfun(\ls{\rt})}{\obscov}$ is a multivariate student-t distribution with mean $\obsfun(\ls{\rt})$, spread $\obscov$, and $\dof$ degrees of freedom,
 %
 \begin{IEEEeqnarray}{rCl}
  \studentt{\ob{\rt}}{\nu}{\obsfun(\ls{\rt})}{\obscov} & = & \frac{ \Gamma(\frac{\dof+1}{2}) }{ \Gamma(\frac{\dof}{2}) } \left|\dof \pi \obscov\right|^{-\frac{1}{2}} \left[ 1+\frac{1}{\dof} (\ob{\rt}-\obsfun(\ls{\rt})))^T \obscov^{-1} (\ob{\rt}-\obsfun(\ls{\rt})) \right]^{-\frac{1}{2}(\dof+d)} \nonumber     ,
@@ -831,7 +831,7 @@ and the parameter values used in our tests were,
 
 A geometrical interpretation of this model is that we are measuring the squared lengths of a set of two-component sub-vectors of the state. This means that the maximum of the likelihood function is not at a single point, but is the surface of a hyper-sphere. This leads to highly non-Gaussian posteriors --- especially if $\magdet{\transcov}$ is large --- and causes conventional particle filters to perform poorly.
 
-Assessing particle filter outputs is a challenging task for such nonlinear models. RMSE values using MMSE point estimates can be highly misleading. If a posterior mode is highly curved, then the average of the particle states may be further from the true value even though the particles form a better representation of the posterior distribution. However, in the absence of anything decisively better, we present RMSE, ESS and RT values here. Each particle filter was run on {\meta ADD NUMBER} simulated data sets, each of {\meta ADD NUMBER} time steps.
+Assessing particle filter outputs is a challenging task for such nonlinear models. RMSE values using MMSE point estimates can be highly misleading. If a posterior mode is highly curved, then the average of the particle states may be further from the true value even though the particles form a better representation of the posterior distribution. However, in the absence of anything decisively better, we present RMSE, ESS and RT values here. Each particle filter was run on 100 simulated data sets, each of 100 time steps.
 
 \subsubsection{Algorithm Settings}
 
@@ -854,17 +854,67 @@ All the particle filters use resampling at every step
 
 \subsubsection{Results: Gaussian Noise}
 
-Table~\ref{} shows results for the case, $\dof = \infty$, in which limiting case the student-t distribution becomes normal.
+Table~\ref{tab:nlg_results} shows results for the case, $\dof = \infty$, in which limiting case the student-t distribution becomes normal.
 
-{\meta Pretty table}
+\begin{table}
+\centering
+\begin{tabular}{c||c|c|c}
+Algorithm                                 & RT    & ESS  & RMSE \\
+\hline
+BF ($N_F=100$)                            & 0.6   & 1.0  & 47.2 \\
+BF ($N_F=20000$)                          & 192.3 & 1.6  & 43.2 \\
+L-OID ($N_F=100$)                         & 138.0 & 1.6  & 43.6 \\
+SUPF ($N_F=100, \lfdiffsf=0$)             & 119.9 & 25.3 & 33.6 \\
+SUPF ($N_F=100, \lfdiffsf=0.01$)          & 143.1 & 23.8 & 33.1 \\
+SUPF ($N_F=100, \lfdiffsf=0.1$)           & 128.1 & 14.2 & 33.9 \\
+SUPF ($N_F=100, \lfdiffsf=0.01$, with IR) & 117.7 & 76.5 & 33.5 \\
+\end{tabular}
+\caption{Table showing average running times (RT) in seconds, average effective sample sizes (ESS) and average root mean square errors (RMSE) for the bootstrap filter (BF), linearised optimal importance density filter (L-OID) and smooth update particle filter (SUPF), with various parameters (IR = Intermediate Resampling).}
+\label{tab:nlg_results}
+\end{table}
 
-The SUPF outperforms both the bootstrap and linearised-OID particle filters. {\meta Some more analysis, including how performance declines after a point as $\lfdiffsf$ increases because the discretisation is too coarse.}
+Figure~\ref{fig:nlg_deter_particle_trajectories} shows the evolution of the first two state dimensions of each particle and the particle weights for a single time step of this test, using the deterministic SUPF. Figure~\ref{fig:nlg_stoch_particle_trajectories} shows the same frame processed by the stochastic SUPF with intermediate resampling. Notice how some particles are replicated and thus do a better job of exploring promising areas of the state space. The ESS values must be treated with caution as this process introduces correlation between particles.
+
+\begin{figure}
+\centering
+\subfloat[State]{\includegraphics[width=0.45\columnwidth]{example_particle_trajectories_nlg_rs0_kk7_deter_state_evo.pdf}}
+\subfloat[Weight]{\includegraphics[width=0.45\columnwidth]{example_particle_trajectories_nlg_rs0_kk7_deter_weight_evo.pdf}}
+\caption{Particle state (first two dimensions) and weight evolution over the pseudo-time interval $[0,1]$. Start states marked as circles; end states as crosses.}
+\label{fig:nlg_deter_particle_trajectories}
+\end{figure}
+
+\begin{figure}
+\centering
+\subfloat[State]{\includegraphics[width=0.45\columnwidth]{example_particle_trajectories_nlg_rs0_kk7_stoch_state_evo.pdf}}
+\subfloat[State (detail)]{\includegraphics[width=0.45\columnwidth]{example_particle_trajectories_nlg_rs0_kk7_stoch_state_evo_zoom.pdf}}
+\caption{Particle state (first two dimensions) over the pseudo-time interval $[0,1]$, with a ``zoomed in'' view to show replicated particles exploring the state space. Start states marked as circles; end states as crosses.}
+\label{fig:nlg_stoch_particle_trajectories}
+\end{figure}
+
+The SUPF outperforms both the bootstrap and linearised-OID particle filters. As $\lfdiffsf$ increases, the filter performance decreases because the discretisation is too coarse, and the Gaussian approximation of the optimal importance density is poor.
+
+
 
 \subsubsection{Results: Student-t Noise}
 
-Next we test the algorithms for the case $\dof = 3$, using the scale mixture of normals representation of the student-t distribution. The results are shown in table~\ref{}.
+Next we test the algorithms for the case $\dof = 3$, using the scale mixture of normals representation of the student-t distribution. The results are shown in table~\ref{tab:nls_results}.
 
-{\meta Pretty table}
+\begin{table}
+\centering
+\begin{tabular}{c||c|c|c}
+Algorithm                        & RT     & ESS  & RMSE \\
+\hline
+BF ($N_F=100$)                   & 7.3    & 3.7  & 40.4 \\
+BF ($N_F=20000$)                 & 1951.6 & 7.6  & 37.8 \\
+L-OID ($N_F=100$)                & 2166.1 & 2.0  & 42.4 \\
+SUPF ($N_F=100, \lfdiffsf=0$)    & 1315.9 & 26.2 & 33.2 \\
+SUPF ($N_F=100, \lfdiffsf=0.01$) & 1566.4 & 25.1 & 33.3 \\
+SUPF ($N_F=100, \lfdiffsf=0.1$)  & 1587.3 & 17.6 & 33.9 \\
+\end{tabular}
+\caption{Table showing average running times (RT) in seconds, average effective sample sizes (ESS) and average root mean square errors (RMSE) for the bootstrap filter (BF), linearised optimal importance density filter (L-OID) and smooth update particle filter (SUPF), with various parameters.}
+\label{tab:nls_results}
+\end{table}
+
 
 
 \section{Desirable Extensions}
@@ -1469,7 +1519,7 @@ then
  \transcov \obsmat^T \obscov^{-1} \ob{\pt} & = & X \obsmat^+ \ob{\pt} \nonumber     .
 \end{IEEEeqnarray}
 
-First consider the case when $\obsmat$ is square and full rank. This means that $\obsmat^+ = \obsmat^{-1}$, and the proof is trivial. Next consider the case when $\obsmat$ is fat (i.e. more columns than rows) and full rank. This means,
+Assume that $\obsmat$ is full rank. First consider the case when $\obsmat$ is square and full rank. This means that $\obsmat^+ = \obsmat^{-1}$, and the proof is trivial. Next consider the case when $\obsmat$ is fat (i.e. more columns than rows). This means,
 %
 \begin{IEEEeqnarray}{rCl}
  \obsmat^+ & = & \obsmat^T \left(\obsmat \obsmat^T\right)^{-1} \nonumber \\
@@ -1478,7 +1528,7 @@ First consider the case when $\obsmat$ is square and full rank. This means that 
 %
 and again the proof is trivial.
 
-Finally, consider the case when $\obsmat$ is wide (i.e. more rows than columns) and full rank, and $\obscov$ is also full rank. In this case,
+Finally, consider the case when $\obsmat$ is tall (i.e. more rows than columns). Let $\obscov$ also be full rank. In this case,
 %
 \begin{IEEEeqnarray}{rCl}
  \left(\obsmat^T \obscov^{-1} \obsmat^T\right) \left(\obsmat^T \obscov^{-1} \obsmat^T\right)^{-1} & = & I     .
@@ -1501,8 +1551,6 @@ In the last line, we have used the pseudo-inverse expressions,
 \end{IEEEeqnarray}
 %
 The second expression for $\obsmat^+$ may be proven using a singular value decomposition on $\obsmat$.
-
-{\meta Would be nice to generalise this for non-full rank $\obsmat$ and $\obscov$.}
 
 \bibliographystyle{plain}
 \bibliography{D:/pb404/Dropbox/PhD/OTbib}
