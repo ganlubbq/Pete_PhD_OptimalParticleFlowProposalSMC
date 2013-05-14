@@ -10,7 +10,7 @@ clup
 
 % Get environment variable specifying test number
 test_num = str2double(getenv('SGE_TASK_ID'));
-% test_num = 3;
+% test_num = 0;
 
 % Set flags
 test.flag_batch = true;
@@ -21,13 +21,18 @@ rand_seed = test_num;
 %%% SETTINGS %%%
 
 % TEST NAME
-test_name = 'nls_alg_comp';
+test_name = 'nlg_alg_comp';
 
 % Which model?
 model_flag = 2;     % 1 = linear Gaussian
                     % 2 = nonlinear non-Gaussian benchmark
                     % 3 = heartbeat alignment
 
+% Gaussian or Student-t
+if model_flag == 2
+    test.STdof = Inf;
+end
+                    
 % Set display options
 display.text = false;
 display.plot_during = false;
@@ -35,7 +40,7 @@ display.plot_after = false;
 display.plot_particle_paths = false;
 
 % How many tests
-num_tests = 6;
+num_tests = 7;
 
 
                                             % Algorithm Numbers
@@ -77,6 +82,8 @@ for tt = 1:num_tests
                 test.num_filt_pts(5) = 100;
                 test.flag_stochastic = true;
                 test.Dscale = 1;
+            otherwise
+                error('No settings for that test');
         end
     elseif model_flag == 2
         % Set test-specific things - NONLINEAR GAUSSIAN
@@ -84,26 +91,38 @@ for tt = 1:num_tests
             case 1
                 test.algs_to_run = [1];
                 test.num_filt_pts(1) = 100;
+                test.flag_intermediate_resample = false;
             case 2
                 test.algs_to_run = [1];
                 test.num_filt_pts(1) = 20000;
+                test.flag_intermediate_resample = false;
             case 3
                 test.algs_to_run = [4];
                 test.num_filt_pts(4) = 100;
+                test.flag_intermediate_resample = false;
             case 4
                 test.algs_to_run = [5];
                 test.num_filt_pts(5) = 100;
                 test.flag_stochastic = false;
+                test.flag_intermediate_resample = false;
             case 5
                 test.algs_to_run = [5];
                 test.num_filt_pts(5) = 100;
                 test.flag_stochastic = true;
+                test.flag_intermediate_resample = false;
                 test.Dscale = 0.01;
             case 6
                 test.algs_to_run = [5];
                 test.num_filt_pts(5) = 100;
                 test.flag_stochastic = true;
+                test.flag_intermediate_resample = false;
                 test.Dscale = 0.1;
+            case 7
+                test.algs_to_run = [5];
+                test.num_filt_pts(5) = 100;
+                test.flag_stochastic = true;
+                test.flag_intermediate_resample = true;
+                test.Dscale = 0.01;
         end
     end
     

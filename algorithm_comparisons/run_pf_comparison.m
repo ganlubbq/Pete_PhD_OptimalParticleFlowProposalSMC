@@ -23,9 +23,10 @@ if ~exist('test', 'var') || ~isfield(test,'flag_batch') || (~test.flag_batch)
     rand_seed = 0;
     
     % Which model?
-    model_flag = 3;     % 1 = linear Gaussian
+    model_flag = 4;     % 1 = linear Gaussian
                         % 2 = nonlinear non-Gaussian benchmark
                         % 3 = heartbeat alignment
+                        % 4 = tracking
     
     % Set display options
     display.text = true;
@@ -35,11 +36,11 @@ if ~exist('test', 'var') || ~isfield(test,'flag_batch') || (~test.flag_batch)
         display.h_pf(2) = figure;
     end
     display.plot_after = true;
-    display.plot_particle_paths = false;
+    display.plot_particle_paths = true;
     display.plot_colours = {'k', 'b', 'c', 'm', 'g'};
     
     % Select algorithms to run
-    test.algs_to_run = [1 4 5];     % Vector of algorithm indexes to run
+    test.algs_to_run = [5];     % Vector of algorithm indexes to run
                                     % 1 = bootstrap
                                     % 2 = EKF proposal
                                     % 3 = UKF proposal
@@ -51,9 +52,13 @@ if ~exist('test', 'var') || ~isfield(test,'flag_batch') || (~test.flag_batch)
 %     test.num_filt_pts = [185, 100, 100, 100, 100];          % Time normalised for model 1
 %     test.num_filt_pts = [20271, 1000, 1000, 92, 126];       % Time normalised for model 2
 
+    % Model settings
+    test.STdof = Inf;
+
     % SUPF settings
-    test.flag_stochastic = false;
-    test.Dscale = 1;
+    test.flag_stochastic = true;
+    test.flag_intermediate_resample = true;
+    test.Dscale = 0.01;
 
 end
 
@@ -98,6 +103,18 @@ elseif model_flag == 3
     fh.ukfproposal = @ha_ukfproposal;
     fh.linearisedoidproposal = @ha_linearisedoidproposal;
     fh.smoothupdate = @ha_smoothupdate;
+elseif model_flag == 4
+    addpath('tracking');
+    fh.setmodel = @tracking_setmodel;
+    fh.setalgo = @tracking_setalgo;
+    fh.generatedata = @tracking_generatedata;
+    fh.transition = @tracking_transition;
+    fh.observation = @tracking_observation;
+    fh.stateprior = @tracking_stateprior;
+    fh.ekfproposal = @tracking_ekfproposal;
+    fh.ukfproposal = @tracking_ukfproposal;
+    fh.linearisedoidproposal = @tracking_linearisedoidproposal;
+    fh.smoothupdate = @tracking_smoothupdate;
 end
 
 % Set model parameters
@@ -147,7 +164,7 @@ for aa = 1:num_to_run
     for kk = 1:model.K
         
         switch model_flag
-            case{1 3}
+            case{1 3 4}
                 se = diagnostics{aa}(kk).se;
                 vr = pf{aa}(kk).vr;
             case{2}
