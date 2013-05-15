@@ -8,19 +8,19 @@ function model = tracking_setmodel(test)
 %%%%%%%%%%%%%%%%
 
 % General things
-model.K = 100;                  % Number of time points
+model.K = 10;                  % Number of time points
 model.ds = 6;                   % Dimension of the state
 model.do = 4;                   % Dimension of the observations
 
 % Parameters
-sigx = 100;
+sigx = 100^2;
 sigtheta = ( 10*(pi/180) )^2;   % Bearing covariance
 sigphi   = ( 10*(pi/180) )^2;   % Elevation covariance
 sigr     = 1^2;                 % Range covariance
 sigrr    = 1^2;                 % Range rate covariance
 
 % Matrixes
-T = 1;                          % Sampling period
+T = 10;                          % Sampling period
 a = 0.99;                       % Ensures stability
 model.A = [1 0 0 T 0 0; 0 1 0 0 T 0; 0 0 1 0 0 T;
            0 0 0 a 0 0; 0 0 0 0 a 0; 0 0 0 0 0 a];
@@ -32,6 +32,9 @@ model.Q = sigx * ...
      0      T^2/2  0      0      T      0    ;
      0      0      T^2/2  0      0      T    ];
 model.R = diag([sigtheta sigphi sigr sigrr]);
+
+% Transition tail heaviness
+model.dfx = 3;
 
 % x1 distribution
 model.m1 = [-5000 5000 5000 100 0 0]';

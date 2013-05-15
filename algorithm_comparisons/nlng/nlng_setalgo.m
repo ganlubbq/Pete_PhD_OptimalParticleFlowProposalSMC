@@ -11,6 +11,6 @@ if (al==5) && (test.flag_stochastic)
 else
     algo.Dscale = 0;
 end
-algo.flag_intermediate_resample = false;
+algo.flag_intermediate_resample = test.flag_intermediate_resample;
 
 end

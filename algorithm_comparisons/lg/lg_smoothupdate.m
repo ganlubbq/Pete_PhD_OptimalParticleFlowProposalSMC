@@ -1,4 +1,4 @@
-function [ state, weight ] = lg_smoothupdate( display, algo, model, fh, obs, prev_state, weight)
+function [ state, weight ] = lg_smoothupdate( display, algo, model, fh, obs, prev_state, prev_weight)
 %lg_smoothupdate Apply a smooth update for the linear Gaussian model.
 
 % Variables
@@ -18,6 +18,7 @@ end
 
 % Arrays
 state = zeros(model.ds, algo.N);
+weight = zeros(size(prev_weight));
 
 % Particle loop
 for ii = 1:algo.N
@@ -52,9 +53,9 @@ for ii = 1:algo.N
 
     % Weight update
     if algo.Dscale == 0
-        weight(ii) = weight(ii) + lhood_prob + trans_prob - prior_prob + log(wt_jac);
+        weight(ii) = prev_weight(ii) + lhood_prob + trans_prob - prior_prob + log(wt_jac);
     else
-        weight(ii) = weight(ii) + lhood_prob + trans_prob - ppsl_prob;
+        weight(ii) = prev_weight(ii) + lhood_prob + trans_prob - ppsl_prob;
     end
 
 end

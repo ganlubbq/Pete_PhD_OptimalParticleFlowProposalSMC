@@ -40,7 +40,7 @@ if ~exist('test', 'var') || ~isfield(test,'flag_batch') || (~test.flag_batch)
     display.plot_colours = {'k', 'b', 'c', 'm', 'g'};
     
     % Select algorithms to run
-    test.algs_to_run = [5];     % Vector of algorithm indexes to run
+    test.algs_to_run = [1 2 3 5];     % Vector of algorithm indexes to run
                                     % 1 = bootstrap
                                     % 2 = EKF proposal
                                     % 3 = UKF proposal
@@ -56,8 +56,8 @@ if ~exist('test', 'var') || ~isfield(test,'flag_batch') || (~test.flag_batch)
     test.STdof = Inf;
 
     % SUPF settings
-    test.flag_stochastic = true;
-    test.flag_intermediate_resample = true;
+    test.flag_stochastic = false;
+    test.flag_intermediate_resample = false;
     test.Dscale = 0.01;
 
 end
@@ -222,6 +222,21 @@ if ~test.flag_batch
         for aa = 1:num_to_run
             alg = test.algs_to_run(aa);
             plot(time, tnees{aa}, display.plot_colours{alg});
+        end
+        
+    end
+    
+    if model_flag == 4
+        
+        fig_traj = figure; hold on;
+        plot3(state(1,:), state(2,:), state(3,:), ':k')
+        plot3(state(1,1), state(2,1), state(3,1), 'ok')
+        
+        for aa = 1:num_to_run
+            alg = test.algs_to_run(aa);
+            mmse_est = [pf{aa}.mn];
+            plot3(mmse_est(1,:), mmse_est(2,:), mmse_est(3,:), display.plot_colours{alg})
+            plot3(mmse_est(1,1), mmse_est(2,1), mmse_est(3,1), 'o', 'color', display.plot_colours{alg})
         end
         
     end

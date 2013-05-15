@@ -8,13 +8,21 @@ function [ new_state, prob ] = tracking_transition( model, state, new_state )
 mn = model.A * state;
 
 % Sample state if not provided
-if (nargin<4)||isempty(new_state)
-    new_state = mvnrnd(mn', model.Q)';
+if (nargin<3)||isempty(new_state)
+    if isinf(model.dfx)
+        new_state = mvnrnd(mn', model.Q)';
+    else
+        new_state = mvnstrnd(mn', model.Q, model.dfx)';
+    end
 end
 
 % Calculate probability if required
 if nargout>1
-    prob = loggausspdf(new_state, mn, model.Q);
+    if isinf(model.dfx)
+        prob = loggausspdf(new_state, mn, model.Q);
+    else
+        prob = log(mvnstpdf(new_state', mn', model.Q, model.dfx));
+    end
 else
     prob = [];
 end
