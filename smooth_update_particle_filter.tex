@@ -164,7 +164,13 @@ A particle filter approximates the filtering density with a set of weighted part
 %
 where $\delta_{\ls{1:\rt}\pss{i}}(\ls{1:\rt})$ denotes a unit probability mass at the point $\ls{1:\rt}\pss{i}$. (To be precise, the associated probability measure consists of a sum of weighted indicator functions at these points.)
 
-A particle is generated at time $\rt$ by first selecting a parent from amongst the $\rt-1$ particles; an index, $\anc{j}$, is chosen with probability (or ``auxiliary weight'') $\naw{t-1}\pss{j}$. Next, a new state $\ls{\rt}\pss{j}$ is sampled from an importance density, $\impden(\ls{\rt} | \ls{\rt-1}\pss{\anc{j}}, \ob{\rt})$, and concatenated to the parent path to form the new particle,
+A particle is generated at time $\rt$ by first selecting a parent from amongst the $\rt-1$ particles; an index, $\anc{j}$, is chosen with probability (or ``auxiliary weight'') $\naw{t-1}\pss{j}$. This is equivalent to sampling from a density $\impden(\ls{1:\rt-1} | \ob{1:\rt-1})$, where,
+%
+\begin{IEEEeqnarray}{rCl}
+ \impden(\ls{1:\rt-1}\pss{i} | \ob{1:\rt-1}) & = & \frac{ \naw{\rt-1}\pss{i} }{ \npw{\rt-1}\pss{i} } p(\ls{1:\rt-1}\pss{i} | \ob{1:\rt-1}) \nonumber      .
+\end{IEEEeqnarray}
+%
+Next, a new state $\ls{\rt}\pss{j}$ is sampled from an importance density, $\impden(\ls{\rt} | \ls{\rt-1}\pss{\anc{j}}, \ob{\rt})$, and concatenated to the parent path to form the new particle,
 %
 \begin{IEEEeqnarray}{rCl}
  \ls{1:\rt}\pss{j} \leftarrow \left\{ \ls{1:\rt-1}\pss{\anc{j}},  \ls{\rt}\pss{j} \right\}     .
@@ -173,8 +179,8 @@ A particle is generated at time $\rt$ by first selecting a parent from amongst t
 Finally, an importance weight is assigned to the particle to account for the discrepancy between importance and target distributions,
 %
 \begin{IEEEeqnarray}{rCl}
- \pw{\rt}\pss{j} & = & \frac{ p(\ls{1:\rt}\pss{j} | \ob{1:\rt}) }{ p(\ls{1:\rt-1}\pss{\anc{j}} | \ob{1:\rt-1}) \impden(\ls{\rt}\pss{j} | \ls{\rt-1}\pss{\anc{j}}, \ob{\rt}) } \nonumber \\
- & \propto & \frac{\npw{\rt-1}\pss{j}}{\naw{t-1}\pss{j}} \times \frac{ p(\ob{\rt} | \ls{\rt}\pss{j}) p(\ls{\rt}\pss{j} | \ls{\rt-1}\pss{\anc{j}}) }{ \impden(\ls{\rt}\pss{j} | \ls{\rt-1}\pss{\anc{j}}, \ob{\rt}) }     ,
+ \pw{\rt}\pss{j} & = & \frac{ p(\ls{1:\rt}\pss{j} | \ob{1:\rt}) }{ \impden(\ls{1:\rt-1}\pss{\anc{j}} | \ob{1:\rt-1}) \impden(\ls{\rt}\pss{j} | \ls{\rt-1}\pss{\anc{j}}, \ob{\rt}) } \nonumber \\
+ & \propto & \frac{\npw{\rt-1}\pss{j}}{\naw{t-1}\pss{\anc{j}}} \times \frac{ p(\ob{\rt} | \ls{\rt}\pss{j}) p(\ls{\rt}\pss{j} | \ls{\rt-1}\pss{\anc{j}}) }{ \impden(\ls{\rt}\pss{j} | \ls{\rt-1}\pss{\anc{j}}, \ob{\rt}) }     ,
 \end{IEEEeqnarray}
 %
 and the weights are normalised,
@@ -183,12 +189,6 @@ and the weights are normalised,
  \npw{\rt} & = & \frac{ \pw{\rt}\pss{j} }{ \sum_i \pw{\rt}\pss{i} }      .
 \end{IEEEeqnarray}
 
-In some cases, the distributions concerned will not have valid densities. In this case, the particle weights can still be legitimately defined as the ratio of target and importance measures, {\meta cite something}
-%
-\begin{IEEEeqnarray}{rCl}
- \pw{\rt}\pss{j} & \propto & \frac{\npw{\rt-1}\pss{j}}{\naw{t-1}\pss{j}} \times \frac{ p(\ob{\rt} | \ls{\rt}\pss{j}) p(d\ls{\rt}\pss{j} | \ls{\rt-1}\pss{\anc{j}}) }{ \impden(d\ls{\rt}\pss{j} | \ls{\rt-1}\pss{\anc{j}}, \ob{\rt}) }     .
-\end{IEEEeqnarray}
-%
 Particle filters are ``exact'' in the sense that as the number of particles tends to infinite, integrals over the density converge to the true value.
 
 The practical performance of the particle filter is determined by the variance of the weights. If this is high, then only a small proportion of the particles (perhaps only one) will be significant, and only these will be taken forward to the next filtering step. Clearly, a lower number of significant particles leads to a poorer representation of the distribution, resulting in an increased estimator variance and propensity for the filter to diverge or ``lose track''. The particle weight variance may be measured using the effective sample size (ESS), defined as,
@@ -273,24 +273,7 @@ Now we define a continuous sequence of target densities,
  \augfiltnorm{\pt} & = & \int p(\ob{\rt} | \ls{\rt,\pt})^{\pt} p(\ls{\rt,\pt} | \ob{1:\rt-1}) d\ls{\rt,\pt}      .
 \end{IEEEeqnarray}
 %
-This is equal to the predictive density when $\pt=0$ and the desired filtering density when $\lambda=1$. Rather than attempting to propose particles directly to approximate $p(\ls{1:\rt}|\ob{1:\rt})$, we begin with our predictive particles sampled from the transition density and move incrementally through pseudo-time, targeting $\augfiltden{\rt,\pt}$ with an SMC sampler.
-
-\subsection{SMC Sampling}
-
-Here we consider a generic SMC method for advancing the particle approximation through pseudo-time. This closely follows the framework defined in \cite{DelMoral2006}, and used for tempering in \cite{DelMoral2007}. Assume we have a set of particles $\{\ls{\rt,\pt_0}\pss{i}\}$ with weights $\{\pw{\rt,\pt_0}\pss{i}\}$ approximating $\augfiltden{\pt_0}$ and consider the change between $\pt_0$ and a later pseudo-time $\pt_1$. For the $(j)$th particle, a new state, $\ls{\rt,\pt_1}\pss{j}$ is sampled from an importance density, $q(\ls{\rt,\pt_1}\pss{j} | \ls{\rt,\pt_0}\pss{j})$. We wish to target the $\augfiltden{\pt_1}$; however, this would lead to a (usually intractable) integral in evaluating the associated particle weight,
-%
-\begin{IEEEeqnarray}{rCl}
- \pw{\rt,\pt_1}\pss{j} & = & \frac{ \augfiltden{\pt_1}(\ls{1:\rt-1}, \ls{\rt,\pt_1}) }{ \int \augfiltden{\pt_1}(\ls{1:\rt-1}, \ls{\rt,\pt_0}) q(\ls{\rt,\pt_1}\pss{j} | \ls{\rt,\pt_0}\pss{j}) d\ls{\rt,\pt_0} } \nonumber     .
-\end{IEEEeqnarray}
-%
-To circumvent this intractability, an SMC sampler \cite{DelMoral2006} employs an extended target distribution over $\ls{\rt,\pt_0}$ and $\ls{\rt,\pt_1}$ by introducing an artificial conditional density, $\artden(\ls{\rt,\pt_0} | \ls{\rt,\pt_1})$. The weight formula for this extended target is then,
-%
-\begin{IEEEeqnarray}{rCl}
- \pw{\rt,\pt_1}\pss{j} & = & \frac{ \augfiltden{\pt_1}(\ls{1:\rt-1}, \ls{\rt,\pt_1}) \artden(\ls{\rt,\pt_0} | \ls{\rt,\pt_1}) }{ \augfiltden{\pt_1}(\ls{1:\rt-1}, \ls{\rt,\pt_0}) \impden(\ls{\rt,\pt_1}\pss{j} | \ls{\rt,\pt_0}\pss{j}) } \nonumber \\
- & = & \pw{\rt,\pt_0}\pss{j} \frac{ p(\ob{\rt} | \ls{\rt,\pt_1})^{\pt_1} p(\ls{\rt,\pt_1} | \ls{\rt-1}) }{ p(\ob{\rt} | \ls{\rt,\pt_0})^{\pt_0} p(\ls{\rt,\pt_0} | \ls{\rt-1}) } \times \frac{ \artden(\ls{\rt,\pt_0} | \ls{\rt,\pt_1}) }{ \impden(\ls{\rt,\pt_1}\pss{j} | \ls{\rt,\pt_0}\pss{j}) } \label{eq:general_weight_update}
-\end{IEEEeqnarray}
-%
-This is easily evaluated, after which the $\ls{\rt,\pt_0}$ states may be marginalised (i.e. simply discarded).
+This is equal to the predictive density when $\pt=0$ and the desired filtering density when $\lambda=1$. Rather than attempting to propose particles directly to approximate $p(\ls{1:\rt}|\ob{1:\rt})$, we begin with our predictive particles sampled from the transition density and move incrementally through pseudo-time, targeting $\augfiltden{\rt,\pt}$ with standard SMC methods.
 
 
 
@@ -335,9 +318,11 @@ Clearly, it will not often be possible to derive closed form expressions for suc
 
 
 
-\subsection{Weight Updates, Importance and Artificial Target Densities}
+\subsection{Importance Densities and Weight Updates}
 
-Having chosen a flow, \eqref{eq:flow}, with which to move the particles, the next step is to use this to deduce the resulting proposal distribution and a suitable artificial conditional distribution with which to extend the target. We will examine two cases separately; the first where $\flowdiffuse{\pt}=0$, and the particles are moved entirely deterministically, and second case where $\flowdiffuse{\pt}\ne0$ and the particles move stochastically.
+Assume we have a set of particles $\{\ls{\rt,\pt_0}\pss{i}\}$ with weights $\{\pw{\rt,\pt_0}\pss{i}\}$ approximating $\augfiltden{\rt,\pt_0}$. and consider the change between $\pt_0$ and a later pseudo-time $\pt_1$. Having chosen a flow, \eqref{eq:flow}, with which to move the particles, the next step is to use this to deduce the resulting proposal distribution and weight update formulas.
+
+We will examine two cases separately; the first where $\flowdiffuse{\pt}=0$, and the particles are moved entirely deterministically, and second case where $\flowdiffuse{\pt}\ne0$ and the particles move stochastically.
 
 \subsubsection{Deterministic Flows}
 
@@ -347,42 +332,45 @@ When $\flowdiffuse{\pt}=0$, the stochastic differential equation \eqref{eq:flow}
  \frac{d\ls{\pt}}{d\pt} & = & \flowdrift{\pt}(\ls{\pt})     .
 \end{IEEEeqnarray}
 
-In this case the particles are moved deterministically, meaning that the proposal density associated with an advance in pseudo-time from $\pt_0$ to $\pt_1$ collapses to a delta function. To find a valid formula for the weight update, we revert to the fundamental description of a particle weight as the ratio of target and importance probability measures. Thus, equation~\eqref{eq:general_weight_update} becomes,
-%
-\begin{IEEEeqnarray}{rCl}
-  \pw{\rt,\pt_1}\pss{j} & = & \pw{\rt,\pt_0}\pss{j} \frac{ p(\ob{\rt} | \ls{\rt,\pt_1})^{\pt_1} p(d\ls{\rt,\pt_1} | \ls{\rt-1}) }{ p(\ob{\rt} | \ls{\rt,\pt_0})^{\pt_0} p(d\ls{\rt,\pt_0} | \ls{\rt-1}) } \times \frac{ \artden(d\ls{\rt,\pt_0} | \ls{\rt,\pt_1}) }{ q(d\ls{\rt,\pt_1}\pss{j} | \ls{\rt,\pt_0}\pss{j}) } \nonumber \\
-  & = & \pw{\rt,\pt_0}\pss{j} \frac{ p(\ob{\rt} | \ls{\rt,\pt_1})^{\pt_1} p(\ls{\rt,\pt_1} | \ls{\rt-1}) }{ p(\ob{\rt} | \ls{\rt,\pt_0})^{\pt_0} p(\ls{\rt,\pt_0} | \ls{\rt-1}) } \times \magdet{ \frac{\partial \ls{\rt,\pt_1}}{\partial \ls{\rt,\pt_0}} } \times \frac{ \artden(d\ls{\rt,\pt_0} | \ls{\rt,\pt_1}) }{ q(d\ls{\rt,\pt_1}\pss{j} | \ls{\rt,\pt_0}\pss{j}) }    \label{eq:measure_weight_update}     .
-\end{IEEEeqnarray}
-%
-For the importance measure, we select,
-%
-\begin{IEEEeqnarray}{rCl}
- \impden(d\ls{\rt,\pt_1}\pss{j} | \ls{\rt,\pt_0}\pss{j}) & = & \indic{ \flowmap{\pt_0}{\pt_1} (\ls{\rt,\pt_0}) }(d\ls{\rt,\pt_1})     ,
-\end{IEEEeqnarray}
-%
-where the transport map is given by,
+In this case the particles are moved deterministically, and we can define a map between the states at $\pt_0$ and $\pt_1$,
 %
 \begin{IEEEeqnarray}{rCl}
  \flowmap{\pt_0}{\pt_1} (\ls{\rt,\pt_0}) & = & \ls{\rt,\pt_0} + \int_{\pt_0}^{\pt_1} \flowdrift{\pt}(\ls{\rt,l}) d\ls{\rt,l}     .
 \end{IEEEeqnarray}
 %
-An appropriate choice for the artificial conditional is a second indicator measure at the point given by the integral of the time-reversed flow,
+The weight update associated with the transition may now be evaluated using the standard formulas for the particle filter. Using the change of variables method, the distribution of the new particle states will be,
 %
 \begin{IEEEeqnarray}{rCl}
- \artden(d\ls{\rt,\pt_1}\pss{j} | \ls{\rt,\pt_0}\pss{j}) & = & \indic{ \flowmap{\pt_1}{\pt_0} (\ls{\rt,\pt_1}) }(d\ls{\rt,\pt_0})     .
+ \impden(\ls{1:\rt-1}, \ls{\pt_1}) & = & \augfiltden{\pt_0}(\ls{1:\rt-1}, \ls{\pt_0}) \magdet{ \frac{\partial \ls{\rt,\pt_0}}{\partial \ls{\rt,\pt_1}} }     .
 \end{IEEEeqnarray}
 %
-This results in a cancellation, and hence the following weight update equation,
+Hence, assuming no resampling occurs,
 %
 \begin{IEEEeqnarray}{rCl}
- \pw{\rt,\pt_1}\pss{j} & = & \pw{\rt,\pt_0}\pss{j} \frac{ p(\ob{\rt} | \ls{\rt,\pt_1})^{\pt_1} p(\ls{\rt,\pt_1} | \ls{\rt-1}) }{ p(\ob{\rt} | \ls{\rt,\pt_0})^{\pt_0} p(\ls{\rt,\pt_0} | \ls{\rt-1}) } \times \magdet{ \frac{\partial \ls{\rt,\pt_1}}{\partial \ls{\rt,\pt_0}} }   \label{eq:deterministic_weight_update}     .
+ \pw{\rt,\pt_1}\pss{j} & = & \frac{ \augfiltden{\pt_1}(\ls{1:\rt-1}\pss{j}, \ls{\pt_1}\pss{j}) }{ \impden(\ls{1:\rt-1}\pss{j}, \ls{\pt_1}\pss{j}) } \nonumber \\
+ & = & \pw{\rt,\pt_0}\pss{j} \frac{ p(\ob{\rt} | \ls{\rt,\pt_1}\pss{j})^{\pt_1} p(\ls{\rt,\pt_1}\pss{j} | \ls{\rt-1}\pss{j}) }{ p(\ob{\rt} | \ls{\rt,\pt_0}\pss{j})^{\pt_0} p(\ls{\rt,\pt_0}\pss{j} | \ls{\rt-1}\pss{j}) } \times \magdet{ \frac{\partial \ls{\rt,\pt_1}\pss{j}}{\partial \ls{\rt,\pt_0}\pss{j}} }   \label{eq:deterministic_weight_update}     .
 \end{IEEEeqnarray}
 
 
 
 \subsubsection{Stochastic Flows}
 
-When $\flowdiffuse{\pt}\ne0$, we can use \eqref{eq:general_weight_update} directly. The importance density is found by integrating the stochastic differential equation governing the flow \eqref{eq:flow} using the selected values of $\flowdrift{\pt}$ and $\flowdiffuse{\pt}$. The optimal choice for the artificial conditional density (in the sense of minimising the weight variance) is shown in \cite{DelMoral2006} to be,
+When $\flowdiffuse{\pt}\ne0$, the naive approach of targeting $\augfiltden{\rt,\pt_1}$ directly does not work. If the proposal mechanism consists of selecting an existing particle from pseudo-time $\pt_0$ and then sampling from $\impden(\ls{\rt,\pt_1} | \ls{\rt,\pt_0}\pss{j})$, the resulting importance density is,
+%
+\begin{IEEEeqnarray}{rCl}
+ \impden(\ls{1:\rt-1},\ls{\pt_1}) & = & \int \augfiltden{\pt_0}(\ls{1:\rt-1}, \ls{\rt,\pt_0}) q(\ls{\rt,\pt_1} | \ls{\rt,\pt_0}) d\ls{\rt,\pt_0}     ,
+\end{IEEEeqnarray}
+%
+which is generally intractable. The solution is to use an SMC sampler using the framework defined in \cite{DelMoral2006}, and used for tempering (just as we are here) in \cite{DelMoral2007}. The intractability is circumvented by employing an extended target distribution over $\ls{\rt,\pt_0}$ and $\ls{\rt,\pt_1}$ by introducing an artificial conditional density, $\artden(\ls{\rt,\pt_0} | \ls{\rt,\pt_1})$. The weight formula for this extended target is then,
+%
+\begin{IEEEeqnarray}{rCl}
+ \pw{\rt,\pt_1}\pss{j} & = & \frac{ \augfiltden{\pt_1}(\ls{1:\rt-1}, \ls{\rt,\pt_1}) \artden(\ls{\rt,\pt_0} | \ls{\rt,\pt_1}) }{ \augfiltden{\pt_0}(\ls{1:\rt-1}, \ls{\rt,\pt_0}) \impden(\ls{\rt,\pt_1}\pss{j} | \ls{\rt,\pt_0}\pss{j}) } \nonumber \\
+ & = & \pw{\rt,\pt_0}\pss{j} \frac{ p(\ob{\rt} | \ls{\rt,\pt_1})^{\pt_1} p(\ls{\rt,\pt_1} | \ls{\rt-1}) }{ p(\ob{\rt} | \ls{\rt,\pt_0})^{\pt_0} p(\ls{\rt,\pt_0} | \ls{\rt-1}) } \times \frac{ \artden(\ls{\rt,\pt_0} | \ls{\rt,\pt_1}) }{ \impden(\ls{\rt,\pt_1}\pss{j} | \ls{\rt,\pt_0}\pss{j}) } \label{eq:general_weight_update}
+\end{IEEEeqnarray}
+%
+This is easily evaluated, after which the $\ls{\rt,\pt_0}$ states may be marginalised (i.e. simply discarded).
+
+The importance density is found by integrating the stochastic differential equation governing the flow \eqref{eq:flow} using the selected values of $\flowdrift{\pt}$ and $\flowdiffuse{\pt}$. The optimal choice for the artificial conditional density (in the sense of minimising the weight variance) is shown in \cite{DelMoral2006} to be,
 %
 \begin{IEEEeqnarray}{rCl}
  \artden(\ls{\rt,\pt_0}\pss{j} | \ls{\rt,\pt_1}\pss{j}) & = & \frac{ \oiden{\pt_0}(\ls{\rt,\pt_0} | \ls{\rt-1}) \impden(\ls{\rt,\pt_1} | \ls{\rt,\pt_0}) }{ \int \oiden{\pt_0}(\ls{} | \ls{\rt-1}) \impden(\ls{\rt,\pt_1} | \ls{}) d\ls{} } \label{eq:optimal_artificial_density}     .
