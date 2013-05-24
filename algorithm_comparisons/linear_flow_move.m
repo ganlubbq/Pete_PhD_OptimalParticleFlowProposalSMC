@@ -1,4 +1,4 @@
-function [ x, J, prob_ratio] = linear_flow_move( t, t0, x0, m, P, y, H, R, Dscale )
+function [ x, J, prob_ratio, flow] = linear_flow_move( t, t0, x0, m, P, y, H, R, Dscale )
 %linear_flow_move Calculate the movement produced by a linear flow for a
 %set of matrixes. Optimal for linear Gaussian models. Analytic integral of
 %linear_flow.
@@ -12,8 +12,9 @@ I = eye(ds);
 r = rank(H);
 
 % Useful matrixes
-S0 = I + t0*P*H'*(R\H);
-St = I + t*P*H'*(R\H);
+HRH = H'*(R\H); HRH = (HRH+HRH')/2;
+S0 = I + t0*P*HRH;
+St = I + t*P*HRH;
 
 sqrtSt = sqrtm(St);
 sqrtS0 = sqrtm(S0);
@@ -63,6 +64,10 @@ if Dscale ~= 0
     prob_ratio = art_prob-flow_prob;
 else
     prob_ratio = 0;
+end
+
+if nargout > 3
+    flow = 0.5*( ((St^2)\H')*(R\(y-H*m)) + St\H'*(R\(y-H*x)) );
 end
 
 end

@@ -23,10 +23,11 @@ if ~exist('test', 'var') || ~isfield(test,'flag_batch') || (~test.flag_batch)
     rand_seed = 0;
     
     % Which model?
-    model_flag = 4;     % 1 = linear Gaussian
+    model_flag = 5;     % 1 = linear Gaussian
                         % 2 = nonlinear non-Gaussian benchmark
                         % 3 = heartbeat alignment
                         % 4 = tracking
+                        % 5 = drone navigation
     
     % Set display options
     display.text = true;
@@ -40,7 +41,7 @@ if ~exist('test', 'var') || ~isfield(test,'flag_batch') || (~test.flag_batch)
     display.plot_colours = {'k', 'b', 'c', 'm', 'g'};
     
     % Select algorithms to run
-    test.algs_to_run = [1 2 3 5];     % Vector of algorithm indexes to run
+    test.algs_to_run = [5];     % Vector of algorithm indexes to run
                                     % 1 = bootstrap
                                     % 2 = EKF proposal
                                     % 3 = UKF proposal
@@ -51,6 +52,7 @@ if ~exist('test', 'var') || ~isfield(test,'flag_batch') || (~test.flag_batch)
     test.num_filt_pts = 100*ones(1,5);
 %     test.num_filt_pts = [185, 100, 100, 100, 100];          % Time normalised for model 1
 %     test.num_filt_pts = [20271, 1000, 1000, 92, 126];       % Time normalised for model 2
+%     test.num_filt_pts = [20000 12000 3500 10 100];               % Time normalised for model 4
 
     % Model settings
     test.STdof = Inf;
@@ -115,6 +117,18 @@ elseif model_flag == 4
     fh.ukfproposal = @tracking_ukfproposal;
     fh.linearisedoidproposal = @tracking_linearisedoidproposal;
     fh.smoothupdate = @tracking_smoothupdate;
+elseif model_flag == 5
+    addpath('drone');
+    fh.setmodel = @drone_setmodel;
+    fh.setalgo = @drone_setalgo;
+    fh.generatedata = @drone_generatedata;
+    fh.transition = @drone_transition;
+    fh.observation = @drone_observation;
+    fh.stateprior = @drone_stateprior;
+    fh.ekfproposal = @drone_ekfproposal;
+    fh.ukfproposal = @drone_ukfproposal;
+    fh.linearisedoidproposal = @drone_linearisedoidproposal;
+    fh.smoothupdate = @drone_smoothupdate;
 end
 
 % Set model parameters
@@ -164,7 +178,7 @@ for aa = 1:num_to_run
     for kk = 1:model.K
         
         switch model_flag
-            case{1 3 4}
+            case{1 3 4 5}
                 se = diagnostics{aa}(kk).se;
                 vr = pf{aa}(kk).vr;
             case{2}
@@ -226,7 +240,7 @@ if ~test.flag_batch
         
     end
     
-    if model_flag == 4
+    if (model_flag == 4) || (model_flag == 5)
         
         fig_traj = figure; hold on;
         plot3(state(1,:), state(2,:), state(3,:), ':k')
