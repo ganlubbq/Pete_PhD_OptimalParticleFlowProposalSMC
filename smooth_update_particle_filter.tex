@@ -36,13 +36,15 @@
 \newcommand{\normal}[3]{\mathcal{N}\left(#1|#2,#3\right)}       % Normal density
 \newcommand{\studentt}[4]{\mathcal{ST}\left(#1|#2,#3,#4\right)} % Student-t density
 \DeclareMathOperator{\lambert}{W}                               % Product-log function
+\newcommand{\bigo}[1]{\mathcal{O}\left({#1}\right)}             % Big O
+\newcommand{\tensorD}[3]{\textbf{D}^{#1}_{#2} #3 \:}            % Tensor derivative operator
+\newcommand{\divtensorD}[3]{\tilde{\textbf{D}}^{#1}_{#2} #3 \:} % Divergence of a tensor derivative operator
 
 % Basics
 \newcommand{\rt}{t}                             % Real time
 \newcommand{\pt}{\lambda}                       % Pseudo-time
 \newcommand{\ls}[1]{x_{#1}}                     % Latent state
 \newcommand{\ob}[1]{y_{#1}}                     % Observation
-\newcommand{\linob}[1]{\tilde{y}_{#1}}          % Linearised bservation
 
 % Particle shizzle
 \newcommand{\pss}[2][]{^{(#2)#1}}               % Particle superscript
@@ -96,6 +98,12 @@
 \newcommand{\lgoimean}[1]{\mu_{#1}}             % Linear Gaussian optimal importance density mean
 \newcommand{\lgoicov}[1]{\Sigma_{#1}}           % Linear Gaussian optimal importance density covariance
 \newcommand{\lginterm}[1]{S_{#1}}               % Useful intermediate term equal to \transcov / \lgoicov
+
+% Taylor expansions
+\newcommand{\obdiff}[1]{\Delta y_{#1}}          % Observation difference: y - h(x^*)
+\newcommand{\lsdiff}[1]{\Delta x_{#1}}          % Latent state difference: x - x^*
+\newcommand{\transmeandiff}{\Delta m}           % Transition mean difference: m - x^*
+\newcommand{\lgoimeandiff}[1]{\Delta \mu_{#1}}  % OID mean difference: \mu - x^*
 
 % Miscellany
 \newcommand{\bels}[1]{\hat{x}_{#1}}             % Backwards estimate of linear state (for step-size control)
@@ -199,7 +207,7 @@ The practical performance of the particle filter is determined by the variance o
 %
 Intuitively, this is the number of particles which would be present in an set of equivalent quality comprised of independent, unweighted samples. It takes a value between $1$ (which is bad) and the number of filtering particles, $\numpart$ (which is good).
 
-The final consideration for the basic particle filter is the choice of the auxiliary weights, $\{\naw{t-1}\pss{i}\}$ and the method for sampling parent indexes, which together constitute a ``resampling'' step. If resampling is conducted before the effect of the new observation is introduced, then it is clear that the weight variance is minimised by choosing $\naw{t-1}\pss{i}=\npw{t-1}\pss{i}$. However, since resampling can be an expensive step (for example, it cannot be easily parallelised), it may often be better simply to keep the same set of particles as generated at the previous time if the weights are not widely spread. This corresponds to using $\naw{t-1}\pss{i}=1/\numpart$.
+The final consideration for the basic particle filter is the choice of the auxiliary weights, $\{\naw{t-1}\pss{i}\}$ and the method for sampling parent indexes, which together constitute a ``resampling'' step. If resampling is conducted before the effect of the new observation is introduced, then it is clear that the weight variance is minimised by choosing $\naw{t-1}\pss{i}=\npw{t-1}\pss{i}$. However, since resampling can be an expensive step (for example, it cannot be easily parallelised) and also increases the particle variance, it may often be better simply to keep the same set of particles as generated at the previous time if the weights are not widely spread. This corresponds to using $\naw{t-1}\pss{i}=1/\numpart$.
 
 \subsection{Importance Distributions}
 
@@ -382,7 +390,7 @@ The importance density is found by integrating the stochastic differential equat
 
 As the filter advances through the interval of pseudo-time, it may become apparent long before $\pt$ approaches $1$ that some particles have very low weights and are highly unlikely to be selected for the next (real) time step. This motivates the introduction of intermediate resampling steps during the pseudo-time interval. These function in exactly the same manner as the ordinary selection step during the prediction phase of the particle filter. Each weighted particle is replaced by an equal-weight particle sampled from the particle approximation. The timing of these steps could be controlled by monitoring the effective sample size.
 
-The effect of such intermediate resampling is to ensure that a diverse collection of particles is maintained throughout, and computation is not wasted in calculating new states for particles which are highly likely to be discarded in the selection step at $\rt+1$. Contrariwise, resampling will introduce dependence between particles, as those with high weights are reproduced multiple times. If $\flowdiffuse=0$, this means that the replicated particles will remain identical until $\pt=1$ and the update step ends. This will still be beneficial in reducing computation time. If $\flowdiffuse \ne 0$, then the particles will gradually ``de-correlate'' as the diffusion element of the flow reduces their interdependence.
+The effect of such intermediate resampling is to ensure that a diverse collection of particles is maintained throughout, and computation is not wasted in calculating new states for particles which are highly likely to be discarded in the selection step at $\rt+1$. Contrariwise, resampling will introduce dependence between particles, as those with high weights are reproduced multiple times. If $\flowdiffuse{\pt}=0$, this means that the replicated particles will remain identical until $\pt=1$ and the update step ends. This will still be beneficial in reducing computation time. If $\flowdiffuse{\pt} \ne 0$, then the particles will gradually ``de-correlate'' as the diffusion element of the flow reduces their interdependence.
 
 Such a system of intermediate resampling shares similarities with the density tempering method described in \cite{Godsill2001b}, in that they both allow us to maintain a collection of equally-weighted particles throughout the introduction of the observation density, and that particle dependence decays as $\pt$ increases. However, the SUPF with intermediate resampling does not require MCMC steps to refresh the state values.
 
@@ -571,19 +579,20 @@ As a first excursion into the realm of nonlinearities, consider the Gaussian mod
  p(\ob{\rt} | \ls{\rt})   & = & \normal{\ob{\rt}}{\obsfun(\ls{\rt})}{\obscov}     .
 \end{IEEEeqnarray}
 
-The observation model may be linearised in the usual way, by truncating the Taylor series expansion,
+For such a model, there is no analytic solution to equation~\eqref{eq:optimal_flow_PDE}, and thus it is not possible to move particles precisely according to the optimal flow. Instead, the observation model may be linearised in the usual way, by truncating the Taylor series expansion,
 %
 \begin{IEEEeqnarray}{rCl}
  \obsfun(\ls{}) & \approx & \obsfun(\ls{}^*) + \underbrace{\left.\frac{\partial \obsfun}{\partial \ls{}}\right|_{\ls{}^*}}_{\obsmat(\ls{}^*)} (\ls{} - \ls{}^*)
 \end{IEEEeqnarray}
 \begin{IEEEeqnarray}{rCl}
- p(\ob{\rt} | \ls{\rt}) & \approx & \normal{\linob{\rt}}{\obsmat(\ls{}^*)\ls{\rt}}{\obscov} \nonumber \\
- \linob{\rt}            & = & \ob{\rt} - \obsfun(\ls{}^*) + \obsmat(\ls{}^*)\ls{}^* \nonumber     ,
+ p(\ob{\rt} | \ls{\rt}) & \approx & \normal{\obdiff{\rt}}{\obsmat(\ls{}^*)\lsdiff{\rt}}{\obscov} \nonumber \\
+ \obdiff{\rt}           & = & \ob{\rt} - \obsfun(\ls{}^*) \nonumber \\
+ \lsdiff{\rt}           & = & \ls{\rt} - \ls{}^* \nonumber     ,
 \end{IEEEeqnarray}
 %
 where $\ls{}^*$ is the point around which the function is linearised.
 
-Rather than moving from $\pt=0$ to $\pt=1$, as was possible in the linear Gaussian case, we now advance through pseudo-time in small increments, using the current state as the linearisation point. By making a local, Gaussian approximation to the observation density, all the same formulas may be used for generating new states and updating weights as were used for the linear Gaussian model. If the pseudo-time step sizes are sufficiently small, such a method may well give better results than using an ordinary particle filter using a Gaussian approximation to the OID.
+With this approximate observation density, the formulas for both the deterministic and stochastic flow derived for the linear Gaussian model may be used again. However, rather than moving from $\pt=0$ to $\pt=1$ in a single step, it is now necessary to advance through pseudo-time in small increments, using the current state as the linearisation point. It is shown in appendix~\ref{app:linearised_optimal_flow} that such moves are ``locally optimal'', in the sense that they satisfy equation~\eqref{eq:optimal_flow_PDE} exactly as $\pt_1-\pt_0 \rightarrow 0$.
 
 
 
@@ -672,7 +681,7 @@ Other methods of matching are possible, for example choosing the Gaussian with t
 
 When using an approximately-optimal SUPF for a nonlinear non-Gaussian model, it is necessary to divide up the pseudo-time interval into small steps. In some cases, it may be sufficient to do this with fixed step sizes or according to some predetermined pseudo-time grid. (For example, shorter time steps early on when particles are moving more quickly.) However, it would be desirable to have an automatic scheme for selecting step sizes as we go.
 
-We can design a system for adaptive step-size control using the concept of ``round-trip displacements''. Say the state has just been advanced deterministically from $\ls{\pt_0}$ to $\ls{\pt_1}$. We can then calculated the transformation required to move backwards in pseudo time to $\pt_0$ again. If the model were exactly linear Gaussian, then this would return us to $\ls{\pt_0}$ again. However, if we are using a Gaussian approximation then the move will not be precisely reversed, and we will reach a different location, $\bels{\pt_0}$. The larger the discrepancy between the Gaussian and the density it approximates, the larger will be the difference between $\ls{\pt_0}$ and $\bels{\pt_0}$, and also the further from optimal will be the flow. Thus, we can implement a system of step-size control by adjusting the interval lengths such that $\magdet{\ls{\pt_0} - \bels{\pt_0}}$ remains below a chosen threshold.
+We can design a system for adaptive step-size control using the concept of ``round-trip displacements''. Say the state has just been advanced deterministically from $\ls{\pt_0}$ to $\ls{\pt_1}$. We can then calculate the transformation required to move backwards in pseudo time to $\pt_0$ again. If the model were exactly linear Gaussian, then this would return us to $\ls{\pt_0}$. However, if we are using a Gaussian approximation then the move will not be precisely reversed, and we will reach a different location, $\bels{\pt_0}$. The larger the discrepancy between the Gaussian and the density it approximates, the larger will be the difference between $\ls{\pt_0}$ and $\bels{\pt_0}$, and also the further from optimal will be the flow. Thus, we can implement a system of step-size control by adjusting the interval lengths such that $\magdet{\ls{\pt_0} - \bels{\pt_0}}$ remains below a chosen threshold.
 
 Note that,
 %
@@ -1270,7 +1279,10 @@ The initial conditions allow us to find the constant of integration, $C$,
 Finally,
 %
 \begin{IEEEeqnarray}{rCl}
- \ls{\pt} & = & \lginterm{\pt}^{-\frac{1}{2}} \left\{ \lginterm{\pt_0}^{\frac{1}{2}} \ls{\pt_0} + \left[ \lginterm{\pt}^{\frac{1}{2}} - \lginterm{\pt_0}^{\frac{1}{2}} \right] \obsmat^+ \ob{\rt} - \left[ \lginterm{\pt}^{-\frac{1}{2}} - \lginterm{\pt_0}^{-\frac{1}{2}} \right] \left( \obsmat^+ \ob{\rt} - \transmean \right) \right\}     .
+ \ls{\pt} & = & \lginterm{\pt}^{-\frac{1}{2}} \left\{ \lginterm{\pt_0}^{\frac{1}{2}} \ls{\pt_0} + \left[ \lginterm{\pt}^{\frac{1}{2}} - \lginterm{\pt_0}^{\frac{1}{2}} \right] \obsmat^+ \ob{\rt} - \left[ \lginterm{\pt}^{-\frac{1}{2}} - \lginterm{\pt_0}^{-\frac{1}{2}} \right] \left( \obsmat^+ \ob{\rt} - \transmean \right) \right\} \nonumber \\
+ & = & \lginterm{\pt}^{-\frac{1}{2}} \lginterm{\pt_0}^{\frac{1}{2}} \ls{\pt_0} \nonumber \\
+ &   & + \: \left[ \obsmat^+ \ob{\rt} - \lginterm{\pt}^{-1} \left( \obsmat^+ \ob{\rt} - \transmean \right) \right] \nonumber \\
+ &   & - \: \lginterm{\pt}^{-\frac{1}{2}} \lginterm{\pt_0}^{\frac{1}{2}} \left[ \obsmat^+ \ob{\rt} - \lginterm{\pt_0}^{-1} \left( \obsmat^+ \ob{\rt} - \transmean \right) \right]     .
 \end{IEEEeqnarray}
 
 
@@ -1436,6 +1448,132 @@ and hence the state updates are identical. Examining the weight update and using
 \end{IEEEeqnarray}
 %
 which also matches the deterministic case.
+
+
+
+\section{Locally Optimal Flow for Nonlinear Gaussian Models}\label{app:linearised_optimal_flow}
+
+Consider models of the form,
+%
+\begin{IEEEeqnarray}{rCl}
+ p(\ls{\rt} | \ls{\rt-1}) & = & \normal{\ls{\rt}}{\transfun(\ls{\rt-1})}{\transcov} \nonumber \\
+ p(\ob{\rt} | \ls{\rt})   & = & \normal{\ob{\rt}}{\obsfun(\ls{\rt})}{\obscov} \nonumber      .
+\end{IEEEeqnarray}
+
+The optimal flow cannot be calculated analytically when the observation function is nonlinear. However, if this function is approximated by the first two terms of the Taylor series, then the resulting linear model may be used in conjunction with the previously derived results for linear Gaussian models,
+%
+\begin{IEEEeqnarray}{rCl}
+ \obsfun(\ls{}) & \approx & \obsfun(\ls{}^*) + \underbrace{\left.\frac{\partial \obsfun}{\partial \ls{}}\right|_{\ls{}^*}}_{\obsmat(\ls{}^*)} (\ls{} - \ls{}^*) \nonumber
+\end{IEEEeqnarray}
+\begin{IEEEeqnarray}{rCl}
+ p(\ob{\rt} | \ls{\rt}) & \approx & \normal{\ob{\rt}}{\obsfun(\ls{}^*) + \obsmat(\ls{}^*)(\ls{\rt} - \ls{}^*)}{\obscov} \nonumber \\
+\end{IEEEeqnarray}
+
+It is now more natural to reformulate all the densities in terms of state and observation differences (omitting subscript $\rt$s).
+%
+\begin{IEEEeqnarray}{rCl}
+ p(\ob{} | \ls{})                   & \approx & \normal{\obdiff{}}{\obsmat(\ls{}^*)\lsdiff{}}{\obscov} \nonumber \\
+ p(\ls{} | \ls{\rt-1})              & = & \normal{\lsdiff{}}{\transmeandiff}{\transcov} \nonumber \\
+ \oiden{\pt}(\ls{\pt} | \ls{\rt-1}) & = & \normal{\lsdiff{\pt}}{\lgoimeandiff{\pt}}{\lgoicov{\pt}} \nonumber \\
+ \obdiff{}                          & = & \ob{} - \obsfun(\ls{}^*) \nonumber \\
+ \lsdiff{}                          & = & \ls{} - \ls{}^* \nonumber \\
+ \transmeandiff                     & = & \transmean - \ls{}^* \nonumber \\
+ \lgoimeandiff{\pt}                 & = & \lgoicov{\pt} \left[ \transcov^{-1} \transmeandiff + \obsmat^T \left(\frac{\obscov}{\pt}\right)^{-1} \obdiff{} \right] \nonumber     .
+\end{IEEEeqnarray}
+
+Now, assuming a linear flow, the steps required are identical to those taken in the linear Gaussian case. The formulas for the drift, the optimal map and optimal importance density are all the same, but with $\ls{}$, $\ob{}$ and $\transmean$ replaced by $\lsdiff{}$, $\obdiff{}$ and $\transmeandiff$ respectively.
+
+Next we consider the optimality of such a flow, starting with the deterministic case. First we rewrite equation~\eqref{eq:optimal_flow_PDE} which governs the optimal flow by subtracting from it the particular case when $\ls{\pt}=\ls{\pt}^*$,
+%
+\begin{IEEEeqnarray}{rCl}
+  \IEEEeqnarraymulticol{3}{l}{ \log\left(\flowod(\ls{\pt})\right) - \log\left(\flowod(\ls{}^*)\right) } \nonumber \\
+  \qquad & = & - \: \left[ \nabla\cdot \flowdrift{\pt}(\ls{\pt}) - \nabla\cdot \left.\flowdrift{\pt}(\ls{\pt})\right|_{\ls{}^*} \right] \nonumber \\
+  \qquad &   & - \: \left[ \flowdrift{\pt}(\ls{\pt}) \cdot \nabla \log\left( \oiden{\pt}(\ls{\pt}) \right) - \flowdrift{\pt}(\ls{}^*) \cdot \nabla \left.\log\left( \oiden{\pt}(\ls{\pt}) \right)\right|_{\ls{}^*} \right] \nonumber \label{app-eq:central_optimal_flow_PDE}      ,
+\end{IEEEeqnarray}
+%
+where the left hand side simplifies to,
+%
+\begin{IEEEeqnarray}{rCl}
+  \IEEEeqnarraymulticol{3}{l}{ \log\left(\flowod(\ls{\pt})\right) - \log\left(\flowod(\ls{}^*)\right) } \nonumber \\
+  & = & -\frac{1}{2} (\ob{}-\obsfun(\ls{\pt}))^T \obscov^{-1} (\ob{}-\obsfun(\ls{\pt})) + \frac{1}{2} (\ob{}-\obsfun(\ls{}^*))^T \obscov^{-1} (\ob{}-\obsfun(\ls{}^*)) \nonumber \\
+  & = & \ob{}^T \obscov^{-1} \left[ \obsfun(\ls{\pt}) - \obsfun(\ls{}^*) \right] - \frac{1}{2} \left[ \obsfun(\ls{\pt}) \obscov^{-1} \obsfun(\ls{\pt}) - \obsfun(\ls{}^*) \obscov^{-1} \obsfun(\ls{}^*) \right] \nonumber      .
+\end{IEEEeqnarray}
+
+Next, Taylor expand the functions $\obsfun(\ls{\pt})$ and $\flowdrift{\pt}(\ls{\pt})$,
+%
+\begin{IEEEeqnarray}{rCl}
+ \obsfun(\ls{}) & = & \obsfun(\ls{}^*) + \tensorD{1}{\ls{}}{\obsfun} + \frac{1}{2} \tensorD{2}{\ls{}}{\obsfun} + \bigo{\lsdiff{}^3} \nonumber \\
+ \flowdrift(\ls{}) & = & \flowdrift(\ls{}^*) + \tensorD{1}{\ls{}}{\flowdrift} + \frac{1}{2} \tensorD{2}{\ls{}}{\flowdrift} + \frac{1}{3!} \tensorD{3}{\ls{}}{\flowdrift} + \bigo{\lsdiff{}^4} \nonumber     ,
+\end{IEEEeqnarray}
+%
+where,
+%
+\begin{IEEEeqnarray}{rCl}
+ \tensorD{n}{\ls{}}{f} & = & \sum_{i_1} \lsdiff{i_1} \dots \sum_{i_n} \lsdiff{i_n} \left.\frac{\partial^n f}{\partial \ls{i_1} \dots \partial \ls{i_n} }\right|_{\ls{}^*} \nonumber      ,
+\end{IEEEeqnarray}
+%
+and here, $\ls{i_n}$ and $\lsdiff{i_n}$ are the ($i_n$)th components of $\ls{}$ and $\lsdiff{}$ respectively. Obviously we also have,
+%
+\begin{IEEEeqnarray}{rCl}
+ \tensorD{1}{\ls{}}{\obsfun} & = & \obsmat(\ls{}^*) \lsdiff{} \nonumber     .
+\end{IEEEeqnarray}
+
+Using the expansion, we find,
+%
+\begin{IEEEeqnarray}{rCl}
+  \IEEEeqnarraymulticol{3}{l}{ \log\left(\flowod(\ls{\pt})\right) - \log\left(\flowod(\ls{}^*)\right) } \nonumber \\
+  \qquad & = & \ob{}^T \obscov^{-1} \left[ \obsfun(\ls{\pt}) - \obsfun(\ls{}^*) \right] - \frac{1}{2} \left[ \obsfun(\ls{\pt}) \obscov^{-1} \obsfun(\ls{\pt}) - \obsfun(\ls{}^*) \obscov^{-1} \obsfun(\ls{}^*) \right] \nonumber \\
+  \qquad & = & \ob{}^T \obscov^{-1} \left[ \obsmat(\ls{}^*) \lsdiff{\pt} + \frac{1}{2} \tensorD{2}{\ls{}}{\obsfun} \right] \nonumber \\
+  \qquad &   & \qquad - \: \frac{1}{2} \left[ 2 \obsfun(\ls{}^*)^T \obscov^{-1} \obsmat(\ls{}^*) \lsdiff{\pt} + \lsdiff{\pt}^T \obsmat(\ls{}^*)^T \obscov^{-1} \obsmat(\ls{}^*) \lsdiff{\pt} + \obsfun(\ls{}^*)^T \obscov^{-1} \tensorD{2}{\ls{}}{\obsfun} \right] \nonumber \\
+  \qquad &   & \qquad + \: \bigo{\lsdiff{\pt}^3} \nonumber     ,
+\end{IEEEeqnarray}
+%
+\begin{IEEEeqnarray}{rCl}
+ \IEEEeqnarraymulticol{3}{l}{ \nabla \log\left( \oiden{\pt}(\ls{\pt}) \right) } \nonumber \\
+ \qquad & = & - \transcov^{-1} (\ls{\pt}-\transmean) + \obsmat(\ls{}^*)^T \obscov^{-1}(\ob{}-\obsfun(\ls{\pt})) \nonumber \\
+ & = & - \transcov^{-1} (\lsdiff{\pt}-\transmeandiff) + \obsmat(\ls{}^*)^T \obscov^{-1}\left(\ob{}- \left(\obsfun(\ls{}^*) + \obsmat(\ls{}^*) \lsdiff{\pt} + \frac{1}{2} \tensorD{2}{\ls{}}{\obsfun} + \bigo{\lsdiff{\pt}^3}\right) \right) \nonumber \\
+ & = & - \left[\transcov^{-1} + \obsmat(\ls{}^*)^T \obscov^{-1} \obsmat(\ls{}^*)\right] \lsdiff{\pt} + \left[\transcov^{-1} \transmeandiff + \obsmat(\ls{}^*)^T \obscov^{-1} \obdiff{}\right] - \frac{1}{2} \obsmat(\ls{}^*)^T \obscov^{-1} \tensorD{2}{\ls{}}{\obsfun} + \bigo{\lsdiff{\pt}^3} \nonumber \\
+ & = & - \lgoicov{\pt}^{-1} \left[ \lsdiff{\pt} - \lgoimeandiff{\pt} \right] - \frac{1}{2} \obsmat(\ls{}^*)^T \obscov^{-1} \tensorD{2}{\ls{}}{\obsfun} + \bigo{\lsdiff{\pt}^3} \nonumber      ,
+\end{IEEEeqnarray}
+%
+\begin{IEEEeqnarray}{rCl}
+ \IEEEeqnarraymulticol{3}{l}{ \left[ \flowdrift{\pt}(\ls{\pt}) \cdot \nabla \log\left( \oiden{\pt}(\ls{\pt}) \right) - \flowdrift{\pt}(\ls{}^*) \cdot \nabla \left.\log\left( \oiden{\pt}(\ls{\pt}) \right)\right|_{\ls{}^*} \right] } \nonumber \\
+ \qquad & = & - \flowdrift{\pt}(\ls{}^*)^T \lgoicov{\pt}^{-1} \lsdiff{\pt} - \frac{1}{2} \flowdrift{\pt}(\ls{}^*)^T \obsmat(\ls{}^*)^T \obscov^{-1} \tensorD{2}{\ls{}}{\obsfun} - \left(\tensorD{1}{\ls{}}{\flowdrift}\right)^T \lgoicov{\pt}^{-1} \left(\lsdiff{\pt}-\lgoimeandiff{\pt}\right) \nonumber \\
+ \qquad &   & \qquad + \: \frac{1}{2} \tensorD{2}{\ls{}}{\flowdrift} \lgoicov{\pt}^{-1} \lgoimeandiff{\pt} + \bigo{\lsdiff{\pt}^3} \nonumber     ,
+\end{IEEEeqnarray}
+%
+\begin{IEEEeqnarray}{rCl}
+ \nabla\cdot \flowdrift{\pt}(\ls{\pt}) - \nabla\cdot \left.\flowdrift{\pt}(\ls{\pt})\right|_{\ls{}^*} & = & \divtensorD{2}{\ls{}}{\flowdrift{\pt}} + \frac{1}{2} \divtensorD{3}{\ls{}}{\flowdrift{\pt}} + \bigo{\lsdiff{\pt}^3} \nonumber      ,
+\end{IEEEeqnarray}
+%
+where the divergence of the tensor derivative operator is,
+%
+\begin{IEEEeqnarray}{rCl}
+ \divtensorD{n}{\ls{}}{f} & = & \sum_{i_1} \lsdiff{i_1} \dots \sum_{i_{n-1}} \lsdiff{i_{n-1}} \sum_k \left.\frac{\partial^n f_k}{\partial \ls{i_1} \dots \partial \ls{i_{n-1}} \partial \ls{k} }\right|_{\ls{}^*} \nonumber      .
+\end{IEEEeqnarray}
+
+Equation~\eqref{app-eq:central_optimal_flow_PDE} which governs the optimal flow has no constant terms. Hence, as $\lsdiff{\pt}\rightarrow0$, the linear terms will dominate, leaving,
+%
+\begin{IEEEeqnarray}{rCl}
+ \obdiff{}^T \obscov^{-1} \obsmat(\ls{}^*) \lsdiff{\pt} & = & - \divtensorD{2}{\ls{}}{\flowdrift{\pt}} + \flowdrift{\pt}(\ls{}^*)^T \lgoicov{\pt}^{-1} \lsdiff{\pt} - \lgoimeandiff{\pt}^T \lgoicov{\pt}^{-1} \tensorD{1}{\ls{}}{\flowdrift} \nonumber      .
+\end{IEEEeqnarray}
+
+For our chosen linear flow,
+%
+\begin{IEEEeqnarray}{rCl}
+ \flowdrift{\pt}(\ls{\pt}) & = & \lfmat{\pt} \lsdiff{\pt} + \lfshift{\pt} \nonumber \\
+ \flowdrift{\pt}(\ls{}^*) & = & \lfshift{\pt} \nonumber \\
+ \tensorD{1}{\ls{}}{\flowdrift} & = & \lfmat{\pt} \lsdiff{\pt} \nonumber \\
+ \divtensorD{2}{\ls{}}{\flowdrift{\pt}} & = & 0 \nonumber     ,
+\end{IEEEeqnarray}
+%
+so for the governing equation to be locally satisfied, we simply require,
+%
+\begin{IEEEeqnarray}{rCl}
+ \obsmat(\ls{}^*)^T \obscov^{-1} \obdiff{} & = & \lgoicov{\pt}^{-1} \lfshift{\pt} - \lfmat{\pt}^T \lgoicov{\pt}^{-1} \lgoimeandiff{\pt} \nonumber      ,
+\end{IEEEeqnarray}
+%
+which is simply a restatement of equation~\eqref{app-eq:lG_shift_basic}, from which $\lfshift{\pt}$ was originally derived. Thus, if step sizes are small, and $\lsdiff{\pt}$ is consequently small, then the flow is approximately optimal.
 
 
 
