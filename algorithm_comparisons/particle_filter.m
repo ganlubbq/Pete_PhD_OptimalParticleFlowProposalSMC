@@ -18,6 +18,14 @@ for kk = 1:model.K
         fprintf(1, '   Time step %u.\n', kk);
     end
     
+    if (flag_ppsl_type == 6) && (display.plot_particle_paths)
+        figure(display.h_ppp(1)); clf; hold on;
+        figure(display.h_ppp(2)); clf; hold on;
+        figure(display.h_ppp(3)); clf; hold on;
+        figure(display.h_ppp(4)); clf; hold on;
+        figure(display.h_ppp(5)); clf; hold on;
+    end
+    
     % Start timer
     tic;
     
@@ -33,7 +41,7 @@ for kk = 1:model.K
     pf(kk).weight = zeros(1, algo.N);
     
     switch flag_ppsl_type
-        case {1, 2, 3, 4}
+        case {1, 2, 3, 4, 6}
             %%% Ordinary particle filters %%%
             
             % Particle loop
@@ -64,7 +72,7 @@ for kk = 1:model.K
                         % Weight
                         weight = prior_weight + lhood_prob;
                         
-                    case {2, 3, 4}
+                    case {2, 3, 4, 6}
                         %%% Other importance densities %%%
                         
                         switch flag_ppsl_type
@@ -91,6 +99,14 @@ for kk = 1:model.K
                                     [state, ppsl_prob] = feval(fh.linearisedoidproposal, model, prev_state, observ(:,kk));
                                 else
                                     [state, ppsl_prob] = feval(fh.linearisedoidproposal, model, [], observ(:,kk));
+                                end
+                                
+                            case 6
+                                %%% Smooth update by particle
+                                if kk > 1
+                                    [state, ppsl_prob] = feval(fh.smoothupdatebyparticle, display, algo, model, fh, prev_state, observ(:,kk));
+                                else
+                                    [state, ppsl_prob] = feval(fh.smoothupdatebyparticle, display, algo, model, fh, [], observ(:,kk));
                                 end
                                 
                         end

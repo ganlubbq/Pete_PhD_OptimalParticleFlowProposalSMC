@@ -67,7 +67,9 @@ else
 end
 
 if nargout > 3
-    flow = 0.5*( ((St^2)\H')*(R\(y-H*m)) + St\H'*(R\(y-H*x)) );
+    % Output the drift at the final state
+    mu = St\(m+t*P*H'*(R\y));
+    flow = 0.5*( ((St^2)\H')*(R\(y-H*m)) + St\H'*(R\(y-H*x)) - Dscale*(x-mu) );
 end
 
 end

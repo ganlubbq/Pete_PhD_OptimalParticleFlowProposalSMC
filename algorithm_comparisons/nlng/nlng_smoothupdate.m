@@ -44,7 +44,8 @@ last_prob = init_trans_prob;
 %     figure(1), clf, hold on
 % end
 
-% errors = zeros(algo.N, L);
+errors1 = zeros(algo.N, L);
+errors2 = zeros(algo.N, L);
 
 % Pseudo-time loop
 for ll = 1:L-1
@@ -105,7 +106,7 @@ for ll = 1:L-1
         R = model.R / xi;
         
         % Analytical flow
-        [ x, wt_jac, prob_ratio] = linear_flow_move( lam, lam0, x0, m, P, y, H, R, algo.Dscale );
+        [ x, wt_jac, prob_ratio, flow] = linear_flow_move( lam, lam0, x0, m, P, y, H, R, algo.Dscale );
         
 %         % Reverse transform
 %         obs_mn_rev = nlng_h(model, x);
@@ -113,7 +114,39 @@ for ll = 1:L-1
 %         R_rev = R;
 %         y_rev = obs - obs_mn_rev + H*x;
 %         [ x0_rev, ~, ~] = linear_flow_move( lam0, lam, x, m, P, y_rev, H_rev, R_rev, algo.Dscale );
-%         errors(ii,ll+1) = norm(x0 - x0_rev);
+%         errors1(ii,ll+1) = norm(x0 - x0_rev);
+
+        %%% Step size control testing %%%
+        
+        [ A0, b0 ] = linear_flow( lam0, m, P, y, H, R, algo.Dscale );
+        
+        H1 = nlng_obsjacobian(model, x);
+        obs_mn1 = nlng_h(model, x0);
+        y1 = obs - obs_mn1 + H1*x;
+        [ A1, b1 ] = linear_flow( lam , m, P, y1, H1, R, algo.Dscale );
+        err_est = 0.5*(lam-lam0)*( (A0*x+b0)-(A1*x+b1) );
+        errors1(ii,ll+1) = err_est'*err_est;
+        
+        
+%         T = nlng_obssecondderivtensor(model,x0);
+%         
+%         err_est = zeros(model.ds,1);
+%         for dd = 1:model.do
+%             err_est = err_est + 0.5 * (lam-lam0)^2 * flow'*T(:,:,dd)*flow;
+%         end
+        
+        
+        
+%         Rdy = R\(obs-obs_mn);
+%         curv_est = zeros(model.ds-1);
+%         for dd = 1:model.do
+%             curv_est = curv_est + T(:,:,dd)*Rdy(dd);
+%         end
+%         err_est = curv_est*flow*(lam-lam0);
+        
+%         errors1(ii,ll+1) = err_est'*err_est;
+        
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
         % Store state
         state = [kk; x];
@@ -215,7 +248,8 @@ if display.plot_particle_paths
     end
 end
 
-% figure(4), plot(errors'), drawnow;
+figure(4), plot(errors1'), drawnow;
+figure(5), plot(log(errors1)'), drawnow;
 
 end
 

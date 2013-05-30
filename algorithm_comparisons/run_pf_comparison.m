@@ -31,14 +31,21 @@ if ~exist('test', 'var') || ~isfield(test,'flag_batch') || (~test.flag_batch)
     
     % Set display options
     display.text = true;
-    display.plot_during = false;
+    display.plot_during = false;    
+    display.plot_after = true;
+    display.plot_particle_paths = true;
+    display.plot_colours = {'k', 'b', 'c', 'm', 'g', 'g'};
     if display.plot_during
         display.h_pf(1) = figure;
         display.h_pf(2) = figure;
     end
-    display.plot_after = true;
-    display.plot_particle_paths = true;
-    display.plot_colours = {'k', 'b', 'c', 'm', 'g'};
+    if display.plot_particle_paths
+        display.h_ppp(1) = figure;
+        display.h_ppp(2) = figure;
+        display.h_ppp(3) = figure;
+        display.h_ppp(4) = figure;
+        display.h_ppp(5) = figure;
+    end
     
     % Select algorithms to run
     test.algs_to_run = [5];     % Vector of algorithm indexes to run
@@ -49,13 +56,13 @@ if ~exist('test', 'var') || ~isfield(test,'flag_batch') || (~test.flag_batch)
                                     % 5 = SUPF
     
 	% Set number of particles for each algorithm
-    test.num_filt_pts = 100*ones(1,5);
+    test.num_filt_pts = 100*ones(1,6);
 %     test.num_filt_pts = [185, 100, 100, 100, 100];          % Time normalised for model 1
-%     test.num_filt_pts = [20271, 1000, 1000, 92, 126];       % Time normalised for model 2
+%     test.num_filt_pts = [20000, 15000, 5000, 90, 125, 300];       % Time normalised for model 2
 %     test.num_filt_pts = [20000 12000 3500 10 100];               % Time normalised for model 4
 
     % Model settings
-    test.STdof = Inf;
+    test.STdof = 3;
 
     % SUPF settings
     test.flag_stochastic = false;
@@ -93,6 +100,7 @@ elseif model_flag == 2
     fh.ukfproposal = @nlng_ukfproposal;
     fh.linearisedoidproposal = @nlng_linearisedoidproposal;
     fh.smoothupdate = @nlng_smoothupdate;
+    fh.smoothupdatebyparticle = @nlng_smoothupdatebyparticle;
 elseif model_flag == 3
     addpath('ha');
     fh.setmodel = @ha_setmodel;

@@ -40,6 +40,6 @@ model.R = sigy * eye(model.do);     % R is a spread matrix, rather than a covari
 
 % x1 distribution
 model.m1 = zeros(dsc,1);
-model.P1 = eye(dsc);
+model.P1 = sigx * eye(dsc);
 
 end
