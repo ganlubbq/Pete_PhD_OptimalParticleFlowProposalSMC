@@ -570,7 +570,7 @@ This is used in conjunction with~\eqref{eq:general_weight_update}. Note that fro
 
 
 
-\subsection{Linearisation}
+\subsection{Nonlinear Gaussian Densities}
 
 As a first excursion into the realm of nonlinearities, consider the Gaussian model with nonlinear transition \emph{and} observation functions,
 %
@@ -596,9 +596,52 @@ With this approximate observation density, the formulas for both the determinist
 
 
 
+\subsection{Fully Nonlinear Non-Gaussian Densities}
+
+When the transition and observation densities are not Gaussian, we can again use a Taylor expansion to construct a linear flow which is optimal for small step sizes. One possible solution to the resulting equation is to use the same formulas as the linear Gaussian case but with the following equivalences,
+%
+\begin{IEEEeqnarray}{rCl}
+ \obsmat(\ls{}^*)    & = & I \nonumber \\
+ \obscov(\ls{}^*)    & = & -\left[\left.\frac{\partial^2 \log\left(\flowod(\ls{})\right)}{\partial \ls{}^2}\right|_{\ls{}^*}\right]^{-1} \nonumber \\
+ \transcov(\ls{}^*)  & = & -\left[\left.\frac{\partial^2 \log\left(\flowtd(\ls{})\right)}{\partial \ls{}^2}\right|_{\ls{}^*}\right]^{-1} \nonumber \\
+ \ob{}(\ls{}^*)      & = & \obscov(\ls{}^*)   \left.\frac{\partial \log\left(\flowod(\ls{})\right)}{\partial \ls{}}\right|_{\ls{}^*} \nonumber \\
+ \transmean(\ls{}^*) & = & \transcov(\ls{}^*) \left.\frac{\partial \log\left(\flowtd(\ls{})\right)}{\partial \ls{}}\right|_{\ls{}^*} \nonumber     ,
+\end{IEEEeqnarray}
+%
+where,
+%
+\begin{IEEEeqnarray}{rCcCl}
+ \flowtd(\ls{}) & = & p(\ls{} | \ls{\rt-1}) \nonumber \\
+ \flowod(\ls{}) & = & p(\ob{\rt} | \ls{}) \nonumber \\
+ \transmean & = & \transfun(\ls{\rt-1}) \nonumber      .
+\end{IEEEeqnarray}
+
+Such a solution will only work reliably when the log-densities are concave, and hence the Hessian matrices are negative definite at all points. This is the case for many exponential family distributions {\meta Erm... is it?}, but does not include heavy tailed distributions such as the student-t distribution.
+
+
+\subsection{Step Size Control}
+
+When conducting a smooth update with a nonlinear observation model, particle motion approaches optimality as the step sizes tend to $0$. For a practical system, we need to select finite step sizes so as to balance computation time against optimality of the flow (which translates to higher effective sample sizes for a fixed number of particles). In some cases, it may be sufficient to do this with fixed step sizes or according to some predetermined pseudo-time grid. (For example, shorter time steps early on when particles are moving more quickly.) However, it would be desirable to have an automatic scheme for selecting step sizes as we go.
+
+We know that for very small step sizes, the flow derived from a linear approximation is optimal, and hence that the drift term, $\flowdrift{\pt}(\ls{\pt})$, calculated using $\obsmat(\ls{\pt_0})$, is optimal for small $\ls{\pt}-\ls{\pt_0}$ (see appendix~\ref{app:linearised_optimal_flow}). As the particle moves away from $\ls{\pt_0}$, the drift becomes less optimal, reaching a maximum error at the end of the step at $\ls{\pt_1}$. We can now calculate $\flowdrift{\pt_1}(\ls{\pt_1})$ using both $\obsmat(\ls{\pt_0})$ (which is the value used) and $\obsmat(\ls{\pt_1})$ which is optimal. The difference between these two is the velocity error at $\pt_1$. Using the approximation that this error increases linearly over the interval $[\pt_0, \pt_1]$ (which is true when $\pt_1-\pt_0$ is small), an estimate of the local error may be calculated. Step sizes may now be adjusted to keep this local error estimate below a threshold.
+
+Denoting the drift calculated using $\obsmat(\ls{}^*)$ as $\flowdrift{\pt,\ls{}^*}(\ls{\pt})$, the drift error is,
+%
+\begin{IEEEeqnarray}{rCl}
+ \epsilon_{D}(\pt_0,\pt_1) & = & \flowdrift{\pt_1,\ls{\pt_1}}(\ls{\pt_1}) - \flowdrift{\pt_1,\ls{\pt_0}}(\ls{\pt_1}) \nonumber      ,
+\end{IEEEeqnarray}
+%
+and the resulting state error estimate is,
+%
+\begin{IEEEeqnarray}{rCl}
+ \epsilon_{S}(\pt_0,\pt_1) & = & \frac{1}{2} (\pt_1 - \pt_0) \times \epsilon_{D}(\pt_0,\pt_1) \nonumber      .
+\end{IEEEeqnarray}
+
+
+
 \subsection{Scale Mixtures of Normals}
 
-A further generalisation is possible to heavy-tailed densities (either transition or observation) which may be represented as scale mixtures of normals,
+A different method may be used for densities (either transition or observation) which may be represented as scale mixtures of normals,
 %
 \begin{IEEEeqnarray}{rCl}
  p(z) & = & \int \normal{z}{m}{\frac{1}{\xi}P} p(\xi) d\xi     .
@@ -621,77 +664,6 @@ and the artificial conditional density,
 which results in no change to the weight update formulas.
 
 In the same manner as the linearisation method for nonlinear models, the stretch of pseudo-time is divided into small intervals and the value for the mixing variable may be sampled afresh for each. This has the effect that each particle is updated according to a ``blend'' of different flows corresponding to different values of $\xi$, rather than a single value.
-
-\subsection{Gradient Matching}
-
-A cruder form of approximation is possible for densities which cannot be written as scale mixtures of normals. Again, the troublesome density is approximated by a Gaussian for short intervals of pseudo-time, but this time the Gaussian is chosen so as to have the same value and gradient as the true density at some particular point, $\ls{}^*$.
-
-To match the transition density, we first write,
-%
-\begin{IEEEeqnarray}{rCl}
- \flowtd(\ls{}) & = & p(\ob{\rt} | \ls{\rt})     ,
-\end{IEEEeqnarray}
-%
-and calculate $\flowtd(\ls{}^*)$ and $\Delta := \frac{\left. \nabla_{\ls{}} \flowtd \right|_{\ls{}^*}}{\flowtd(\ls{}^*)}$. Denoting the matched Gaussian density and its parameters with tildes, we can write the following,
-%
-\begin{IEEEeqnarray}{rCl}
- \tilde{\flowtd}(\ls{}) & := & \left| 2 \pi \tilde{\transcov} \right|^{-\frac{1}{2}} \exp\left\{ -\frac{1}{2} (\ls{}-\tilde{\transmean})^T \tilde{\transcov}^{-1} (\ls{}-\tilde{\transmean}) \right\} \nonumber \\
-                   & = & \left| 2 \pi \tilde{\transcov} \right|^{-\frac{1}{2}} \exp\left\{ -\frac{1}{2} \tilde{\Delta}^T \tilde{\transcov} \tilde{\Delta} \right\} \nonumber \\
- \tilde{\Delta} := \frac{\left.\nabla_{\ls{}} \tilde{\flowtd}(\ls{})\right|_{\ls{}^*}}{\tilde{\flowtd}(\ls{})} & = & - \tilde{\transcov}^{-1} (\ls{}-\tilde{\transmean}) \nonumber      .
-\end{IEEEeqnarray}
-%
-Now equating $\flowtd(\ls{}^*)=\tilde{\flowtd}(\ls{}^*)$ and $\Delta=\tilde{\Delta}$, and selecting $\tilde{\transcov} = \tilde{\sigma}_P^2 I$, we have,
-%
-\begin{IEEEeqnarray}{rCl}
- \flowtd(\ls{}^*) & = & (2 \pi \tilde{\sigma}_P^2)^{\frac{-d_S}{2}} \exp \left\{ -\frac{1}{2} \left|\Delta\right|^2 \tilde{\sigma}_P^2 \right\} \nonumber
-\end{IEEEeqnarray}
-%
-and thus the parameters of the matched Gaussian are given by,
-%
-\begin{IEEEeqnarray}{rCl}
- \tilde{\transcov}  & = & \tilde{\sigma}_P^2 I \nonumber \\
- \tilde{\sigma}_P^2 & = & \frac{d_S}{\left|\Delta\right|^2} \lambert\left[ \frac{\left|\Delta\right|^2}{2 \pi d_S} \flowtd(\ls{}^*)^{-\frac{2}{d_S}} \right] \nonumber \\
- \tilde{\transmean} & = & \ls{}^* + \tilde{\sigma}_P^2 \Delta     ,
-\end{IEEEeqnarray}
-%
-where $\lambert$ is the Lambert-W or product-log function and $d_S$ is the number of state dimensions.
-
-Repeating the same process for the observation density,
-%
-\begin{IEEEeqnarray}{rCl}
- \flowod(\ls{}) & = & p(\ob{\rt} | \ls{}) \nonumber \\
- \Delta & := & \frac{\left. \nabla_{\ls{}} \flowod \right|_{\ls{}^*}}{\flowod(\ls{}^*)} \nonumber     ,
-\end{IEEEeqnarray}
-%
-with the additional step that we assume $\tilde{\obsmat}=I$, we obtain,
-%
-\begin{IEEEeqnarray}{rCl}
- \tilde{\flowod}(\ls{}) & := & \left| 2 \pi \tilde{\obscov} \right|^{-\frac{1}{2}} \exp\left\{ -\frac{1}{2} (\tilde{y} - \tilde{\obsmat} \ls{})^T \tilde{\obscov}^{-1} (\tilde{y} - \tilde{\obsmat} \ls{}) \right\} \nonumber \\
- \tilde{\obsmat} & = & I \nonumber \\
- \tilde{\obscov} & = & \tilde{\sigma}_L^2 I \nonumber \\
- \tilde{\sigma}_L^2 & = & \frac{d_S}{\left|\Delta\right|^2} \lambert\left[ \frac{\left|\Delta\right|^2}{2 \pi d_S} \flowod(\ls{}^*)^{-\frac{2}{d_S}} \right] \nonumber \\
- \tilde{y} & = & \ls{}^* + \tilde{\sigma}_L^2 \Delta     .
-\end{IEEEeqnarray}
-
-Other methods of matching are possible, for example choosing the Gaussian with the same gradient and Hessian as the true density. This requires special handling when the Hessian is not positive definite.
-
-
-
-\subsection{Step Size Control}
-
-When using an approximately-optimal SUPF for a nonlinear non-Gaussian model, it is necessary to divide up the pseudo-time interval into small steps. In some cases, it may be sufficient to do this with fixed step sizes or according to some predetermined pseudo-time grid. (For example, shorter time steps early on when particles are moving more quickly.) However, it would be desirable to have an automatic scheme for selecting step sizes as we go.
-
-We can design a system for adaptive step-size control using the concept of ``round-trip displacements''. Say the state has just been advanced deterministically from $\ls{\pt_0}$ to $\ls{\pt_1}$. We can then calculate the transformation required to move backwards in pseudo time to $\pt_0$ again. If the model were exactly linear Gaussian, then this would return us to $\ls{\pt_0}$. However, if we are using a Gaussian approximation then the move will not be precisely reversed, and we will reach a different location, $\bels{\pt_0}$. The larger the discrepancy between the Gaussian and the density it approximates, the larger will be the difference between $\ls{\pt_0}$ and $\bels{\pt_0}$, and also the further from optimal will be the flow. Thus, we can implement a system of step-size control by adjusting the interval lengths such that $\magdet{\ls{\pt_0} - \bels{\pt_0}}$ remains below a chosen threshold.
-
-Note that,
-%
-\begin{IEEEeqnarray}{rCl}
- \ls{\pt_0} - \bels{\pt_0} & = & \ls{\pt_0} -  \left[ \lfmapmat{\pt_1,\pt_0} \ls{\pt_1} + \lfmapshift{\pt_1,\pt_0} \right] \nonumber \\
- & = & \ls{\pt_0} -  \left[ \lfmapmat{\pt_1,\pt_0} \left( \lfmapmat{\pt_0,\pt_1} \ls{\pt_0} + \lfmapshift{\pt_0,\pt_1} \right) + \lfmapshift{\pt_1,\pt_0} \right] \nonumber \\
- & = & \left[ I - \lfmapmat{\pt_1,\pt_0} \lfmapmat{\pt_0,\pt_1} \right] \ls{\pt_0} - \lfmapmat{\pt_1,\pt_0} \lfmapshift{\pt_0,\pt_1} - \lfmapshift{\pt_1,\pt_0}     .
-\end{IEEEeqnarray}
-
-{\meta This is not yet implemented, but monitoring the diagnostic suggests it should work. Mention how to cope with stochastic case --- use the mean rather than the sampled value.}
 
 
 
@@ -1573,7 +1545,7 @@ so for the governing equation to be locally satisfied, we simply require,
  \obsmat(\ls{}^*)^T \obscov^{-1} \obdiff{} & = & \lgoicov{\pt}^{-1} \lfshift{\pt} - \lfmat{\pt}^T \lgoicov{\pt}^{-1} \lgoimeandiff{\pt} \nonumber      ,
 \end{IEEEeqnarray}
 %
-which is simply a restatement of equation~\eqref{app-eq:lG_shift_basic}, from which $\lfshift{\pt}$ was originally derived. Thus, if step sizes are small, and $\lsdiff{\pt}$ is consequently small, then the flow is approximately optimal.
+which is just a restatement of equation~\eqref{app-eq:lG_shift_basic}, from which $\lfshift{\pt}$ was originally derived. Thus, if step sizes are small, and $\lsdiff{\pt}$ is consequently small, then the flow is approximately optimal.
 
 
 
