@@ -3,9 +3,10 @@ function [ state, weight ] = ha_smoothupdate( display, algo, model, fh, obs, pre
 
 % Set up integration schedule
 ratio = 1.2;
-num_steps = 40;
+num_steps = 50;
 scale_fact = (1-ratio)/(ratio*(1-ratio^num_steps));
 lam_rng = cumsum([0 scale_fact*ratio.^(1:num_steps)]);
+% lam_rng = 0:0.001:1;
 L = length(lam_rng);
 
 % Initialise particle filter structure
@@ -31,7 +32,7 @@ pf(1).origin = 1:algo.N;
 % Loop initialisation
 last_prob = init_trans_prob;
 
-% errors = zeros(algo.N, L);
+errors = zeros(algo.N, L);
 
 % Pseudo-time loop
 for ll = 1:L-1
@@ -84,6 +85,13 @@ for ll = 1:L-1
         end
         R = model.R / xi;
         
+%         % Flow matching
+%         tau = x0(1);
+%         prior_grad = (model.tau_shape-1)./(tau-model.tau_shift) - 1/model.tau_scale;
+%         prior_hess = -(model.tau_shape-1)./(tau-model.tau_shift)^2;
+%         tau_vr = -1/prior_hess;
+%         tau_mn = tau + tau_vr*prior_grad;
+        
         % Calculate value and gradient of the tau prior density
         tau = x0(1);
         pdf = gampdf(tau-model.tau_shift, model.tau_shape, model.tau_scale);
@@ -118,6 +126,23 @@ for ll = 1:L-1
 %             tau_mn = model.tau_shape * model.tau_scale;
 %             tau_vr = model.tau_shape * model.tau_scale^2;
 %         end
+%         m = [tau_mn; A_mn];
+%         P = diag([tau_vr, A_vr]);
+%         [ x0_rev, ~, ~] = linear_flow_move( lam0, lam, x, m, P, y_rev, H_rev, R_rev, algo.Dscale );
+%         errors(ii,ll+1) = norm(x0 - x0_rev);
+
+%         % Reverse transform
+%         obs_mn_rev = ha_h(model, x);
+%         H_rev = ha_obsjacobian(model, x);
+%         R_rev = R;
+%         y_rev = obs - obs_mn_rev + H*x;
+%         tau = x(1);
+%         prior_grad = (model.tau_shape-1)./(tau-model.tau_shift) - 1/model.tau_scale;
+%         prior_hess = -(model.tau_shape-1)./(tau-model.tau_shift)^2;
+%         tau_vr = -1/prior_hess;
+%         tau_mn = tau + tau_vr*prior_grad;
+%         m = [tau_mn; A_mn];
+%         P = diag([tau_vr, A_vr]);
 %         [ x0_rev, ~, ~] = linear_flow_move( lam0, lam, x, m, P, y_rev, H_rev, R_rev, algo.Dscale );
 %         errors(ii,ll+1) = norm(x0 - x0_rev);
         
@@ -180,7 +205,7 @@ if display.plot_particle_paths
     drawnow;
 end
 
-% figure(4), plot(errors'), drawnow;
+figure(4), plot(errors'), drawnow;
 
 end
 

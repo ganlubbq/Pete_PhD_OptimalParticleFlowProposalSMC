@@ -24,6 +24,7 @@ for kk = 1:model.K
         figure(display.h_ppp(3)); clf; hold on;
         figure(display.h_ppp(4)); clf; hold on;
         figure(display.h_ppp(5)); clf; hold on;
+        figure(display.h_ppp(6)); clf; hold on;
     end
     
     % Start timer

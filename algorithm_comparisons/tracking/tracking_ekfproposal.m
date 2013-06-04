@@ -30,6 +30,20 @@ R = model.R;
 H = tracking_obsjacobian(model, prior_mn);
 obs_lin = obs - obs_mn + H*prior_mn;
 
+% Resolve angle ambiguity
+% Bearing
+if obs_lin(1) > pi
+    obs_lin(1) = obs_lin(1) - 2*pi;
+elseif obs_lin(1) < -pi
+    obs_lin(1) = obs_lin(1) + 2*pi;
+end
+% Elevation
+if obs_lin(2) > pi
+    obs_lin(2) = obs_lin(2) - 2*pi;
+elseif obs_lin(2) < -pi
+    obs_lin(2) = obs_lin(2) + 2*pi;
+end
+
 % EKF update
 [ppsl_mn, ppsl_vr] = ekf_update1(prior_mn, prior_vr, obs_lin, H, R, obs_mn);
 ppsl_vr = (ppsl_vr + ppsl_vr')/2;

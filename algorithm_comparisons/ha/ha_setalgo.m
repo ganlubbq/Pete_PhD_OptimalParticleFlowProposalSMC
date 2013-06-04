@@ -9,9 +9,8 @@ algo.N = test.num_filt_pts(al);
 algo.flag_intermediate_resample = false;
 
 % Stochastic smooth update?
-algo.flag_stochastic = true;
-if algo.flag_stochastic
-    algo.Dscale = 0.01;
+if test.flag_stochastic
+    algo.Dscale = test.Dscale;
 else
     algo.Dscale = 0;
 end

@@ -25,7 +25,9 @@ sqrtS0 = sqrtm(S0);
 expdS = exp(-Dscale*(t-t0)/2);
 
 % H pseudo-inverse
-assert(r==min(nr,nc), 'H is not full rank');
+if r<min(nr,nc)
+    warning('linear_flow_move:RankH', 'H is not full rank');
+end
 Hpi = pinv(H);
 
 % Find x
@@ -69,7 +71,7 @@ end
 if nargout > 3
     % Output the drift at the final state
     mu = St\(m+t*P*H'*(R\y));
-    flow = 0.5*( ((St^2)\H')*(R\(y-H*m)) + St\H'*(R\(y-H*x)) - Dscale*(x-mu) );
+    flow = 0.5*( ((St^2)\P*H')*(R\(y-H*m)) + St\P*H'*(R\(y-H*x)) - Dscale*(x-mu) );
 end
 
 end

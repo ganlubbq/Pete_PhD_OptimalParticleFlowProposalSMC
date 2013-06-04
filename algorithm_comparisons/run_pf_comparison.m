@@ -23,7 +23,7 @@ if ~exist('test', 'var') || ~isfield(test,'flag_batch') || (~test.flag_batch)
     rand_seed = 0;
     
     % Which model?
-    model_flag = 5;     % 1 = linear Gaussian
+    model_flag = 3;     % 1 = linear Gaussian
                         % 2 = nonlinear non-Gaussian benchmark
                         % 3 = heartbeat alignment
                         % 4 = tracking
@@ -45,15 +45,17 @@ if ~exist('test', 'var') || ~isfield(test,'flag_batch') || (~test.flag_batch)
         display.h_ppp(3) = figure;
         display.h_ppp(4) = figure;
         display.h_ppp(5) = figure;
+        display.h_ppp(6) = figure;
     end
     
     % Select algorithms to run
-    test.algs_to_run = [5];     % Vector of algorithm indexes to run
+    test.algs_to_run = [4];     % Vector of algorithm indexes to run
                                     % 1 = bootstrap
                                     % 2 = EKF proposal
                                     % 3 = UKF proposal
                                     % 4 = linearised OID proposal
                                     % 5 = SUPF
+                                    % 6 = SUPF by particle
     
 	% Set number of particles for each algorithm
     test.num_filt_pts = 100*ones(1,6);
@@ -113,6 +115,7 @@ elseif model_flag == 3
     fh.ukfproposal = @ha_ukfproposal;
     fh.linearisedoidproposal = @ha_linearisedoidproposal;
     fh.smoothupdate = @ha_smoothupdate;
+    fh.smoothupdatebyparticle = @ha_smoothupdatebyparticle;
 elseif model_flag == 4
     addpath('tracking');
     fh.setmodel = @tracking_setmodel;
@@ -160,7 +163,7 @@ for aa = 1:num_to_run
     alg = test.algs_to_run(aa);
     
     % Reset random seed
-    rng(rand_seed);
+    rng(rand_seed+1);
     
     % Generate algorithm parameter
     [algo] = feval(fh.setalgo, test, model, alg);

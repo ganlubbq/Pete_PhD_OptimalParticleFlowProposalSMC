@@ -14,7 +14,23 @@ end
 
 % Calculate probability if required
 if nargout>1
-    prob = loggausspdf(obs, mn, model.R);
+    
+    % Resolve angle ambiguity
+    dy = obs - mn;
+    % Bearing
+    if dy(1) > pi
+        dy(1) = dy(1) - 2*pi;
+    elseif dy(1) < -pi
+        dy(1) = dy(1) + 2*pi;
+    end
+    % Elevation
+    if dy(2) > pi
+        dy(2) = dy(2) - 2*pi;
+    elseif dy(2) < -pi
+        dy(2) = dy(2) + 2*pi;
+    end
+    
+    prob = loggausspdf(dy, zeros(size(dy)), model.R);
 else
     prob = [];
 end

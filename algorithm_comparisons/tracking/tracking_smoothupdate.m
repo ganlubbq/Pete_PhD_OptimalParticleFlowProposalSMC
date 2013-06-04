@@ -89,6 +89,20 @@ for ll = 1:L-1
         H = tracking_obsjacobian(model, x0);
         y = obs - obs_mn + H*x0;
         
+        % Resolve angle ambiguity        
+        % Bearing
+        if y(1) > pi
+            y(1) = y(1) - 2*pi;
+        elseif y(1) < -pi
+            y(1) = y(1) + 2*pi;
+        end
+        % Elevation
+        if y(2) > pi
+            y(2) = y(2) - 2*pi;
+        elseif y(2) < -pi
+            y(2) = y(2) + 2*pi;
+        end
+        
         % Analytical flow
         [ x, wt_jac, prob_ratio] = linear_flow_move( lam, lam0, x0, m, P, y, H, R, algo.Dscale );
         
@@ -173,7 +187,7 @@ if display.plot_particle_paths
             idx = ii;
             for ll = L-1:-1:1
                 idx = pf(ll+1).ancestor(idx);
-                state_traj(:,ii,ll) = pf(ll).state(2:3,idx);
+                state_traj(:,ii,ll) = pf(ll).state(1:2,idx);
             end
             plot(squeeze(state_traj(1,ii,:)), squeeze(state_traj(2,ii,:)), ':');
             plot(state_traj(1,ii,1), state_traj(2,ii,1), 'o');

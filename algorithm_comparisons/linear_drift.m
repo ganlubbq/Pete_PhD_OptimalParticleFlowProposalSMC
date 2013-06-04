@@ -11,7 +11,7 @@ St = I + t*P*HRH;
 
 % Drift
 mu = St\(m+t*P*H'*(R\y));
-drift = 0.5*( ((St^2)\H')*(R\(y-H*m)) + St\H'*(R\(y-H*x)) - Dscale*(x-mu) );
+drift = 0.5*( ((St^2)\P*H')*(R\(y-H*m)) + St\P*H'*(R\(y-H*x)) - Dscale*(x-mu) );
 
 end
 
