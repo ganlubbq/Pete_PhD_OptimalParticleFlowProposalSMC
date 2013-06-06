@@ -224,20 +224,16 @@ This choice is thus known as the ``optimal importance density'' (OID). It may be
 
 The SUPF uses the same prediction step as a bootstrap filter, starting with particle selection and then proposing a new state from the transition density. The novelty lies in the update step.
 
-First, as in \citep{Daum2011d}, a variable $\pt \in [0,1]$ is introduced. Intuitively, this is a stretch of ``pseudo-time'' between the predictive and filtering densities, allowing the effect of the observation to be introduced gradually. Define $\ls{\rt,\pt}$ as the state at time $\rt$ and pseudo-time $\pt$.
-
-Now define a continuous sequence of target densities,
+First, as in \citep{Daum2011d}, a variable $\pt \in [0,1]$ is introduced. Intuitively, this is a stretch of ``pseudo-time'' between the predictive and filtering densities, allowing the effect of the observation to be introduced gradually. Define $\ls{\rt,\pt}$ as the state at time $\rt$ and pseudo-time $\pt$, and a continuous sequence of target densities,
 %
 \begin{IEEEeqnarray}{rCl}
  \augfiltden{\rt,\pt}(\ls{1:\rt-1}, \ls{\rt,\pt}) & = & \frac{ p(\ob{\rt} | \ls{\rt,\pt})^{\pt} p(\ls{\rt,\pt} | \ls{\rt-1}) p(\ls{1:\rt-1}|\ob{1:\rt-1}) }{ \augfiltnorm{\pt} } \nonumber \\
- \augfiltnorm{\pt} & = & \int p(\ob{\rt} | \ls{})^{\pt} p(\ls{} | \ob{1:\rt-1}) d\ls{}      .
+ \augfiltnorm{\pt} & = & \int p(\ob{\rt} | \ls{\rt,\pt})^{\pt} p(\ls{\rt,\pt} | \ob{1:\rt-1}) d\ls{\rt,\pt}      .
 \end{IEEEeqnarray}
 %
 This is equal to the predictive density when $\pt=0$ and the desired filtering density when $\lambda=1$. Rather than using the same particles for the filtering density as the predictive density, we allow them to move around as we progress incrementally through pseudo-time, targeting $\augfiltden{\rt,\pt}$ at each point with standard SMC methods.
 
 \subsection{The Optimal Particle Flow}
-
-{\meta SORT OUT PARTICLE SUPERCRIPTS AND TIME SUBSCRIPTS.}
 
 Within the SMC framework, the task is now to move the particles in an optimal manner so as to minimise the weight variance. We achieve this by considering the family of optimal importance densities corresponding to $\augfiltden{\rt,\pt}$. For the $(j)$th particle, this is defined by,
 %
@@ -248,20 +244,22 @@ Within the SMC framework, the task is now to move the particles in an optimal ma
 %
 Hence, $\oiden{\rt,0}$ is the transition density and $\oiden{\rt,1}$ the OID for a standard particle filter.
 
-Suppose that as pseudo-time advances from $0$ to $1$, particles are moved according to a stochastic differential equation (time subscripts $\rt$ omitted for clarity),
+For the remainder of this section, the discussion is concerned with the motion of a single particle at a single time step. Hence, particle index superscripts and time subscripts are omitted for clarity.
+
+Suppose that as pseudo-time advances from $0$ to $1$, particles are moved according to a stochastic differential equation,
 %
 \begin{IEEEeqnarray}{rCl}
- d\ls{\pt}\pss{j} & = & \flowdrift{\pt}\pss{j}(\ls{\pt}\pss{j}) d\pt + \flowdiffuse{\pt}\pss{j} d\flowbm{\pt}\pss{j} \label{eq:flow}     ,
+ d\ls{\pt} & = & \flowdrift{\pt}(\ls{\pt}) d\pt + \flowdiffuse{\pt} d\flowbm{\pt} \label{eq:flow}     ,
 \end{IEEEeqnarray}
 %
-where $\flowbm{\pt}\pss{j}$ is a Brownian motion. The more general case in which $\flowdiffuse{\pt}$ depends on $\ls{\pt}$ has not been investigated.
+where $\flowbm{\pt}$ is a Brownian motion. The more general case in which $\flowdiffuse{\pt}$ depends on $\ls{\pt}$ has not been investigated.
 
-An optimal particle flow is defined as a choice of $\flowdrift{\pt}\pss{j}$ and $\flowdiffuse{\pt}\pss{j}$ such that each particle, $\ls{\pt}\pss{j}$, is distributed according to $\oiden{\rt,\pt}(\ls{\rt,\pt} | \ls{\rt-1}\pss{\anc{j}})$, since this results in a sample from the OID at the end of the pseudo-time interval.
+An optimal particle flow is defined as a choice of $\flowdrift{\pt}$ and $\flowdiffuse{\pt}$ such that the particle, $\ls{\pt}$, is distributed according to $\oiden{\rt,\pt}(\ls{\rt,\pt} | \ls{\rt-1})$, since this results in a sample from the OID at the end of the pseudo-time interval.
 
 The interaction between particle motion and evolution of densities is governed by the Fokker-Planck equation, consideration of which leads us to the following lemma.
 %
 \begin{lemma}\label{lem:optimal_flow_governing_eq}
-Optimal choices of $\flowdrift{\pt}\pss{j}$ and $\flowdiffuse{\pt}\pss{j}$ are governed by the following partial differential equation,
+Optimal choices of $\flowdrift{\pt}$ and $\flowdiffuse{\pt}$ are governed by the following partial differential equation,
 %
 \begin{IEEEeqnarray}{rCl}
 \log\left(\flowod(\ls{\pt})\right) - \expect{\oiden{\pt}}\left[ \log\left(\flowod(\ls{\pt})\right) \right] & = & -\nabla\cdot \flowdrift{\pt}(\ls{\pt}) - \flowdrift{\pt}(\ls{\pt}) \cdot \nabla \log\left( \oiden{\pt}(\ls{\pt}) \right) \nonumber \\
@@ -280,38 +278,38 @@ For proof, see Appendix \ref{app:optimal_flow_governing_eq}.
 
 Once the optimal flow has been determined, it can integrated in order to establish an optimal choice for the importance density needed to advance the particle filter over an interval of pseudo time.
 
-Note that although this provides a route for selecting an optimal flow, the results in the following section are applicable for any choice of $\flowdrift{\pt}\pss{j}$ and $\flowdiffuse{\pt}\pss{j}$. Clearly, it will not often be possible to derive an analytic expression for the optimal flow. However, an approximately-optimal flow may yield better filter performance than simply approximating the OID directly, for example with a Gaussian.
+Note that although this provides a route for selecting an optimal flow, the results in the following section are applicable for any choice of $\flowdrift{\pt}$ and $\flowdiffuse{\pt}$. Clearly, it will not often be possible to derive an analytic expression for the optimal flow. However, an approximately-optimal flow may yield better filter performance than simply approximating the OID directly, for example with a Gaussian.
 
 \subsection{Importance Densities and Weight Updates}
 
 Beginning with particle $(j)$, with state $\ls{\rt,\pt_0}\pss{j}$ and weight $\pw{\rt,\pt_0}\pss{i}$, which is distributed according to $\augfiltden{\rt,\pt_0}$, consider the change between $\pt_0$ and a later pseudo-time $\pt_1$. For a chosen flow, how should the new state $\ls{\rt,\pt_1}\pss{j}$ be generated and the new weight $\pw{\rt,\pt_1}\pss{i}$ calculated such that the particle is distributed according to $\augfiltden{\rt,\pt_1}$?
 
-We examine two cases separately; the first where $\flowdiffuse{\pt}\pss{j}=0$, and the particle is moved entirely deterministically, and second case where $\flowdiffuse{\pt}\pss{j}\ne0$ and the particle moves stochastically.
+We examine two cases separately; the first where $\flowdiffuse{\rt,\pt}\pss{j}=0$, and the particle is moved entirely deterministically, and second case where $\flowdiffuse{\rt,\pt}\pss{j}\ne0$ and the particle moves stochastically.
 
 \subsubsection{Deterministic Flows}
 
-When $\flowdiffuse{\pt}\pss{j}=0$, the stochastic differential equation \eqref{eq:flow} for particle motion collapses to an ordinary differential equation,
+When $\flowdiffuse{\rt,\pt}\pss{j}=0$, the stochastic differential equation \eqref{eq:flow} for particle motion collapses to an ordinary differential equation,
 %
 \begin{IEEEeqnarray}{rCl}
- \frac{d\ls{\pt}\pss{j}}{d\pt} & = & \flowdrift{\pt}\pss{j}(\ls{\pt}\pss{j})     .
+ \frac{d\ls{\rt,\pt}\pss{j}}{d\pt} & = & \flowdrift{\rt,\pt}\pss{j}(\ls{\rt,\pt}\pss{j})     .
 \end{IEEEeqnarray}
 
 In this case each particle is moved deterministically, and a map may be defined from the state at $\pt_0$ to that at $\pt_1$,
 %
 \begin{IEEEeqnarray}{rCl}
- \flowmap{\pt_0}{\pt_1} (\ls{\rt,\pt_0}\pss{j}) & = & \ls{\rt,\pt_0}\pss{j} + \int_{\pt_0}^{\pt_1} \flowdrift{\pt}\pss{j}(\ls{\rt,l}) dl     .
+ \flowmap{\pt_0}{\pt_1} (\ls{\rt,\pt_0}\pss{j}) & = & \ls{\rt,\pt_0}\pss{j} + \int_{\pt_0}^{\pt_1} \flowdrift{\rt,\pt}\pss{j}(\ls{\rt,l}) dl     .
 \end{IEEEeqnarray}
 
-Each particle is updated by discarding the old state $\ls{\rt,\pt_0}$ and replacing it with the new $\ls{\rt,\pt_1} = \flowmap{\pt_0}{\pt_1} (\ls{\rt,\pt_0})$. The weight update associated with the transition is evaluated using standard formulas for the particle filter. Using the change of variables method, the new particle is distributed as $\impden(\ls{1:\rt-1}, \ls{\pt_1})$, where
+Each particle is updated by discarding the old state $\ls{\rt,\pt_0}$ and replacing it with the new $\ls{\rt,\pt_1} = \flowmap{\pt_0}{\pt_1} (\ls{\rt,\pt_0})$. The weight update associated with the transition is evaluated using standard formulas for the particle filter. Using the change of variables method, the new particle is distributed as $\impden(\ls{1:\rt-1}, \ls{\rt,\pt_1})$, where
 %
 \begin{IEEEeqnarray}{rCl}
- \pw{\rt,\pt_0}\pss{j} \impden(\ls{1:\rt-1}\pss{j}, \ls{\pt_1}\pss{j}) & = & \augfiltden{\pt_0}(\ls{1:\rt-1}\pss{j}, \ls{\pt_0}\pss{j}) \magdet{ \frac{\partial \ls{\rt,\pt_0}\pss{j}}{\partial \ls{\rt,\pt_1}\pss{j}} }     .
+ \pw{\rt,\pt_0}\pss{j} \impden(\ls{1:\rt-1}\pss{j}, \ls{\rt,\pt_1}\pss{j}) & = & \augfiltden{\rt,\pt_0}(\ls{1:\rt-1}\pss{j}, \ls{\rt,\pt_0}\pss{j}) \magdet{ \frac{\partial \ls{\rt,\pt_0}\pss{j}}{\partial \ls{\rt,\pt_1}\pss{j}} }     .
 \end{IEEEeqnarray}
 %
 Hence, the new weights are given by,
 %
 \begin{IEEEeqnarray}{rCl}
- \pw{\rt,\pt_1}\pss{j} & = & \frac{ \augfiltden{\pt_1}(\ls{1:\rt-1}\pss{j}, \ls{\pt_1}\pss{j}) }{ \impden(\ls{1:\rt-1}\pss{j}, \ls{\pt_1}\pss{j}) } \nonumber \\
+ \pw{\rt,\pt_1}\pss{j} & = & \frac{ \augfiltden{\rt,\pt_1}(\ls{1:\rt-1}\pss{j}, \ls{\rt,\pt_1}\pss{j}) }{ \impden(\ls{1:\rt-1}\pss{j}, \ls{\pt_1}\pss{j}) } \nonumber \\
  & = & \pw{\rt,\pt_0}\pss{j} \frac{ p(\ob{\rt} | \ls{\rt,\pt_1}\pss{j})^{\pt_1} p(\ls{\rt,\pt_1}\pss{j} | \ls{\rt-1}\pss{j}) }{ p(\ob{\rt} | \ls{\rt,\pt_0}\pss{j})^{\pt_0} p(\ls{\rt,\pt_0}\pss{j} | \ls{\rt-1}\pss{j}) } \times \magdet{ \frac{\partial \ls{\rt,\pt_1}\pss{j}}{\partial \ls{\rt,\pt_0}\pss{j}} }   \label{eq:deterministic_weight_update}     .
 \end{IEEEeqnarray}
 
@@ -319,25 +317,25 @@ Hence, the new weights are given by,
 
 \subsubsection{Stochastic Flows}
 
-When $\flowdiffuse{\pt}\ne0$, the naive approach of targeting $\augfiltden{\rt,\pt_1}$ directly does not work. Suppose a new state were sampled from $\impden(\ls{\rt,\pt_1} | \ls{\rt,\pt_0}\pss{j})$, and the , the resulting importance density is,
+When $\flowdiffuse{\pt}\pss{j}\ne0$, the naive approach of targeting $\augfiltden{\rt,\pt_1}$ directly does not work. Suppose a new state were sampled from $\impden(\ls{\rt,\pt_1} | \ls{\rt,\pt_0}\pss{j})$, and the previous state $\ls{\rt,\pt_0}$ discarded, then the new particle is distributed as,
 %
 \begin{IEEEeqnarray}{rCl}
- \impden(\ls{1:\rt-1},\ls{\pt_1}) & = & \int \augfiltden{\pt_0}(\ls{1:\rt-1}, \ls{\rt,\pt_0}) q(\ls{\rt,\pt_1} | \ls{\rt,\pt_0}) d\ls{\rt,\pt_0}     ,
+ \impden(\ls{1:\rt-1},\ls{\rt,\pt_1}) & = & \int \augfiltden{\rt,\pt_0}(\ls{1:\rt-1}, \ls{\rt,\pt_0}) q(\ls{\rt,\pt_1} | \ls{\rt,\pt_0}) d\ls{\rt,\pt_0}     ,
 \end{IEEEeqnarray}
 %
-which is generally intractable. The solution is to use an SMC sampler using the framework defined in \cite{DelMoral2006}, and used for tempering (just as we are here) in \cite{DelMoral2007}. The intractability is circumvented by employing an extended target distribution over $\ls{\rt,\pt_0}$ and $\ls{\rt,\pt_1}$ by introducing an artificial conditional density, $\artden(\ls{\rt,\pt_0} | \ls{\rt,\pt_1})$. The weight formula for this extended target is then,
+which is in general intractable. The solution is to use an SMC sampler with the framework defined in \cite{DelMoral2006}, and used for static annealing in \cite{DelMoral2007}. The intractability is circumvented using an extended target distribution over $\ls{\rt,\pt_0}$ and $\ls{\rt,\pt_1}$ through the introduction an artificial conditional density, $\artden(\ls{\rt,\pt_0} | \ls{\rt,\pt_1})$. This has no effect of the sampling process, but the weight update formula becomes,
 %
 \begin{IEEEeqnarray}{rCl}
- \pw{\rt,\pt_1}\pss{j} & = & \frac{ \augfiltden{\pt_1}(\ls{1:\rt-1}, \ls{\rt,\pt_1}) \artden(\ls{\rt,\pt_0} | \ls{\rt,\pt_1}) }{ \augfiltden{\pt_0}(\ls{1:\rt-1}, \ls{\rt,\pt_0}) \impden(\ls{\rt,\pt_1}\pss{j} | \ls{\rt,\pt_0}\pss{j}) } \nonumber \\
- & = & \pw{\rt,\pt_0}\pss{j} \frac{ p(\ob{\rt} | \ls{\rt,\pt_1})^{\pt_1} p(\ls{\rt,\pt_1} | \ls{\rt-1}) }{ p(\ob{\rt} | \ls{\rt,\pt_0})^{\pt_0} p(\ls{\rt,\pt_0} | \ls{\rt-1}) } \times \frac{ \artden(\ls{\rt,\pt_0} | \ls{\rt,\pt_1}) }{ \impden(\ls{\rt,\pt_1}\pss{j} | \ls{\rt,\pt_0}\pss{j}) } \label{eq:general_weight_update}
+ \pw{\rt,\pt_1}\pss{j} & = & \frac{ \augfiltden{\rt,\pt_1}(\ls{1:\rt-1}\pss{j}, \ls{\rt,\pt_1}\pss{j}) \artden(\ls{\rt,\pt_0}\pss{j} | \ls{\rt,\pt_1}\pss{j}) }{ \augfiltden{\rt,\pt_0}(\ls{1:\rt-1}\pss{j}, \ls{\rt,\pt_0}\pss{j}) \impden(\ls{\rt,\pt_1}\pss{j} | \ls{\rt,\pt_0}\pss{j}) } \nonumber \\
+ & \propto & \pw{\rt,\pt_0}\pss{j} \frac{ p(\ob{\rt} | \ls{\rt,\pt_1}\pss{j})^{\pt_1} p(\ls{\rt,\pt_1}\pss{j} | \ls{\rt-1}\pss{j}) }{ p(\ob{\rt} | \ls{\rt,\pt_0}\pss{j})^{\pt_0} p(\ls{\rt,\pt_0}\pss{j} | \ls{\rt-1}\pss{j}) } \times \frac{ \artden(\ls{\rt,\pt_0}\pss{j} | \ls{\rt,\pt_1}\pss{j}) }{ \impden(\ls{\rt,\pt_1}\pss{j} | \ls{\rt,\pt_0}\pss{j}) } \label{eq:general_weight_update}
 \end{IEEEeqnarray}
 %
-This is easily evaluated, after which the $\ls{\rt,\pt_0}$ states may be marginalised (i.e. simply discarded).
+This is easily evaluated, after which $\ls{\rt,\pt_0}$ may be marginalised (i.e. simply discard $\ls{\rt,\pt_0}\pss{j}$).
 
-The importance density is found by integrating the stochastic differential equation governing the flow \eqref{eq:flow} using the selected values of $\flowdrift{\pt}$ and $\flowdiffuse{\pt}$. The optimal choice for the artificial conditional density (in the sense of minimising the weight variance) is shown in \cite{DelMoral2006} to be,
+The importance density is found by integrating the stochastic differential equation governing the flow \eqref{eq:flow} using the selected values of $\flowdrift{\pt}\pss{j}$ and $\flowdiffuse{\pt}\pss{j}$. The optimal choice for the artificial conditional density (in the sense of minimising the weight variance) is shown in \cite{DelMoral2006} to be,
 %
 \begin{IEEEeqnarray}{rCl}
- \artden(\ls{\rt,\pt_0}\pss{j} | \ls{\rt,\pt_1}\pss{j}) & = & \frac{ \oiden{\pt_0}(\ls{\rt,\pt_0} | \ls{\rt-1}) \impden(\ls{\rt,\pt_1} | \ls{\rt,\pt_0}) }{ \int \oiden{\pt_0}(\ls{} | \ls{\rt-1}) \impden(\ls{\rt,\pt_1} | \ls{}) d\ls{} } \label{eq:optimal_artificial_density}     .
+ \artden(\ls{\rt,\pt_0} | \ls{\rt,\pt_1}) & = & \frac{ \oiden{\rt,\pt_0}(\ls{\rt,\pt_0} | \ls{\rt-1}) \impden(\ls{\rt,\pt_1} | \ls{\rt,\pt_0}) }{ \int \oiden{\rt,\pt_0}(\ls{\rt} | \ls{\rt-1}) \impden(\ls{\rt,\pt_1} | \ls{\rt}) d\ls{\rt} } \label{eq:optimal_artificial_density}     .
 \end{IEEEeqnarray}
 
 
