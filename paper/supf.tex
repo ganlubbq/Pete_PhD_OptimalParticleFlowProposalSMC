@@ -317,13 +317,19 @@ Hence, the new weights are given by,
 
 \subsubsection{Stochastic Flows}
 
-When $\flowdiffuse{\pt}\pss{j}\ne0$, the naive approach of targeting $\augfiltden{\rt,\pt_1}$ directly does not work. Suppose a new state were sampled from $\impden(\ls{\rt,\pt_1} | \ls{\rt,\pt_0}\pss{j})$, and the previous state $\ls{\rt,\pt_0}$ discarded, then the new particle is distributed as,
+When $\flowdiffuse{\pt}\pss{j}\ne0$, a stochastic map may be defined which generates a new state at $\pt_1$ given the old state at $\pt_0$,
+%
+\begin{IEEEeqnarray}{rCl}
+ \flowmap{\pt_0}{\pt_1} (\ls{\rt,\pt_0}\pss{j}) & = & \ls{\rt,\pt_0}\pss{j} + \int_{\pt_0}^{\pt_1} \flowdrift{\rt,\pt}\pss{j}(\ls{\rt,l}) dl + \int_{\pt_0}^{\pt_1} \flowdiffuse{\rt,\pt}\pss{j}(\ls{\rt,l}) d\flowbm{l}        .
+\end{IEEEeqnarray}
+%
+Associated with this map is an importance density, $\impden(\ls{\rt,\pt_1} | \ls{\rt,\pt_0}\pss{j})$. A naive approach for targeting $\augfiltden{\rt,\pt_1}$ would be to sample a new state from this importance density and then discard the previous state $\ls{\rt,\pt_0}$. However, the new particle resulting would then be distributed as,
 %
 \begin{IEEEeqnarray}{rCl}
  \impden(\ls{1:\rt-1},\ls{\rt,\pt_1}) & = & \int \augfiltden{\rt,\pt_0}(\ls{1:\rt-1}, \ls{\rt,\pt_0}) q(\ls{\rt,\pt_1} | \ls{\rt,\pt_0}) d\ls{\rt,\pt_0}     ,
 \end{IEEEeqnarray}
 %
-which is in general intractable. The solution is to use an SMC sampler with the framework defined in \cite{DelMoral2006}, and used for static annealing in \cite{DelMoral2007}. The intractability is circumvented using an extended target distribution over $\ls{\rt,\pt_0}$ and $\ls{\rt,\pt_1}$ through the introduction an artificial conditional density, $\artden(\ls{\rt,\pt_0} | \ls{\rt,\pt_1})$. This has no effect of the sampling process, but the weight update formula becomes,
+which is, in general, intractable. The solution is to use an SMC sampler with the framework defined in \cite{DelMoral2006}, and used for static annealing in \cite{DelMoral2007}. The intractability is circumvented using an extended target distribution over $\ls{\rt,\pt_0}$ and $\ls{\rt,\pt_1}$ through the introduction an artificial conditional density, $\artden(\ls{\rt,\pt_0} | \ls{\rt,\pt_1})$. This has no effect on the sampling process, but the weight update formula becomes,
 %
 \begin{IEEEeqnarray}{rCl}
  \pw{\rt,\pt_1}\pss{j} & = & \frac{ \augfiltden{\rt,\pt_1}(\ls{1:\rt-1}\pss{j}, \ls{\rt,\pt_1}\pss{j}) \artden(\ls{\rt,\pt_0}\pss{j} | \ls{\rt,\pt_1}\pss{j}) }{ \augfiltden{\rt,\pt_0}(\ls{1:\rt-1}\pss{j}, \ls{\rt,\pt_0}\pss{j}) \impden(\ls{\rt,\pt_1}\pss{j} | \ls{\rt,\pt_0}\pss{j}) } \nonumber \\
@@ -332,7 +338,7 @@ which is in general intractable. The solution is to use an SMC sampler with the 
 %
 This is easily evaluated, after which $\ls{\rt,\pt_0}$ may be marginalised (i.e. simply discard $\ls{\rt,\pt_0}\pss{j}$).
 
-The importance density is found by integrating the stochastic differential equation governing the flow \eqref{eq:flow} using the selected values of $\flowdrift{\pt}\pss{j}$ and $\flowdiffuse{\pt}\pss{j}$. The optimal choice for the artificial conditional density (in the sense of minimising the weight variance) is shown in \cite{DelMoral2006} to be,
+The optimal choice for the artificial conditional density (in the sense of minimising the weight variance) is shown in \cite{DelMoral2006} to be,
 %
 \begin{IEEEeqnarray}{rCl}
  \artden(\ls{\rt,\pt_0} | \ls{\rt,\pt_1}) & = & \frac{ \oiden{\rt,\pt_0}(\ls{\rt,\pt_0} | \ls{\rt-1}) \impden(\ls{\rt,\pt_1} | \ls{\rt,\pt_0}) }{ \int \oiden{\rt,\pt_0}(\ls{\rt} | \ls{\rt-1}) \impden(\ls{\rt,\pt_1} | \ls{\rt}) d\ls{\rt} } \label{eq:optimal_artificial_density}     .
@@ -345,8 +351,9 @@ The importance density is found by integrating the stochastic differential equat
 In order to implement the algorithm set out in the previous section, the following solutions are needed:
 \begin{itemize}
   \item Use \eqref{eq:optimal_flow_PDE} to select choices for $\flowdrift{\rt,\pt}\pss{j}$ and $\flowdiffuse{\rt,\pt}\pss{j}$ which are as close to optimal as possible.
-  \item Integrate the SDE for particle motion \eqref{eq:flow} to find either a map (in the deterministic case) or an importance density (in the stochastic case) with which to update particle states.
-  \item Select an artificial conditional density, $\artden(\ls{\rt,\pt_0} | \ls{\rt,\pt_1})$ in the stochastic case, or calculate the required Jacobian in the deterministic case.
+  \item Integrate the SDE for particle motion \eqref{eq:flow} to find a map for generating new states.
+  \item In the stochastic case, select an artificial conditional density, $\artden(\ls{\rt,\pt_0} | \ls{\rt,\pt_1})$.
+  \item Calculate either the Jacobian or the ratio of artificial and importance densities so that the new weight may be evaluated.
 \end{itemize}
 
 These tasks can all be performed analytically for a partially linear Gaussian model, specifically a model with a linear observation function and Gaussian transition and observation densities. The transition function need not be linear.
@@ -356,10 +363,9 @@ These tasks can all be performed analytically for a partially linear Gaussian mo
  p(\ob{\rt} | \ls{\rt})     & = & \normal{\ob{\rt}}{\obsmat \ls{\rt}}{\obscov}
 \end{IEEEeqnarray}
 
-For this model, the OID can be calculated analytically and is a Gaussian, so using an SUPF here is largely redundant in practice. However, consideration of this model will lead us to a method for running a near-optimal SUPF for nonlinear non-Gaussian models.
+For this model, the OID can be calculated analytically and is a Gaussian, so using an SUPF here is largely redundant in practice. In fact, the state and weight update results derived below may be reached without any reference to particle flows. However, consideration of this model will lead us to a method for running a near-optimal SUPF for nonlinear non-Gaussian models.
 
 Note that throughout this section, subscript $\rt$s are omitted for clarity on variables which vary with $\pt$. Particle superscripts are also omitted.
-
 
 \subsection{Optimal Deterministic Flow}
 
@@ -388,22 +394,24 @@ The governing equation for the optimal flow is a scalar PDE, so the solution is 
 For the optimal choice of $\flowdrift{\pt}$ given by lemma~\ref{lem:optimal_flow_linear_Gaussian_deterministic}, and choosing $\rotategen=0$, the map associated with a transition from $\pt_0$ to $\pt_1$ is,
 %
 \begin{IEEEeqnarray}{rCl}
- \flowmap{\pt_0}{\pt_1} (\ls{\pt_0}) & = & \lgoimean{\pt_1} + \lgoicov{\pt_1}^{\frac{1}{2}} \lgoicov{\pt_0}^{-\frac{1}{2}} (\ls{\pt_0}-\lgoimean{\pt_0}) \label{eq:optimal_map}      .
+ \flowmap{\pt_0}{\pt_1} (\ls{\pt_0}) & = & \lgoimean{\pt_1} + \lgoicov{\pt_1}^{\frac{1}{2}} \lgoicov{\pt_0}^{-\frac{1}{2}} (\ls{\pt_0}-\lgoimean{\pt_0}) \label{eq:deterministic_map}      .
 \end{IEEEeqnarray}
 %
-For proof see Appendix~\ref{app:optimal_map_linear_Gaussian}.
+For proof see Appendix~\ref{app:optimal_integrals_linear_Gaussian}.
 \end{lemma}
 
-\begin{lemma}
-The Jacobian required for the weight update associated with \eqref{eq:optimal_map} is given by,
+The Jacobian associated with \eqref{eq:deterministic_map} is,
 %
 \begin{IEEEeqnarray}{rCl}
  \magdet{ \frac{\partial \ls{\pt_1}}{\partial \ls{\pt_0}} } & = & \magdet{ \lgoicov{\pt_1}^{\frac{1}{2}} \lgoicov{\pt_0}^{-\frac{1}{2}} } \nonumber \\
- & = & \sqrt{ \frac{\magdet{\lgoicov{\pt_1}}}{\magdet{\lgoicov{\pt_0}}} }     .
+ & = & \sqrt{ \frac{\magdet{\lgoicov{\pt_1}}}{\magdet{\lgoicov{\pt_0}}} }     ,
 \end{IEEEeqnarray}
 %
-The proof is trivial, by differentiation of \eqref{eq:optimal_map}.
-\end{lemma}
+which allows the weight update formula to simplify to,
+%
+\begin{IEEEeqnarray}{rCl}
+ \pw{\rt,\pt_1}\pss{j} & = & \pw{\rt,\pt_0}\pss{j} \frac{ \normal{\ob{\rt}}{\obsmat \transfun(\ls{\rt-1})}{\frac{\obscov}{\pt_1} + \obsmat \transcov \obsmat^T} }{ \normal{\ob{\rt}}{\obsmat \transfun(\ls{\rt-1})}{\frac{\obscov}{\pt_0} + \obsmat \transcov \obsmat^T} }     \label{eq:linear_Gaussian_deterministic_weight_update}     .
+\end{IEEEeqnarray}
 
 Using the results of these lemmas, everything required to update states and weights optimally as $\pt$ advances may be calculated analytically.
 
@@ -445,43 +453,40 @@ A reasonable choice is therefore,
 where $\lfdiffsf$ is a positive scale factor.
 
 \begin{lemma}\label{lem:optimal_importance_density_linear_Gaussian}
-For the optimal choice of $\flowdrift{\pt}$ given by lemma~\ref{lem:optimal_flow_linear_Gaussian_stochastic}, and choosing $\flowdiffuse{\pt}$ according to \eqref{eq:obvious_flow_diffusion}, and $\rotategen=0$, the importance density associated with a transition from $\pt_0$ to $\pt_1$ is,
+For the optimal choice of $\flowdrift{\pt}$ given by lemma~\ref{lem:optimal_flow_linear_Gaussian_stochastic}, and choosing $\flowdiffuse{\pt}$ according to \eqref{eq:obvious_flow_diffusion}, and $\rotategen=0$, the map associated with a transition from $\pt_0$ to $\pt_1$ is,
 %
-{\meta ***************** THE COAL FACE. ********************}
 \begin{IEEEeqnarray}{rCl}
- \impden(\ls{\pt_1} | \ls{\pt_0}) & = & \normal{\ls{\pt_1}}{\lfmapmat{\pt_0,\pt_1} \ls{\pt_0} + \lfmapshift{\pt_0,\pt_1}}{\lfmapcov{\pt_0,\pt_1}} \label{eq:lg_stochastic_flow_importance_density} \\
- \lfmapmat{\pt_0,\pt_1}   & = & \exp\left\{ -\frac{1}{2} \lfdiffsf \left( \pt_1 - \pt_0 \right) \right\} \lginterm{\pt_1}^{-\frac{1}{2}} \lginterm{\pt_0}^{\frac{1}{2}} \nonumber \\
- \lfmapshift{\pt_0,\pt_1} & = & \lfmapmat{\pt_0,\pt_1} \left[ \lginterm{\pt_0}^{-1} \left( \obsmat^+ \ob{\rt} - \transmean \right) - \obsmat^+ \ob{\rt} \right] \nonumber \\
-             &   & + \: \obsmat^+ \ob{\rt} - \lginterm{\pt_1}^{-1} \left( \obsmat^+ \ob{\rt} - \transmean \right) \nonumber \\
- \lfmapcov{\pt_0,\pt_1}   & = & \left[ 1 - \exp\left\{ - \lfdiffsf \left(\pt_1 - \pt_0\right) \right\} \right] \lgoicov{\pt_1}
+ \flowmap{\pt_0}{\pt_1} (\ls{\pt_0}) & = & \lgoimean{\pt_1} + \lfmapmat{\pt_0,\pt_1} (\ls{\pt_0}-\lgoimean{\pt_0}) + \lfmapcov{\pt_0,\pt_1}^{\frac{1}{2}} z \label{eq:stochastic_map}
 \end{IEEEeqnarray}
 %
-where,
+with the associated importance density,
 %
-
+\begin{IEEEeqnarray}{rCl}
+ \impden(\ls{\pt_1} | \ls{\pt_0}) & = & \mathcal{N}(\ls{\pt_1}| \lgoimean{\pt_1} + \lfmapmat{\pt_0,\pt_1} (\ls{\pt_0}-\lgoimean{\pt_0}) , \lfmapcov{\pt_0,\pt_1} )    ,
+\end{IEEEeqnarray}
 %
-For proof see Appendix~\ref{app:optimal_importance_density_linear_Gaussian}.
+where
+%
+\begin{IEEEeqnarray}{rCl}
+ \lfmapmat{\pt_0,\pt_1} & = & \exp\left\{ -\frac{1}{2} \lfdiffsf (\pt_1-\pt_0) \right\} \lgoicov{\pt_1}^{\frac{1}{2}} \lgoicov{\pt_0}^{-\frac{1}{2}} \nonumber \\
+ \lfmapcov{\pt_0,\pt_1} & = & \left( 1 - \exp\left\{ -\lfdiffsf(\pt_1-\pt_0) \right\} \right) \lgoicov{\pt_1} \nonumber       .
+\end{IEEEeqnarray}
+%
+For proof see Appendix~\ref{app:optimal_integrals_linear_Gaussian}.
 \end{lemma}
 
-For this model, the OID is a Gaussian,
+For this model, $\oiden{\pt}$ is a Gaussian, so it is possible to use the optimal artificial density specified by~\eqref{eq:optimal_artificial_density}. The ratio between this optimal artificial density and the importance density is then,
 %
 \begin{IEEEeqnarray}{rCl}
- \oiden{\pt}(\ls{\pt}) & = & \mathcal{N}(\ls{\pt}|\lgoimean{\pt},\lgoicov{\pt}) \nonumber    ,
+ \frac{ \artden(\ls{\pt_0} | \ls{\pt_1}) }{ \impden(\ls{\pt_1} | \ls{\pt_0}) } & = & \frac{ \oiden{\pt_0}(\ls{\pt_0} | \ls{\rt-1}) \impden(\ls{\pt_1} | \ls{\pt_0}) }{ \int \oiden{\pt_0}(\ls{} | \ls{\rt-1}) \impden(\ls{\pt_1} | \ls{}) d\ls{} } \times \frac{1}{\impden(\ls{\pt_1} | \ls{\pt_0})} \nonumber \\
+  & = & \frac{ \normal{\ls{\pt_0}}{\lgoimean{\pt_0}}{\lgoicov{\pt_0}} }{ \int \normal{\ls{}}{\lgoimean{\pt_0}}{\lgoicov{\pt_0}} \normal{\ls{\pt_1}}{\lgoimean{\pt_1} + \lfmapmat{\pt_0,\pt_1} (\ls{}-\lgoimean{\pt_0})}{\lfmapcov{\pt_0,\pt_1}} d\ls{} } \nonumber \\
+  & = & \frac{ \normal{\ls{\pt_0}}{\lgoimean{\pt_0}}{\lgoicov{\pt_0}} }{ \normal{\ls{\pt_1}}{\lgoimean{\pt_1}}{\lgoicov{\pt_1}} } \nonumber      ,
 \end{IEEEeqnarray}
 %
-and thus it is possible to use the optimal artificial density specified by~\eqref{eq:optimal_artificial_density}. The ratio between this optimal artificial density and the importance density is now,
+and the weight update formula simplifies as before to,
 %
 \begin{IEEEeqnarray}{rCl}
- \frac{ \artden(\ls{\pt_0} | \ls{\pt_1}) }{ \impden(\ls{\pt_1} | \ls{\pt_0}) } & = & \frac{ \oiden{\pt_0}(\ls{\pt_0} | \ls{\rt-1}) \impden(\ls{\pt_1} | \ls{\pt_0}) }{ \int \oiden{\pt_0}(\ls{} | \ls{\rt-1}) \impden(\ls{\pt_1} | \ls{}) d\ls{} \: \impden(\ls{\pt_1} | \ls{\pt_0}) } \nonumber \\
-  & = & \frac{ \oiden{\pt_0}(\ls{\rt,\pt_0} | \ls{\rt-1}) }{ \int \oiden{\pt_0}(\ls{} | \ls{\rt-1}) \impden(\ls{\rt,\pt_1} | \ls{}) d\ls{} } \nonumber \\
-  & = & \frac{ \normal{\ls{\pt_0}}{\lgoimean{\pt_0}}{\lgoicov{\pt_0}} }{ \int \normal{\ls{}}{\lgoimean{\pt_0}}{\lgoicov{\pt_0}} \normal{\ls{\pt_1}}{\lfmapmat{\pt_0,\pt_1} \ls{} + \lfmapshift{\pt_0,\pt_1}}{\lfmapcov{\pt_0,\pt_1}} d\ls{} } \nonumber \\
-  & = & \frac{ \normal{\ls{\pt_0}}{\lgoimean{\pt_0}}{\lgoicov{\pt_0}} }{ \normal{\ls{\pt_1}}{\lfmapmat{\pt_0,\pt_1} \lgoimean{\pt_0} + \lfmapshift{\pt_0,\pt_1}}{\lfmapmat{\pt_0,\pt_1}\lgoicov{\pt_0}\lfmapmat{\pt_0,\pt_1}^T + \lfmapcov{\pt_0,\pt_1}} } \nonumber \\
-\end{IEEEeqnarray}
-%
-The weight update formula then simplifies to,
-%
-\begin{IEEEeqnarray}{rCl}
- \pw{\pt_1} & = & \pw{\pt_0} \frac{ \normal{\ob{\rt}}{\obsmat \ls{\pt_1}}{\frac{\obscov}{\pt_1}} \normal{\ls{\pt_1}}{\lgoimean{\pt_1}}{\lgoicov{\pt_1}} }{ \normal{\ls{\pt_1}}{\lfmapmat{\pt_0,\pt_1} \lgoimean{\pt_0} + \lfmapshift{\pt_0,\pt_1}}{\lfmapmat{\pt_0,\pt_1} \lgoicov{\pt_0} \lfmapmat{\pt_0,\pt_1}^T + \lfmapcov{\pt_0,\pt_1}} } \nonumber     .
+ \pw{\pt_1} & = & \pw{\pt_0} \frac{ \normal{\ob{\rt}}{\obsmat \transfun(\ls{\rt-1})}{\frac{\obscov}{\pt_1} + \obsmat \transcov \obsmat^T} }{ \normal{\ob{\rt}}{\obsmat \transfun(\ls{\rt-1})}{\frac{\obscov}{\pt_0} + \obsmat \transcov \obsmat^T} } \label{eq:linear_Gaussian_stochastic_weight_update}        .
 \end{IEEEeqnarray}
 
 
@@ -496,13 +501,13 @@ Using the derived equations for the linear Gaussian model, an optimal SUPF algor
     \FOR{$i=1,\dots,N_F$}
       \IF{$t>1$ and $\ess{\rt-1}$ less than threshold}
         \STATE Select an ancestor, $a_i=j$, with probability $\naw{\rt-1}\pss{j}$
-        \STATE Calculate predictive particle weight, $\pw{\rt,0}\pss{i} = \npw{\rt-1}\pss{a_i} / \naw{\rt-1}\pss{a_i}$.
+        \STATE Calculate predictive particle weight, $\predpw{\rt,0}\pss{i} = \npw{\rt-1}\pss{a_i} / \naw{\rt-1}\pss{a_i}$.
       \ELSE
-        \STATE Initialise weights, $\pw{\rt,0}\pss{i} = 1$.
+        \STATE Initialise weights, $\predpw{\rt,0}\pss{i} = 1$.
       \ENDIF
       \STATE Sample a predictive state value from the transition/prior density, $\ls{\rt,0} \sim p(\ls{\rt} | \ls{\rt-1})$ or $\ls{\rt,0} \sim p(\ls{\rt})$.
-      \STATE Sample an updated state value from the smooth update importance density given by \eqref{eq:lg_stochastic_flow_importance_density}, $\ls{\rt,1} \sim \impden(\ls{\rt,1} | \ls{\rt,0})$.
-      \STATE Update particle weight, $\pw{\rt,1}\pss{i}$ using \eqref{eq:deterministic_weight_update} or \eqref{eq:general_weight_update}.
+      \STATE Generate an update state value using \eqref{eq:deterministic_map} or \eqref{eq:stochastic_map}.
+      \STATE Update particle weight, $\pw{\rt,1}\pss{i}$ using \eqref{eq:linear_Gaussian_stochastic_weight_update}.
       \STATE Finalise, $\ls{\rt}\pss{i} = \ls{\rt,1}\pss{i}$, $\pw{\rt}\pss{i} = \pw{\rt,1}\pss{i}$.
     \ENDFOR
     \STATE Normalise weights, $\npw{\rt} = \pw{\rt}\pss{i} / \sum_j \pw{\rt}\pss{j}$ .
@@ -510,6 +515,8 @@ Using the derived equations for the linear Gaussian model, an optimal SUPF algor
 \end{algorithmic}
 \end{algorithm}
 
+
+{\meta ************************ THE COAL FACE. ***************************}
 
 
 
@@ -528,28 +535,28 @@ This derivation is based closely on the exposition of \citep{Daum2008}, except t
 An equation for the optimal flow may be derived by considering the sequence of densities, $\oiden{\pt}(\ls{\pt})$. Taking the log and differentiating with respect to $\pt$ and $\ls{\pt}$,
 %
 \begin{IEEEeqnarray}{rCl}
- \log\left( \oiden{\pt}(\ls{\pt}) \right) & = & \log\left( \flowtd(\ls{\pt}) \right) + \pt \log\left( \flowod(\ls{\pt}) \right) - \log\left(\oinorm{\pt}\right)     ,
+ \log\left( \oiden{\pt}(\ls{\pt}) \right) & = & \log\left( \flowtd(\ls{\pt}) \right) + \pt \log\left( \flowod(\ls{\pt}) \right) - \log\left(\oinorm{\pt}\right) \nonumber      ,
 \end{IEEEeqnarray}
 %
 \begin{IEEEeqnarray}{rCl}
  \frac{\partial}{\partial \pt} \log\left( \oiden{\pt}(\ls{\pt}) \right) & = & \frac{ 1 }{ \oiden{\pt}(\ls{\pt}) } \frac{\partial \oiden{\pt}}{\partial \pt} \nonumber \\
-  & = & \log\left(\flowod(\ls{\pt})\right) - \frac{d}{d\pt}\log\left(\oinorm{\pt}\right) \label{eq:dpi-dlam}     ,
+  & = & \log\left(\flowod(\ls{\pt})\right) - \frac{d}{d\pt}\log\left(\oinorm{\pt}\right) \nonumber      ,
 \end{IEEEeqnarray}
 %
 \begin{IEEEeqnarray}{rCl}
- \nabla \log\left( \oiden{\pt}(\ls{\pt}) \right) & = & \frac{ 1 }{ \oiden{\pt}(\ls{\pt}) } \nabla \oiden{\pt}(\ls{\pt}) \label{eq:dpi-dx}     .
+ \nabla \log\left( \oiden{\pt}(\ls{\pt}) \right) & = & \frac{ 1 }{ \oiden{\pt}(\ls{\pt}) } \nabla \oiden{\pt}(\ls{\pt}) \nonumber      .
 \end{IEEEeqnarray}
 %
 The Fokker-Planck equation relates the motion of a particle with the evolution of the density for its position. For a particle moving according to,
 %
 \begin{IEEEeqnarray}{rCl}
- d\ls{\pt} & = & \flowdrift{\pt}(\ls{\pt}) d\pt + \flowdiffuse{\pt} d\flowbm{\pt}     ,
+ d\ls{\pt} & = & \flowdrift{\pt}(\ls{\pt}) d\pt + \flowdiffuse{\pt} d\flowbm{\pt} \nonumber      ,
 \end{IEEEeqnarray}
 %
 Fokker-Planck states,
 %
 \begin{IEEEeqnarray}{rCl}
- \frac{\partial \oiden{\pt}}{\partial \pt} & = & - \nabla \cdot \left[ \flowdrift{\pt}(\ls{\pt}) \oiden{\pt}(\ls{\pt}) \right] + \nabla \cdot \left[ \flowcov{\pt} \nabla \oiden{\pt}(\ls{\pt}) \right]     .
+ \frac{\partial \oiden{\pt}}{\partial \pt} & = & - \nabla \cdot \left[ \flowdrift{\pt}(\ls{\pt}) \oiden{\pt}(\ls{\pt}) \right] + \nabla \cdot \left[ \flowcov{\pt} \nabla \oiden{\pt}(\ls{\pt}) \right] \nonumber      .
 \end{IEEEeqnarray}
 %
 Substituting \eqref{eq:dpi-dlam} and \eqref{eq:dpi-dx}, we have,
@@ -559,7 +566,7 @@ Substituting \eqref{eq:dpi-dlam} and \eqref{eq:dpi-dx}, we have,
  \oiden{\pt}(\ls{\pt}) \left[ \log\left(\flowod(\ls{\pt})\right) - \frac{d}{d\pt}\log\left(\oinorm{\pt}\right) \right] & = & -\nabla\cdot \flowdrift{\pt}(\ls{\pt}) \oiden{\pt}(\ls{\pt}) - \flowdrift{\pt}(\ls{\pt}) \cdot \nabla \oiden{\pt}(\ls{\pt}) \nonumber \\
  &   & \qquad \qquad + \: \nabla \cdot \left[ \flowcov{\pt} \nabla \oiden{\pt}(\ls{\pt}) \right] \nonumber \\
  \left[ \log\left(\flowod(\ls{\pt})\right) - \frac{d}{d\pt}\log\left(\oinorm{\pt}\right) \right] & = & -\nabla\cdot \flowdrift{\pt}(\ls{\pt}) - \flowdrift{\pt}(\ls{\pt}) \cdot \nabla \log\left( \oiden{\pt}(\ls{\pt}) \right) \nonumber \\
- &   & \qquad \qquad + \: \frac{ 1 }{ \oiden{\pt}(\ls{\pt}) } \nabla \cdot \left[ \flowcov{\pt} \nabla \oiden{\pt}(\ls{\pt}) \right]     ,
+ &   & \qquad \qquad + \: \frac{ 1 }{ \oiden{\pt}(\ls{\pt}) } \nabla \cdot \left[ \flowcov{\pt} \nabla \oiden{\pt}(\ls{\pt}) \right] \nonumber      ,
 \end{IEEEeqnarray}
 %
 where the last step is a division through by $\oiden{\pt}$. This requires the density to be nowhere vanishing. Finally consider the normalising constant,
@@ -567,7 +574,7 @@ where the last step is a division through by $\oiden{\pt}$. This requires the de
 \begin{IEEEeqnarray}{rCl}
  \frac{d}{d\pt}\log\left(\oinorm{\pt}\right) & = & \frac{\frac{d\oinorm{\pt}}{d\pt}}{\oinorm{\pt}} \nonumber \\
                                                & = & \frac{ \int \flowtd(\ls{\pt}) \flowod(\ls{\pt})^\pt \log\left(\flowod(\ls{\pt})\right) d\ls{\rt} }{ \int \flowtd(\ls{\pt}) \flowod(\ls{\pt})^\pt d\ls{\pt} } \nonumber \\
-                                               & = & \expect{\oiden{\pt}}\left[ \log\left(\flowod(\ls{\pt})\right) \right]     .
+                                               & = & \expect{\oiden{\pt}}\left[ \log\left(\flowod(\ls{\pt})\right) \right] \nonumber      .
 \end{IEEEeqnarray}
 %
 Thus,
@@ -629,7 +636,7 @@ The following intermediate terms can then be calculated,
 When $\flowdiffuse{\pt}=0$, the general solution to the governing PDE for the optimal flow with the partially linear Gaussian model is given by,
 %
 \begin{IEEEeqnarray}{rCl}
- \flowdrift{\pt}(\ls{\pt}) & = & \lgoicov{\pt} \obsmat^T \obscov^{-1} \left[ (\ob{\rt}-\obsmat\lgoimean{\pt}) - \frac{1}{2} \obsmat(\ls{\pt}-\lgoimean{\pt}) \right] + \lgoicov{\pt}^{\frac{1}{2}} \rotategen \lgoicov{\pt}^{-\frac{1}{2}} (\ls{\pt}-\lgoimean{\pt})     ,
+ \flowdrift{\pt}(\ls{\pt}) & = & \lgoicov{\pt} \obsmat^T \obscov^{-1} \left[ (\ob{\rt}-\obsmat\lgoimean{\pt}) - \frac{1}{2} \obsmat(\ls{\pt}-\lgoimean{\pt}) \right] + \lgoicov{\pt}^{\frac{1}{2}} \rotategen \lgoicov{\pt}^{-\frac{1}{2}} (\ls{\pt}-\lgoimean{\pt}) \nonumber      ,
 \end{IEEEeqnarray}
 %
 where $\rotategen$ is the infinitesimal generator of an arbitrary rotation. The first term is a particular solution to the PDE, while the second is the complementary function.
@@ -637,7 +644,7 @@ where $\rotategen$ is the infinitesimal generator of an arbitrary rotation. The 
 Consider first the particular solution,
 %
 \begin{IEEEeqnarray}{rCl}
- \flowdrift{P,\pt}(\ls{\pt}) & = & \lgoicov{\pt} \obsmat^T \obscov^{-1} \left[ (\ob{\rt}-\obsmat\lgoimean{\pt}) - \frac{1}{2} \obsmat(\ls{\pt}-\lgoimean{\pt}) \right]   .
+ \flowdrift{P,\pt}(\ls{\pt}) & = & \lgoicov{\pt} \obsmat^T \obscov^{-1} \left[ (\ob{\rt}-\obsmat\lgoimean{\pt}) - \frac{1}{2} \obsmat(\ls{\pt}-\lgoimean{\pt}) \right] \nonumber    .
 \end{IEEEeqnarray}
 %
 Substituting this, and the intermediate terms into \eqref{app-eq:optimal_flow_PDE},
@@ -658,7 +665,7 @@ With a little algebra, the two side are seen to be equal.
 Next, consider the complementary function,
 %
 \begin{IEEEeqnarray}{rCl}
- \flowdrift{C,\pt}(\ls{\pt}) & = & \lgoicov{\pt}^{\frac{1}{2}} \rotategen \lgoicov{\pt}^{-\frac{1}{2}} (\ls{\pt}-\lgoimean{\pt})     .
+ \flowdrift{C,\pt}(\ls{\pt}) & = & \lgoicov{\pt}^{\frac{1}{2}} \rotategen \lgoicov{\pt}^{-\frac{1}{2}} (\ls{\pt}-\lgoimean{\pt}) \nonumber       .
 \end{IEEEeqnarray}
 %
 Again, substituting into \eqref{app-eq:optimal_flow_PDE},
@@ -668,7 +675,7 @@ Again, substituting into \eqref{app-eq:optimal_flow_PDE},
             & = & - \trace\left[ \frac{\partial \flowdrift{C,\pt}}{\partial \pt} \right] + \flowdrift{C,\pt}(\ls{\pt})^T \lgoicov{\pt}^{-1} \left(\ls{\pt}-\lgoimean{\pt}\right) \nonumber \\
             & = & \frac{1}{2} \trace\left[ \lgoicov{\pt}^{\frac{1}{2}} \rotategen \lgoicov{\pt}^{-\frac{1}{2}} \right] + \left[ \lgoicov{\pt}^{\frac{1}{2}} \rotategen \lgoicov{\pt}^{-\frac{1}{2}} (\ls{\pt}-\lgoimean{\pt}) \right]^T \lgoicov{\pt}^{-1} \left(\ls{\pt}-\lgoimean{\pt}\right) \nonumber \\
             & = & \frac{1}{2} \trace\left[ \rotategen \right] + (\ls{\pt}-\lgoimean{\pt})^T  \lgoicov{\pt}^{-\frac{1}{2}} \rotategen \lgoicov{\pt}^{-\frac{1}{2}} \left(\ls{\pt}-\lgoimean{\pt}\right) \nonumber \\
-            & = & 0      ,
+            & = & 0 \nonumber        ,
 \end{IEEEeqnarray}
 %
 using the cyclic permutation property of the trace and from the trace and inner product properties of skew-symmetric matrixes.
@@ -679,13 +686,13 @@ When $\flowdiffuse{\pt}\ne0$, the general solution to the governing PDE for the 
 %
 \begin{IEEEeqnarray}{rCl}
  \flowdrift{\pt}(\ls{\pt}) & = & \lgoicov{\pt} \obsmat^T \obscov^{-1} \left[ (\ob{\rt}-\obsmat\lgoimean{\pt}) - \frac{1}{2} \obsmat(\ls{\pt}-\lgoimean{\pt}) \right] \nonumber \\
-  &   & \qquad \qquad - \: \flowcov{\pt} \lgoicov{\pt}^{-1} (\ls{\pt}-\lgoimean{\pt}) + \lgoicov{\pt}^{\frac{1}{2}} \rotategen \lgoicov{\pt}^{-\frac{1}{2}} (\ls{\pt}-\lgoimean{\pt})     ,
+  &   & \qquad \qquad - \: \flowcov{\pt} \lgoicov{\pt}^{-1} (\ls{\pt}-\lgoimean{\pt}) + \lgoicov{\pt}^{\frac{1}{2}} \rotategen \lgoicov{\pt}^{-\frac{1}{2}} (\ls{\pt}-\lgoimean{\pt}) \nonumber      ,
 \end{IEEEeqnarray}
 %
 where $\rotategen$ is the infinitesimal generator of an arbitrary rotation. This is the same as for the deterministic case with one extra term. Hence, the solution may be verified simply by considering the effect of this term,
 %
 \begin{IEEEeqnarray}{rCl}
- \flowdrift{D,\pt}(\ls{\pt}) & = & - \flowcov{\pt} \lgoicov{\pt}^{-1} (\ls{\pt}-\lgoimean{\pt})     .
+ \flowdrift{D,\pt}(\ls{\pt}) & = & - \flowcov{\pt} \lgoicov{\pt}^{-1} (\ls{\pt}-\lgoimean{\pt}) \nonumber      .
 \end{IEEEeqnarray}
 %
 Substituting into \eqref{app-eq:optimal_flow_PDE},
@@ -695,15 +702,17 @@ Substituting into \eqref{app-eq:optimal_flow_PDE},
             & = & - \trace\left[ \frac{\partial \flowdrift{D,\pt}}{\partial \pt} \right] + \flowdrift{D,\pt}(\ls{\pt})^T \lgoicov{\pt}^{-1} \left(\ls{\pt}-\lgoimean{\pt}\right) + \frac{ 1 }{ \oiden{\pt}(\ls{\pt}) } \nabla \cdot \left[ \flowcov{\pt} \nabla \oiden{\pt}(\ls{\pt}) \right] \nonumber \\
             & = & \trace\left[ \flowcov{\pt} \lgoicov{\pt}^{-1} \right] - \left[ \flowcov{\pt} \lgoicov{\pt}^{-1} (\ls{\pt}-\lgoimean{\pt}) \right]^T \lgoicov{\pt}^{-1} \left(\ls{\pt}-\lgoimean{\pt}\right) \nonumber \\
             &   & \qquad \qquad + \: \left(\ls{\pt}-\lgoimean{\pt}\right)^T \lgoicov{\pt}^{-1} \flowcov{\pt} \lgoicov{\pt}^{-1} \left(\ls{\pt}-\lgoimean{\pt}\right) - \trace\left[ \flowcov{\pt} \lgoicov{\pt}^{-1} \right] \nonumber \\
-            & = & 0      .
+            & = & 0 \nonumber       .
 \end{IEEEeqnarray}
 %
 Thus, the extra term in the solution exactly cancels the additional term in the PDE due to the diffusion.
 
 
-\section{Proof of Lemma~\ref{lem:optimal_map_linear_Gaussian}: Optimal Deterministic Transport Map for a Partially Linear Gaussian Model} \label{app:optimal_map_linear_Gaussian}
+\section{Proof of Lemmas~\ref{lem:optimal_map_linear_Gaussian} and~\ref{lem:optimal_importance_density_linear_Gaussian}: Optimal Transport Map and Importance Density for a Partially Linear Gaussian Model} \label{app:optimal_integrals_linear_Gaussian}
 
-We require the transport map,
+\subsection{Deterministic Case}
+
+When $\flowdiffuse{\pt}=0$, we require the transport map,
 %
 \begin{IEEEeqnarray}{rCl}
  \flowmap{\pt_0}{\pt_1} (\ls{\pt_0}) & = & \ls{\pt_0} + \int_{\pt_0}^{\pt_1} \flowdrift{l}(\ls{l}) dl \nonumber     ,
@@ -738,37 +747,76 @@ From standard infinitesimal identities, discarding quadratic terms and higher
 Hence,
 %
 \begin{IEEEeqnarray}{rCl}
- \lim_{\dpt\rightarrow0} \frac{ \flowmap{\pt}{\pt+\dpt} (\ls{\pt}) - \ls{\pt} }{ \dpt }  & = & \lim_{\dpt\rightarrow0} \frac{1}{\dpt} \left[ \lgoimean{\pt+\dpt} + \lgoicov{\pt+\dpt}^{\frac{1}{2}} \lgoicov{\pt}^{-\frac{1}{2}} (\ls{\pt}-\lgoimean{\pt}) - \ls{\pt} + \bigo{\dpt^2} \right] \nonumber \\
+ \lim_{\dpt\rightarrow0} \frac{ \flowmap{\pt}{\pt+\dpt} (\ls{\pt}) - \ls{\pt} }{ \dpt }  & = & \lim_{\dpt\rightarrow0} \frac{1}{\dpt} \left[ \lgoimean{\pt+\dpt} + \lgoicov{\pt+\dpt}^{\frac{1}{2}} \lgoicov{\pt}^{-\frac{1}{2}} (\ls{\pt}-\lgoimean{\pt}) - \ls{\pt} \right] \nonumber \\
  & = & \lim_{\dpt\rightarrow0} \frac{1}{\dpt} \bigg[ \lgoimean{\pt} + \dpt \lgoicov{\pt} \obsmat^T \obscov^{-1} (\ob{\rt} - \obsmat \lgoimean{\pt}) \nonumber \\
  &   & \qquad + \: \left( \lgoicov{\pt}^{\frac{1}{2}} - {\frac{1}{2}} \dpt \lgoicov{\pt} \obsmat^T \obscov^{-1} \obsmat \lgoicov{\pt}^{\frac{1}{2}} \right) \lgoicov{\pt}^{-\frac{1}{2}} (\ls{\pt}-\lgoimean{\pt}) - \ls{\pt}  + \bigo{\dpt^2} \bigg] \nonumber \\
  & = & \lim_{\dpt\rightarrow0} \left[ \lgoicov{\pt} \obsmat^T \obscov^{-1} (\ob{\rt} - \obsmat \lgoimean{\pt}) - {\frac{1}{2}} \lgoicov{\pt} \obsmat^T \obscov^{-1} \obsmat (\ls{\pt}-\lgoimean{\pt})  + \bigo{\dpt} \right] \nonumber \\
- & = & \lgoicov{\pt} \obsmat^T \obscov^{-1} (\ob{\rt} - \obsmat \lgoimean{\pt}) - {\frac{1}{2}} \lgoicov{\pt} \obsmat^T \obscov^{-1} \obsmat (\ls{\pt}-\lgoimean{\pt}) ,
+ & = & \lgoicov{\pt} \obsmat^T \obscov^{-1} (\ob{\rt} - \obsmat \lgoimean{\pt}) - {\frac{1}{2}} \lgoicov{\pt} \obsmat^T \obscov^{-1} \obsmat (\ls{\pt}-\lgoimean{\pt}) \nonumber       ,
 \end{IEEEeqnarray}
 %
 which is the correct expression for $\flowdrift{\pt}$.
 
+\subsection{Stochastic Case}
 
-
-\section{Proof of Lemma~\ref{lem:optimal_importance_density_linear_Gaussian}: Optimal Importance Density for a Partially Linear Gaussian Model} \label{app:optimal_importance_density_linear_Gaussian}
-
-We require the importance density $\impden(\ls{\pt_1} | \ls{\pt_0})$ corresponding to the optimal, stochastic flow associated with a partially linear Gaussian model, where the infinitesimal generator matrix for the arbitrary rotation has been set to the zero matrix and the diffusion matrix has been set so that,
+When $\flowdiffuse{\pt}\ne0$, we require the importance density $\impden(\ls{\pt_1} | \ls{\pt_0})$ corresponding to the optimal, stochastic flow associated with a partially linear Gaussian model, where the infinitesimal generator matrix for the arbitrary rotation has been set to the zero matrix and the diffusion matrix has been set so that,
 %
 \begin{IEEEeqnarray}{rCl}
  \flowcov{\pt} & = & \frac{1}{2} \lfdiffsf \lgoicov{\pt} \nonumber       ,
 \end{IEEEeqnarray}
 %
-where $\lfdiffsf$ is a positive scale factor. The optimal flow is,
+where $\lfdiffsf$ is a positive scale factor. The optimal flow is therefore,
 %
 \begin{IEEEeqnarray}{rCl}
- \flowdrift{\pt}(\ls{\pt}) & = & \lgoicov{\pt} \obsmat^T \obscov^{-1} \left[ (\ob{\rt}-\obsmat\lgoimean{\pt}) - \frac{1}{2} \obsmat(\ls{\pt}-\lgoimean{\pt}) \right] \nonumber \\
-  &   & \qquad \qquad - \: \frac{1}{2} \lfdiffsf (\ls{\pt}-\lgoimean{\pt}) + \lgoicov{\pt}^{\frac{1}{2}} \rotategen \lgoicov{\pt}^{-\frac{1}{2}} (\ls{\pt}-\lgoimean{\pt}) \nonumber       ,
+ \flowdrift{\pt}(\ls{\pt}) & = & \lgoicov{\pt} \obsmat^T \obscov^{-1} \left[ (\ob{\rt}-\obsmat\lgoimean{\pt}) - \frac{1}{2} \obsmat(\ls{\pt}-\lgoimean{\pt}) \right] - \frac{1}{2} \lfdiffsf (\ls{\pt}-\lgoimean{\pt}) \nonumber       ,
 \end{IEEEeqnarray}
 
 The solution is given by,
 %
 \begin{IEEEeqnarray}{rCl}
- \impden(\ls{\pt_1} | \ls{\pt_0}) & = & 
+ \impden(\ls{\pt_1} | \ls{\pt_0}) & = & \mathcal{N}(\ls{\pt_1}| \lgoimean{\pt_1} + \lfmapmat{\pt_0,\pt_1} (\ls{\pt_0}-\lgoimean{\pt_0}) , \lfmapcov{\pt_0,\pt_1} ) \nonumber        ,
 \end{IEEEeqnarray}
+%
+where
+%
+\begin{IEEEeqnarray}{rCl}
+ \lfmapmat{\pt_0,\pt_1} & = & \exp\left\{ -\frac{1}{2} \lfdiffsf (\pt_1-\pt_0) \right\} \lgoicov{\pt_1}^{\frac{1}{2}} \lgoicov{\pt_0}^{-\frac{1}{2}} \nonumber \\
+ \lfmapcov{\pt_0,\pt_1} & = & \left( 1 - \exp\left\{ -\lfdiffsf(\pt_1-\pt_0) \right\} \right) \lgoicov{\pt_1} \nonumber       .
+\end{IEEEeqnarray}
+
+Alternatively, this may be written as a stochastic map,
+%
+\begin{IEEEeqnarray}{rCl}
+ \flowmap{\pt_0}{\pt_1} (\ls{\pt_0}) & = & \lgoimean{\pt_1} + \lfmapmat{\pt_0,\pt_1} (\ls{\pt_0}-\lgoimean{\pt_0}) + \lfmapcov{\pt_0,\pt_1}^{\frac{1}{2}} z \nonumber
+\end{IEEEeqnarray}
+%
+where $z$ is a zero-mean, identity-variance Gaussian random variable. Again, the proof follows from setting $\pt_0 = \pt$, $\pt_1 = \pt + \dpt$ and taking a limit. For small $\dpt$,
+%
+\begin{IEEEeqnarray}{rCl}
+ \lfmapmat{\pt,\pt+\dpt} & \approx & \left[1 - \frac{1}{2} \lfdiffsf \dpt \right] \lgoicov{\pt+\dpt}^{\frac{1}{2}} \lgoicov{\pt}^{-\frac{1}{2}} \nonumber \\
+                         & \approx & \left( \lgoicov{\pt}^{\frac{1}{2}} - {\frac{1}{2}} \dpt \lgoicov{\pt} \obsmat^T \obscov^{-1} \obsmat \lgoicov{\pt}^{\frac{1}{2}} \right) \lgoicov{\pt}^{-\frac{1}{2}} - \frac{1}{2} \lfdiffsf \dpt I  \nonumber \\
+                         & \approx & I - {\frac{1}{2}} \dpt \left( \lgoicov{\pt} \obsmat^T \obscov^{-1} \obsmat + \lfdiffsf I \right) \nonumber \\
+ \lfmapcov{\pt,\pt+\dpt} & \approx & \lfdiffsf \dpt \lgoicov{\pt+\dpt} \nonumber \\
+                         & \approx & \lfdiffsf \dpt \lgoicov{\pt} \nonumber       .
+\end{IEEEeqnarray}
+%
+Hence,
+%
+\begin{IEEEeqnarray}{rCl}
+ \flowmap{\pt}{\pt+\dpt} (\ls{\pt}) - \ls{\pt}  & = & \lgoimean{\pt+\dpt} + \lfmapmat{\pt,\pt+\dpt} (\ls{\pt}-\lgoimean{\pt}) + \lfmapcov{\pt,\pt+\dpt}^{\frac{1}{2}} z \nonumber \\
+ & = & \lgoimean{\pt} + \dpt \lgoicov{\pt} \obsmat^T \obscov^{-1} (\ob{\rt} - \obsmat \lgoimean{\pt}) \nonumber \\
+ &   & \qquad \qquad + \: \left( I - {\frac{1}{2}} \dpt \left( \lgoicov{\pt} \obsmat^T \obscov^{-1} \obsmat + \lfdiffsf I \right) \right) (\ls{\pt}-\lgoimean{\pt}) \nonumber \\
+ &   & \qquad \qquad + \: \lfdiffsf^{\frac{1}{2}} \dpt^{\frac{1}{2}} \lgoicov{\pt}^{\frac{1}{2}} - \ls{\pt}  + \bigo{\dpt^{\frac{3}{2}}} \nonumber \\
+ & = & \dpt \lgoicov{\pt} \obsmat^T \obscov^{-1} (\ob{\rt} - \obsmat \lgoimean{\pt}) \nonumber \\
+ &   & \qquad \qquad - \: {\frac{1}{2}} \dpt \left( \lgoicov{\pt} \obsmat^T \obscov^{-1} \obsmat + \lfdiffsf I \right) (\ls{\pt}-\lgoimean{\pt}) \nonumber \\
+ &   & \qquad \qquad + \: \lfdiffsf^{\frac{1}{2}} \dpt^{\frac{1}{2}} \lgoicov{\pt}^{\frac{1}{2}} + \bigo{\dpt^{\frac{3}{2}}} \nonumber \\
+ & = & \flowdrift{\pt}(\ls{\pt}) \dpt + \flowdiffuse{\pt} \delta \flowbm{\pt}  + \bigo{\dpt^{\frac{3}{2}}} \nonumber     .
+\end{IEEEeqnarray}
+%
+So as $\dpt \rightarrow 0$, the optimal flow is recovered.
+
+
+
+
 
 
 \bibliographystyle{chicago}
