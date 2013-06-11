@@ -84,6 +84,12 @@ It is possible to take the idea of bridging distributions to a limit and define 
 
 In a particle flow filter, a sequence of densities is defined at each time step between the predictive and filtering densities, parameterised by a ``pseudo-time'' variable which increases from $0$ to $1$. Each frame of the filtering algorithm begins with the sampling of a set of particles from the predictive density. The particles are then imbued with some appropriate dynamics such that they are always distributed according to the density sequence as they advance through pseudo-time, and thus follow the required filtering density when the interval of pseudo-time ends. The dynamics may be deterministic \citep{Daum2008}, or stochastic \citep{Daum2013,Reich2011}. In either case, correct drift and diffusion terms may be derived using the Fokker-Planck equation, which relates the evolution of densities (which is specified) to the corresponding flow of particles.
 
+{\meta \\****** Good to here *************\\}
+
+
+
+
+
 A significant advantage of particle flow filters is that particles are equally weighted throughout. Consequently, they do not require any resampling and are easily parallelised. However, while extremely elegant, they suffer from a number of drawbacks:
 \begin{enumerate}
   \item There is only one model for which the particle dynamics can be derived and integrated analytically: the linear Gaussian case, for which there already exists the optimal and far more efficient Kalman filter. For every other model, it is necessary to make either numerical or functional approximations in order to evaluate the particle flow, besides which this flow must then be numerically integrated. For example, it seems generally to be required that it be possible to evaluate the filtering density at arbitrary points. This is addressed in \citep{Daum2012} by using a Monte Carlo approximation, and in \citep{Reich2012a} by using a Gaussian-mixture approximation. The problem with these approximations is that they alter the distribution of the particles such that it is no longer exactly equal to the filtering distribution, and the resulting errors thus introduced are not easily quantified. Hence, these particle flow methods do not have the appealing asymptotic consistency of an ordinary particle filter.
@@ -94,6 +100,16 @@ A significant advantage of particle flow filters is that particles are equally w
 \subsection{Smooth Updates}
 
 In this paper, we attempt to reconcile the elegant and powerful techniques of particle flows with the standard framework for particle filtering. This is achieved by using a particle flow as a mechanism for sampling from an approximation to the OID, rather than attempting to sample directly from the filtering distribution, and by exploiting the analytic results available for a particular class of models. The resulting algorithm, which we dub the smooth update particle filter (SUPF), is free from the drawbacks of existing particle flow filters discussed above, but also loses the property of equally weighted particles.
+
+{\meta ******* ADDING HERE *********}
+
+A modification of the algorithm is also presented which introduces intermediate resampling steps during the smooth update. This helps further to limit degeneracy of the particle weights, at the cost of introducing dependency between the particles. This latter algorithm resembles an annealed particle filter {\meta citations}, but uses gradient information from the model densities to lead particles towards maxima. In this sense, there are also connections with adaptive MCMC methods, such as those of \citep{Girolami2011}. Furthermore, the SUPF is not simply a special case of annealing algorithms since there exists a special case where the particle updates are entirely deterministic.
+
+
+
+
+
+
 
 The SUPF resembles an SMC-based annealing algorithm of the form described in \citep{DelMoral2006}, but equipped with near-optimal importance densities for each step. Furthermore, there exists a special case in which the procedure ceases to use sampling at all, but moves the particles deterministically. Since the algorithm relies on the use of gradient and curvature information from the target density, there are also connections with adaptive MCMC methods, such as those of \citep{Girolami2011}.
 
@@ -630,6 +646,133 @@ This is a partial differential equation (PDE), for which any solution, $\flowdri
 
 
 
+
+
+\section{Proof of Lemmas~\ref{lem:optimal_flow_linear_Gaussian_deterministic} and~\ref{lem:optimal_flow_linear_Gaussian_stochastic}: Optimal Flow for a Partially Linear Gaussian Model} \label{app:optimal_flow_linear_Gaussian}
+
+If the transition and observation densities are Gaussian, and the observation function is linear, then the optimal flow PDE can be solved analytically. Time subscripts, particle superscripts and dependence on $\ls{\rt-1}$ is omitted where appropriate for clarity. In addition, the transition and observation densities are written as,
+%
+\begin{IEEEeqnarray}{rClCl}
+ \flowtd(\ls{}) & = & p(\ls{} | \ls{\rt-1}) & = & \normal{\ls{}}{\transmean}{\transcov} \nonumber \\
+ \flowod(\ls{}) & = & p(\ob{\rt} | \ls{})   & = & \normal{\ob{\rt}}{\obsmat \ls{}}{\obscov} \nonumber \\
+ \transmean & = & \transfun(\ls{\rt-1}) \nonumber
+\end{IEEEeqnarray}
+%
+For this model, the OID for pseudo-time $\pt$ is available analytically,
+%
+\begin{IEEEeqnarray}{rCl}
+ \oiden{\pt}(\ls{\pt}) & = & \mathcal{N}(\ls{\pt}|\lgoimean{\pt},\lgoicov{\pt}) \nonumber    ,
+\end{IEEEeqnarray}
+%
+where
+%
+\begin{IEEEeqnarray}{rCl}
+ \lgoicov{\pt} & = & \left[ \transcov^{-1} + \obsmat^T \left(\frac{\obscov}{\pt}\right)^{-1} \obsmat \right]^{-1} \nonumber \\
+ \lgoimean{\pt}    & = & \lgoicov{\pt} \left[ \transcov^{-1} \transmean + \obsmat^T \left(\frac{\obscov}{\pt}\right)^{-1} \ob{\rt} \right] \nonumber     .
+\end{IEEEeqnarray}
+%
+The following intermediate terms can then be calculated,
+%
+\begin{IEEEeqnarray}{rCl}
+ \log\left(\flowod(\ls{\pt})\right) & = & -\frac{1}{2}\log\left(\left| 2 \pi \obscov   \right|\right) - \frac{1}{2}(\ob{\rt}-\obsmat\ls{\pt})^T \obscov^{-1}(\ob{\rt}-\obsmat\ls{\pt}) \nonumber \\
+ \expect{\oiden{\pt}}\left[ \log\left(\flowod(\ls{\pt})\right) \right] & = & -\frac{1}{2}\log\left(\left| 2 \pi \obscov \right|\right) - \frac{1}{2} \expect{\oiden{\pt}}\left[ (\ob{\rt}-\obsmat\ls{\pt})^T \obscov^{-1}(\ob{\rt}-\obsmat\ls{\pt}) \right] \nonumber \\
+ & = & -\frac{1}{2}\log\left(\left| 2 \pi \obscov \right|\right) - \frac{1}{2} \trace\left( \lgoicov{\pt} \obsmat^T \obscov^{-1} \obsmat \right) \nonumber \\
+ &   & \qquad - \: \frac{1}{2} (\ob{\rt}-\obsmat\lgoimean{\pt})^T \obscov^{-1}(\ob{\rt}-\obsmat\lgoimean{\pt}) \nonumber \\
+ \nabla \log\left(\flowod(\ls{\pt})\right) & = & \obsmat^T \obscov^{-1}(\ob{\rt}-\obsmat\ls{\pt}) \nonumber
+\end{IEEEeqnarray}
+\begin{IEEEeqnarray}{rCl}
+ \log\left(\oiden{\pt}(\ls{\pt})\right) & = & -\frac{1}{2}\log\left(\left| 2 \pi \lgoicov{\pt} \right|\right) - \frac{1}{2}(\ls{\pt}-\lgoimean{\pt})^T \lgoicov{\pt}^{-1}(\ls{\pt}-\lgoimean{\pt}) \nonumber \\
+ \nabla \log\left(\oiden{\pt}(\ls{\pt})\right) & = & - \lgoicov{\pt}^{-1} \left(\ls{\pt}-\lgoimean{\pt}\right) \nonumber
+\end{IEEEeqnarray}
+\begin{IEEEeqnarray}{rCl}
+ \nabla \oiden{\pt}(\ls{\pt}) & = & \oiden{\pt}(\ls{\pt}) \left[ -\lgoicov{\pt}^{-1} \left(\ls{\pt}-\lgoimean{\pt}\right) \right] \nonumber \\
+ \nabla \cdot \left[ \flowcov{\pt} \nabla \oiden{\pt}(\ls{\pt}) \right] & = & \nabla \cdot \left\{ \oiden{\pt}(\ls{\pt}) \left[ - \flowcov{\pt} \lgoicov{\pt}^{-1} \left(\ls{\pt}-\lgoimean{\pt}\right) \right] \right\} \nonumber \\
+ & = & \nabla \oiden{\pt}(\ls{\pt}) \cdot \left[ - \flowcov{\pt} \lgoicov{\pt}^{-1} \left(\ls{\pt}-\lgoimean{\pt}\right) \right] + \oiden{\pt}(\ls{\pt}) \nabla \cdot \left[ - \flowcov{\pt} \lgoicov{\pt}^{-1} \left(\ls{\pt}-\lgoimean{\pt}\right) \right] \nonumber \\
+ & = & \oiden{\pt}(\ls{\pt}) \left\{ \left(\ls{\pt}-\lgoimean{\pt}\right)^T \lgoicov{\pt}^{-1} \flowcov{\pt} \lgoicov{\pt}^{-1} \left(\ls{\pt}-\lgoimean{\pt}\right) - \trace\left[ \flowcov{\pt} \lgoicov{\pt}^{-1} \right] \right\} \nonumber       .
+\end{IEEEeqnarray}
+
+\subsection{Deterministic Case}
+
+When $\flowdiffuse{\pt}=0$, the general solution to the governing PDE for the optimal flow with the partially linear Gaussian model is given by,
+%
+\begin{IEEEeqnarray}{rCl}
+ \flowdrift{\pt}(\ls{\pt}) & = & \lgoicov{\pt} \obsmat^T \obscov^{-1} \left[ (\ob{\rt}-\obsmat\lgoimean{\pt}) - \frac{1}{2} \obsmat(\ls{\pt}-\lgoimean{\pt}) \right] + \lgoicov{\pt}^{\frac{1}{2}} \rotategen \lgoicov{\pt}^{-\frac{1}{2}} (\ls{\pt}-\lgoimean{\pt}) \nonumber      ,
+\end{IEEEeqnarray}
+%
+where $\rotategen$ is the infinitesimal generator of an arbitrary rotation. The first term is a particular solution to the PDE, while the second is the complementary function.
+
+Consider first the particular solution,
+%
+\begin{IEEEeqnarray}{rCl}
+ \flowdrift{P,\pt}(\ls{\pt}) & = & \lgoicov{\pt} \obsmat^T \obscov^{-1} \left[ (\ob{\rt}-\obsmat\lgoimean{\pt}) - \frac{1}{2} \obsmat(\ls{\pt}-\lgoimean{\pt}) \right] \nonumber    .
+\end{IEEEeqnarray}
+%
+Substituting this, and the intermediate terms into \eqref{app-eq:optimal_flow_PDE},
+%
+\begin{IEEEeqnarray}{rCl}
+ \text{RHS} & = & - \nabla\cdot \flowdrift{P,\pt}(\ls{\pt}) - \flowdrift{P,\pt}(\ls{\pt}) \cdot \nabla \log\left( \oiden{\pt}(\ls{\pt}) \right) \nonumber \\
+            & = & - \trace\left[ \frac{\partial \flowdrift{P,\pt}}{\partial \pt} \right] + \flowdrift{P,\pt}(\ls{\pt})^T \lgoicov{\pt}^{-1} \left(\ls{\pt}-\lgoimean{\pt}\right) \nonumber \\
+            & = & \frac{1}{2} \trace\left[ \lgoicov{\pt} \obsmat^T \obscov^{-1} \obsmat \right] + \left[ (\ob{\rt}-\obsmat\lgoimean{\pt}) - \frac{1}{2} \obsmat(\ls{\pt}-\lgoimean{\pt}) \right]^T \obscov^{-1} \obsmat \left(\ls{\pt}-\lgoimean{\pt}\right) \nonumber
+\end{IEEEeqnarray}
+\begin{IEEEeqnarray}{rCl}
+ \text{LHS} & = & \log\left(\flowod(\ls{\pt})\right) - \expect{\oiden{\pt}}\left[ \log\left(\flowod(\ls{\pt})\right) \right] \nonumber \\
+            & = & - \frac{1}{2}(\ob{\rt}-\obsmat\ls{\pt})^T \obscov^{-1}(\ob{\rt}-\obsmat\ls{\pt}) \nonumber \\
+            &   & \qquad + \: \frac{1}{2} \trace\left( \lgoicov{\pt} \obsmat^T \obscov^{-1} \obsmat \right) + \frac{1}{2} (\ob{\rt}-\obsmat\lgoimean{\pt})^T \obscov^{-1}(\ob{\rt}-\obsmat\lgoimean{\pt}) \nonumber      .
+\end{IEEEeqnarray}
+%
+With a little algebra, the two side are seen to be equal.
+
+Next, consider the complementary function,
+%
+\begin{IEEEeqnarray}{rCl}
+ \flowdrift{C,\pt}(\ls{\pt}) & = & \lgoicov{\pt}^{\frac{1}{2}} \rotategen \lgoicov{\pt}^{-\frac{1}{2}} (\ls{\pt}-\lgoimean{\pt}) \nonumber       .
+\end{IEEEeqnarray}
+%
+Again, substituting into \eqref{app-eq:optimal_flow_PDE},
+%
+\begin{IEEEeqnarray}{rCl}
+ \text{RHS} & = & - \nabla\cdot \flowdrift{C,\pt}(\ls{\pt}) - \flowdrift{C,\pt}(\ls{\pt}) \cdot \nabla \log\left( \oiden{\pt}(\ls{\pt}) \right) \nonumber \\
+            & = & - \trace\left[ \frac{\partial \flowdrift{C,\pt}}{\partial \pt} \right] + \flowdrift{C,\pt}(\ls{\pt})^T \lgoicov{\pt}^{-1} \left(\ls{\pt}-\lgoimean{\pt}\right) \nonumber \\
+            & = & \frac{1}{2} \trace\left[ \lgoicov{\pt}^{\frac{1}{2}} \rotategen \lgoicov{\pt}^{-\frac{1}{2}} \right] + \left[ \lgoicov{\pt}^{\frac{1}{2}} \rotategen \lgoicov{\pt}^{-\frac{1}{2}} (\ls{\pt}-\lgoimean{\pt}) \right]^T \lgoicov{\pt}^{-1} \left(\ls{\pt}-\lgoimean{\pt}\right) \nonumber \\
+            & = & \frac{1}{2} \trace\left[ \rotategen \right] + (\ls{\pt}-\lgoimean{\pt})^T  \lgoicov{\pt}^{-\frac{1}{2}} \rotategen \lgoicov{\pt}^{-\frac{1}{2}} \left(\ls{\pt}-\lgoimean{\pt}\right) \nonumber \\
+            & = & 0 \nonumber        ,
+\end{IEEEeqnarray}
+%
+using the cyclic permutation property of the trace and from the trace and inner product properties of skew-symmetric matrixes.
+
+\subsection{Stochastic Case}
+
+When $\flowdiffuse{\pt}\ne0$, the general solution to the governing PDE for the optimal flow with the partially linear Gaussian model is given by,
+%
+\begin{IEEEeqnarray}{rCl}
+ \flowdrift{\pt}(\ls{\pt}) & = & \lgoicov{\pt} \obsmat^T \obscov^{-1} \left[ (\ob{\rt}-\obsmat\lgoimean{\pt}) - \frac{1}{2} \obsmat(\ls{\pt}-\lgoimean{\pt}) \right] \nonumber \\
+  &   & \qquad \qquad - \: \flowcov{\pt} \lgoicov{\pt}^{-1} (\ls{\pt}-\lgoimean{\pt}) + \lgoicov{\pt}^{\frac{1}{2}} \rotategen \lgoicov{\pt}^{-\frac{1}{2}} (\ls{\pt}-\lgoimean{\pt}) \nonumber      ,
+\end{IEEEeqnarray}
+%
+where $\rotategen$ is the infinitesimal generator of an arbitrary rotation. This is the same as for the deterministic case with one extra term. Hence, the solution may be verified simply by considering the effect of this term,
+%
+\begin{IEEEeqnarray}{rCl}
+ \flowdrift{D,\pt}(\ls{\pt}) & = & - \flowcov{\pt} \lgoicov{\pt}^{-1} (\ls{\pt}-\lgoimean{\pt}) \nonumber      .
+\end{IEEEeqnarray}
+%
+Substituting into \eqref{app-eq:optimal_flow_PDE},
+%
+\begin{IEEEeqnarray}{rCl}
+ \text{RHS} & = & - \nabla\cdot \flowdrift{D,\pt}(\ls{\pt}) - \flowdrift{D,\pt}(\ls{\pt}) \cdot \nabla \log\left( \oiden{\pt}(\ls{\pt}) \right) + \frac{ 1 }{ \oiden{\pt}(\ls{\pt}) } \nabla \cdot \left[ \flowcov{\pt} \nabla \oiden{\pt}(\ls{\pt}) \right] \nonumber \\
+            & = & - \trace\left[ \frac{\partial \flowdrift{D,\pt}}{\partial \pt} \right] + \flowdrift{D,\pt}(\ls{\pt})^T \lgoicov{\pt}^{-1} \left(\ls{\pt}-\lgoimean{\pt}\right) + \frac{ 1 }{ \oiden{\pt}(\ls{\pt}) } \nabla \cdot \left[ \flowcov{\pt} \nabla \oiden{\pt}(\ls{\pt}) \right] \nonumber \\
+            & = & \trace\left[ \flowcov{\pt} \lgoicov{\pt}^{-1} \right] - \left[ \flowcov{\pt} \lgoicov{\pt}^{-1} (\ls{\pt}-\lgoimean{\pt}) \right]^T \lgoicov{\pt}^{-1} \left(\ls{\pt}-\lgoimean{\pt}\right) \nonumber \\
+            &   & \qquad \qquad + \: \left(\ls{\pt}-\lgoimean{\pt}\right)^T \lgoicov{\pt}^{-1} \flowcov{\pt} \lgoicov{\pt}^{-1} \left(\ls{\pt}-\lgoimean{\pt}\right) - \trace\left[ \flowcov{\pt} \lgoicov{\pt}^{-1} \right] \nonumber \\
+            & = & 0 \nonumber       .
+\end{IEEEeqnarray}
+%
+Thus, the extra term in the solution exactly cancels the additional term in the PDE due to the diffusion.
+
+
+
+
+
+
+
 \section{Proof of Lemma~\ref{lem:optimal_flow_nonlinear_Gaussian}: Locally Optimal Flow for a Nonlinear Gaussian Model} \label{app:optimal_flow_nonlinear_Gaussian}
 
 For a nonlinear model with Gaussian transition and observation densities,
@@ -727,7 +870,8 @@ Substituting this, and the intermediate terms into \eqref{app-eq:optimal_flow_PD
             & = & \left[ (\obdiff{\rt}-\obsmatlin{\lsfixed}\lgoimeandiff{\pt}) - \frac{1}{2} \obsmatlin{\lsfixed}(\lsdiff{\pt}-\lgoimeandiff{\pt}) \right]^T \obscov^{-1} \obsmatlin{\lsfixed} \left(\lsdiff{\pt}-\lgoimeandiff{\pt}\right) \nonumber \nonumber \\
             &   & \qquad - \: \frac{1}{2} \pt \flowdrift{P,\pt}(\ls{\pt})^T \obsmatlin{\lsfixed}^T \obscov^{-1} \hTSquad + \bigo{\lsdiff{}^3} \nonumber \\
             &   & \qquad + \: \left[ (\obdiff{\rt}-\obsmatlin{\lsfixed}\lgoimeandiff{\pt}) + \frac{1}{2} \obsmatlin{\lsfixed}\lgoimeandiff{\pt} \right]^T \obscov^{-1} \obsmatlin{\lsfixed} \lgoimeandiff{\pt} \nonumber \\
-            & = & \obdiff{\rt}^T \obscov^{-1} \obsmatlin{\lsfixed} \lsdiff{\pt} - \frac{1}{2} \lsdiff{\pt}^T \obsmatlin{\lsfixed}^T \obscov^{-1} \obsmatlin{\lsfixed} \lsdiff{\pt} \nonumber
+            & = & \obdiff{\rt}^T \obscov^{-1} \obsmatlin{\lsfixed} \lsdiff{\pt} - \frac{1}{2} \lsdiff{\pt}^T \obsmatlin{\lsfixed}^T \obscov^{-1} \obsmatlin{\lsfixed} \lsdiff{\pt} \nonumber \\
+            &   & \qquad - \: \frac{1}{2} \pt \flowdrift{P,\pt}(\ls{\pt})^T \obsmatlin{\lsfixed}^T \obscov^{-1} \hTSquad + \bigo{\lsdiff{}^3} \nonumber      .
 \end{IEEEeqnarray}
 \begin{IEEEeqnarray}{rCl}
  \text{LHS} & = & \log\left(\flowod(\ls{\pt})\right) - \log\left(\flowod(\lsfixed)\right) \nonumber \\
