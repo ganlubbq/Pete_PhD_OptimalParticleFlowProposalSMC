@@ -67,6 +67,7 @@
 \newcommand{\obscov}{R}                         % Observation covariance
 \newcommand{\transmat}{F}                       % Linear transition matrix
 \newcommand{\obsmat}{H}                         % Linear observation matrix
+\newcommand{\obsmatlin}[1]{\left.\obsmat\right|_{#1}}    % Linear observation matrix formed by differentiation of the observation function
 \newcommand{\transmean}{m}                      % Mean of the transition density (i.e. f(x_{t-1}))
 \newcommand{\dof}{\nu}                          % Degrees of freedom of something student-t-ish
 
@@ -77,12 +78,12 @@
 
 % Taylor expansions
 \newcommand{\lsfixed}{\ls{}^* }                 % Expansion point
-\newcommand{\obdiff}[1]{\Delta y_{#1}}          % Observation difference: y - h(x^*)
-\newcommand{\lsdiff}[1]{\Delta x_{#1}}          % Latent state difference: x - x^*
-\newcommand{\transmeandiff}{\Delta m}           % Transition mean difference: m - x^*
-\newcommand{\lgoimeandiff}[1]{\Delta \mu_{#1}}  % OID mean difference: \mu - x^*
+\newcommand{\obdiff}[1]{\tilde{y}_{#1}}          % Observation difference: y - h(x^*)
+\newcommand{\lsdiff}[1]{\tilde{x}_{#1}}          % Latent state difference: x - x^*
+\newcommand{\transmeandiff}{\tilde{m}}           % Transition mean difference: m - x^*
+\newcommand{\lgoimeandiff}[1]{\tilde{\mu}_{#1}}  % OID mean difference: \mu - x^*
 \newcommand{\hTSlin}{\left.\frac{\partial \obsfun}{\partial \ls{}}\right|_{\lsfixed}}   % Linear term of Taylor series of h
-\newcommand{\hTSquad}{\sum_{i,j} \left.\frac{\partial^2 \obsfun}{\partial \ls{i,j}^2}\right|_{\lsfixed} \lsdiff{i}\lsdiff{j}}   % Quadratic term of Taylor series of h
+\newcommand{\hTSquad}{\sum_{i,j} \left.\frac{\partial^2 \obsfun}{\partial \ls{i,j}^2}\right|_{\lsfixed} \lsdiff{\pt,i}\lsdiff{\pt,j}}   % Quadratic term of Taylor series of h
 
 % Miscellany
 \newcommand{\bels}[1]{\hat{x}_{#1}}             % Backwards estimate of linear state (for step-size control) 

@@ -644,7 +644,7 @@ a flow which is locally optimal around $\lsfixed$ may be derived by expanding th
 
 In the following, time subscripts, particle superscripts and dependence on $\ls{\rt-1}$ are omitted where appropriate for clarity.
 
-First rewrite the governing equation by setting $\ls{\pt}=\lsfixed$ and subtracting the result from the original. This more convenient resulting form is,
+First rewrite the governing equation by setting $\ls{\pt}=\lsfixed$ and subtracting the result from the original. This more convenient form resulting is,
 %
 \begin{IEEEeqnarray}{rCl}
 \log\left(\flowod(\ls{\pt})\right) - \log\left(\flowod(\lsfixed)\right) & = & -\left[\nabla\cdot \flowdrift{\pt}(\ls{\pt})-\nabla\cdot \flowdrift{\pt}(\lsfixed)\right] \label{app-eq:modified_optimal_flow_PDE} \\
@@ -665,33 +665,41 @@ The following intermediate terms can be calculated,
 Because both model densities are Gaussian, we only need expand the observation function as a Taylor series,
 %
 \begin{IEEEeqnarray}{rCl}
- \obsfun(\ls) & = & \obsfun(\lsfixed) + \hTSlin \lsdiff{} + \frac{1}{2} \hTSquad + \bigo{\lsdiff{}^3} \nonumber \\
- \lsdiff{}    & = & \ls{} - \lsfixed \nonumber       .
+ \obsfun(\ls{\pt}) & = & \obsfun(\lsfixed) + \hTSlin \lsdiff{\pt} + \frac{1}{2} \hTSquad + \bigo{\lsdiff{\pt}^3} \nonumber \\
+ \lsdiff{\pt}      & = & \ls{\pt} - \lsfixed \nonumber       .
 \end{IEEEeqnarray}
 %
 It is also useful to define,
 %
 \begin{IEEEeqnarray}{rCl}
  \obdiff{\rt} & = & \ob{\rt} - \obsfun(\lsfixed) \nonumber \\
- \transmeandiff & = & \transmean - \lsfixed \nonumber      .
+ \transmeandiff & = & \transmean - \lsfixed \nonumber      ,
 \end{IEEEeqnarray}
 %
-Then,
+and to write,
 %
 \begin{IEEEeqnarray}{rCl}
- \nabla \log\left(\oiden{\pt}(\ls{\pt})\right) & = & - \lgoicov{\pt}^{-1} \left(\ls{\pt}-\lgoimean{\pt}\right) - \frac{1}{2} \pt \hTSlin^T \obscov^{-1} \hTSquad + \bigo{\lsdiff{}^3} \nonumber \\
- \nabla \oiden{\pt}(\ls{\pt}) & = & \oiden{\pt}(\ls{\pt}) \bigg\{ \left(\ls{\pt}-\lgoimean{\pt}\right)^T \lgoicov{\pt}^{-1} \flowcov{\pt} \lgoicov{\pt}^{-1} \left(\ls{\pt}-\lgoimean{\pt}\right) - \trace\left[ \flowcov{\pt} \lgoicov{\pt}^{-1} \right] \nonumber \\
- &   & \qquad - \: 2 \pt \lgoimean{\pt}^T \lgoicov{\pt}^{-1} \flowcov{\pt} \hTSlin^T \obscov^{-1} \hTSquad \bigg\}
+ \obsmatlin{\lsfixed} & = & \hTSlin \nonumber      .
+\end{IEEEeqnarray}
+%
+Then after a little manipulation,
+%
+\begin{IEEEeqnarray}{rCl}
+\log\left(\flowod(\ls{\pt})\right) & = & -\frac{1}{2}\log\left(\left| 2 \pi \obscov \right|\right) - \frac{1}{2}(\obdiff{\rt}-\obsmatlin{\lsfixed} \lsdiff{\pt})^T \obscov^{-1}(\obdiff{\rt}-\obsmatlin{\lsfixed} \lsdiff{\pt}) \nonumber \\
+ &   & \qquad+ \: \obdiff{\rt}^T \obscov^{-1} \hTSquad + \bigo{\lsdiff{\pt}^3} \nonumber \\
+ \nabla \log\left(\oiden{\pt}(\ls{\pt})\right) & = & - \lgoicov{\pt}^{-1} \left(\lsdiff{\pt}-\lgoimeandiff{\pt}\right) - \frac{1}{2} \pt \obsmatlin{\lsfixed}^T \obscov^{-1} \hTSquad + \bigo{\lsdiff{}^3} \nonumber \\
+ \nabla \oiden{\pt}(\ls{\pt}) & = & \oiden{\pt}(\ls{\pt}) \bigg\{ \left(\lsdiff{\pt}-\lgoimeandiff{\pt}\right)^T \lgoicov{\pt}^{-1} \flowcov{\pt} \lgoicov{\pt}^{-1} \left(\lsdiff{\pt}-\lgoimeandiff{\pt}\right) - \trace\left[ \flowcov{\pt} \lgoicov{\pt}^{-1} \right] \nonumber \\
+ &   & \qquad - \: 2 \pt \lgoimeandiff{\pt}^T \lgoicov{\pt}^{-1} \flowcov{\pt} \obsmatlin{\lsfixed}^T \obscov^{-1} \hTSquad \bigg\}
 \end{IEEEeqnarray}
 %
 where,
 %
 \begin{IEEEeqnarray}{rCl}
- \lgoicov{\pt}  & = & \left[ \transcov^{-1} + \obsmat^T \left(\frac{\obscov}{\pt}\right)^{-1} \obsmat \right]^{-1} \nonumber \\
- \lgoimean{\pt} & = & \lgoicov{\pt} \left[ \transcov^{-1} \transmeandiff + \obsmat^T \left(\frac{\obscov}{\pt}\right)^{-1} \obdiff{\rt} \right] \nonumber     .
+ \lgoicov{\pt}  & = & \left[ \transcov^{-1} + \pt \obsmatlin{\lsfixed}^T \obscov^{-1} \obsmatlin{\lsfixed} \right]^{-1} \nonumber \\
+ \lgoimeandiff{\pt} & = & \lgoicov{\pt} \left[ \transcov^{-1} \transmeandiff + \pt \obsmatlin{\lsfixed}^T \obscov^{-1} \obdiff{\rt} \right] \nonumber     .
 \end{IEEEeqnarray}
 
-The Gaussian, $\mathcal{N}(\ls{\pt}|\lgoimean{\pt},\lgoicov{\pt})$ is a local approximation to the OID.
+The Gaussian, $\mathcal{N}(\lsdiff{\pt}|\lgoimeandiff{\pt},\lgoicov{\pt})$ is a local approximation to the OID at $\lsfixed$.
 
 
 
@@ -700,7 +708,7 @@ The Gaussian, $\mathcal{N}(\ls{\pt}|\lgoimean{\pt},\lgoicov{\pt})$ is a local ap
 When $\flowdiffuse{\pt}=0$, a general solution to the governing PDE in the vicinity of $\lsfixed$ is,
 %
 \begin{IEEEeqnarray}{rCl}
- \flowdrift{\pt}(\ls{\pt}) & = & \lgoicov{\pt} \obsmat^T \obscov^{-1} \left[ (\ob{\rt}-\obsmat\lgoimean{\pt}) - \frac{1}{2} \obsmat(\ls{\pt}-\lgoimean{\pt}) \right] + \lgoicov{\pt}^{\frac{1}{2}} \rotategen \lgoicov{\pt}^{-\frac{1}{2}} (\ls{\pt}-\lgoimean{\pt}) \nonumber      ,
+ \flowdrift{\pt}(\ls{\pt}) & = & \lgoicov{\pt} \obsmatlin{\lsfixed}^T \obscov^{-1} \left[ (\obdiff{\rt}-\obsmatlin{\lsfixed}\lgoimeandiff{\pt}) - \frac{1}{2} \obsmatlin{\lsfixed}(\lsdiff{\pt}-\lgoimeandiff{\pt}) \right] + \lgoicov{\pt}^{\frac{1}{2}} \rotategen \lgoicov{\pt}^{-\frac{1}{2}} (\lsdiff{\pt}-\lgoimeandiff{\pt}) \nonumber      ,
 \end{IEEEeqnarray}
 %
 where $\rotategen$ is the infinitesimal generator of an arbitrary rotation. The first term is a particular solution to the PDE, while the second is the complementary function.
@@ -708,24 +716,26 @@ where $\rotategen$ is the infinitesimal generator of an arbitrary rotation. The 
 Consider first the particular solution,
 %
 \begin{IEEEeqnarray}{rCl}
- \flowdrift{P,\pt}(\ls{\pt}) & = & \lgoicov{\pt} \obsmat^T \obscov^{-1} \left[ (\ob{\rt}-\obsmat\lgoimean{\pt}) - \frac{1}{2} \obsmat(\ls{\pt}-\lgoimean{\pt}) \right] \nonumber    .
+ \flowdrift{P,\pt}(\ls{\pt}) & = & \lgoicov{\pt} \obsmatlin{\lsfixed}^T \obscov^{-1} \left[ (\obdiff{\rt}-\obsmatlin{\lsfixed}\lgoimeandiff{\pt}) - \frac{1}{2} \obsmatlin{\lsfixed}(\lsdiff{\pt}-\lgoimeandiff{\pt}) \right] \nonumber    .
 \end{IEEEeqnarray}
 %
 {\meta *****************************************************}
-Substituting this, and the intermediate terms into \eqref{app-eq:optimal_flow_PDE},
+Substituting this, and the intermediate terms into \eqref{app-eq:optimal_flow_PDE}, and using the fact that $\nabla\cdot \flowdrift{\pt}(\ls{\pt})$ is a constant,
 %
 \begin{IEEEeqnarray}{rCl}
- \text{RHS} & = & - \nabla\cdot \flowdrift{P,\pt}(\ls{\pt}) - \flowdrift{P,\pt}(\ls{\pt}) \cdot \nabla \log\left( \oiden{\pt}(\ls{\pt}) \right) \nonumber \\
-            & = & - \trace\left[ \frac{\partial \flowdrift{P,\pt}}{\partial \pt} \right] + \flowdrift{P,\pt}(\ls{\pt})^T \lgoicov{\pt}^{-1} \left(\ls{\pt}-\lgoimean{\pt}\right) \nonumber \\
-            & = & \frac{1}{2} \trace\left[ \lgoicov{\pt} \obsmat^T \obscov^{-1} \obsmat \right] + \left[ (\ob{\rt}-\obsmat\lgoimean{\pt}) - \frac{1}{2} \obsmat(\ls{\pt}-\lgoimean{\pt}) \right]^T \obscov^{-1} \obsmat \left(\ls{\pt}-\lgoimean{\pt}\right) \nonumber
+ \text{RHS} & = & -\left[\nabla\cdot \flowdrift{\pt}(\ls{\pt})-\nabla\cdot \flowdrift{\pt}(\lsfixed)\right] - \left[\flowdrift{\pt}(\ls{\pt}) \cdot \nabla \log\left( \oiden{\pt}(\ls{\pt}) \right) - \flowdrift{\pt}(\lsfixed) \cdot \nabla \log\left( \oiden{\pt}(\lsfixed) \right)\right] \nonumber \\
+            & = & \left[ (\obdiff{\rt}-\obsmatlin{\lsfixed}\lgoimeandiff{\pt}) - \frac{1}{2} \obsmatlin{\lsfixed}(\lsdiff{\pt}-\lgoimeandiff{\pt}) \right]^T \obscov^{-1} \obsmatlin{\lsfixed} \left(\lsdiff{\pt}-\lgoimeandiff{\pt}\right) \nonumber \nonumber \\
+            &   & \qquad - \: \frac{1}{2} \pt \flowdrift{P,\pt}(\ls{\pt})^T \obsmatlin{\lsfixed}^T \obscov^{-1} \hTSquad + \bigo{\lsdiff{}^3} \nonumber \\
+            &   & \qquad + \: \left[ (\obdiff{\rt}-\obsmatlin{\lsfixed}\lgoimeandiff{\pt}) + \frac{1}{2} \obsmatlin{\lsfixed}\lgoimeandiff{\pt} \right]^T \obscov^{-1} \obsmatlin{\lsfixed} \lgoimeandiff{\pt} \nonumber \\
+            & = & \obdiff{\rt}^T \obscov^{-1} \obsmatlin{\lsfixed} \lsdiff{\pt} - \frac{1}{2} \lsdiff{\pt}^T \obsmatlin{\lsfixed}^T \obscov^{-1} \obsmatlin{\lsfixed} \lsdiff{\pt} \nonumber
 \end{IEEEeqnarray}
 \begin{IEEEeqnarray}{rCl}
- \text{LHS} & = & \log\left(\flowod(\ls{\pt})\right) - \expect{\oiden{\pt}}\left[ \log\left(\flowod(\ls{\pt})\right) \right] \nonumber \\
-            & = & - \frac{1}{2}(\ob{\rt}-\obsmat\ls{\pt})^T \obscov^{-1}(\ob{\rt}-\obsmat\ls{\pt}) \nonumber \\
-            &   & \qquad + \: \frac{1}{2} \trace\left( \lgoicov{\pt} \obsmat^T \obscov^{-1} \obsmat \right) + \frac{1}{2} (\ob{\rt}-\obsmat\lgoimean{\pt})^T \obscov^{-1}(\ob{\rt}-\obsmat\lgoimean{\pt}) \nonumber      .
+ \text{LHS} & = & \log\left(\flowod(\ls{\pt})\right) - \log\left(\flowod(\lsfixed)\right) \nonumber \\
+            & = & - \frac{1}{2}(\obdiff{\rt}-\obsmatlin{\lsfixed} \lsdiff{\pt})^T \obscov^{-1}(\obdiff{\rt}-\obsmatlin{\lsfixed} \lsdiff{\pt}) + \obdiff{\rt}^T \obscov^{-1} \hTSquad + \bigo{\lsdiff{\pt}^3} \nonumber \\
+            &   & \qquad + \: \frac{1}{2} \obdiff{\pt}^T \obscov^{-1} \obdiff{\pt} \nonumber \\
+            & = & \obdiff{\rt}^T \obscov^{-1} \obsmatlin{\lsfixed} \lsdiff{\pt} - \frac{1}{2} \lsdiff{\pt}^T \obsmatlin{\lsfixed}^T \obscov^{-1} \obsmatlin{\lsfixed} \lsdiff{\pt} \nonumber       .
 \end{IEEEeqnarray}
 %
-With a little algebra, the two side are seen to be equal.
 
 Next, consider the complementary function,
 %
