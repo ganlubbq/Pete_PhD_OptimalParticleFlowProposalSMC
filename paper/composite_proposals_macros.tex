@@ -1,0 +1,112 @@
+%%% MACROS FOR MATHEMATICAL NOTATION IN COMPOSITE PROPOSAL PAPER %%%
+
+% Functions and operators
+\newcommand{\half}{\frac{1}{2}}                                 % Half
+\newcommand{\expect}[1]{\mathbb{E}_{#1}}                        % Expectation
+\newcommand{\variance}[1]{\mathbb{V}_{#1}}                      % Variance
+\DeclareMathOperator{\trace}{Tr}                                % Trace
+\newcommand{\magdet}[1]{\left|\left| #1 \right|\right|}         % Magnitude of the determinant
+\newcommand{\indic}[1]{\mathbbm{1}_{#1}}                        % Indicator function
+\newcommand{\normal}[3]{\mathcal{N}\left(#1|#2,#3\right)}       % Normal density
+\newcommand{\studentt}[4]{\mathcal{ST}\left(#1|#2,#3,#4\right)} % Student-t density
+\newcommand{\bigo}[1]{\mathcal{O}\left({#1}\right)}             % Big O
+
+% Basics
+\newcommand{\rt}{t}                             % Real time
+\newcommand{\pt}{\lambda}                       % Pseudo-time
+\newcommand{\dpt}{\delta\lambda}                % A little bit of pseudo-time
+\newcommand{\ls}[1]{x_{#1}}                     % Latent state
+\newcommand{\ob}[1]{y_{#1}}                     % Observation
+
+% Particle shizzle
+\newcommand{\pss}[2][]{^{(#2)#1}}               % Particle superscript
+\newcommand{\pw}[1]{w_{#1}}                     % Particle weight
+\newcommand{\predpw}[1]{\hat{w}_{#1}}           % Predictive particle weight
+\newcommand{\npw}[1]{\bar{w}_{#1}}              % Normalised particle weight
+\newcommand{\naw}[1]{\bar{v}_{#1}}              % Normalised auxiliary weight
+\newcommand{\anc}[1]{a_{#1}}                    % Particle ancestor
+
+% Densities
+\newcommand{\impden}{q}                         % Importance density
+\newcommand{\artden}{\rho}                      % Artificial conditional density
+\newcommand{\oiden}[1]{\pi_{#1}}                % Optimal importance density
+\newcommand{\approxoiden}[2]{\hat{\pi}_{#1,#2}} % Approximation of the optimal importance density
+\newcommand{\augfiltden}[1]{\tilde{\pi}_{#1}}   % Augmented filtering density
+\newcommand{\oinorm}[1]{K_{#1}}                 % Normalising constant for the optimal importance density
+\newcommand{\augfiltnorm}[1]{\tilde{K}_{#1}}    % Normalising constant for the augmented filtering density
+
+% Numbers
+\newcommand{\numpart}{N_F}                      % Number of filter particles
+\newcommand{\ess}[1]{N_{E,#1}}                  % Effective sample size
+
+% Models
+\newcommand{\transfun}{f}                       % Transition function
+\newcommand{\obsfun}{h}                         % Observation function
+\newcommand{\transcov}{Q}                       % Transition covariance
+\newcommand{\obscov}{R}                         % Observation covariance
+\newcommand{\transmat}{F}                       % Linear transition matrix
+\newcommand{\obsmat}{H}                         % Linear observation matrix
+\newcommand{\transmean}{m}                      % Mean of the transition density (i.e. f(x_{t-1}))
+\newcommand{\dof}{\nu}                          % Degrees of freedom of something student-t-ish
+
+% Linear Gaussian things
+\newcommand{\lgoimean}[1]{\mu_{#1}}             % Linear Gaussian optimal importance density mean
+\newcommand{\lgoicov}[1]{\Sigma_{#1}}           % Linear Gaussian optimal importance density covariance
+\newcommand{\stdnorm}[1]{z_{#1}}                % Standard normal R.V.
+
+% Gaussian Transformation
+\newcommand{\lgdecayfunc}{a}                    % Linear Gaussian decay function for OID transformation
+\newcommand{\lgexpsf}{\gamma}                   % Linear Gaussian exponential scale factor for OID transformation
+\newcommand{\lgupdmeanmat}[1]{\Gamma_{#1}}      % Mean mapping matrix for the OID transformation
+\newcommand{\lgupdcov}[1]{\Omega_{#1}}          % Covariance matrix for the OID transformation
+
+% Linear Gaussian approximations
+\newcommand{\lgoimeanapprox}[2]{\hat{\mu}_{#1}(#2)}     % Mean of the Gaussian approximation to the OID at time #1 and state #2
+\newcommand{\lgoicovapprox}[2]{\hat{\Sigma}_{#1}(#2)}   % Covariance of the Gaussian approximation to the OID at time #1 and state #2
+
+
+
+
+%%% REDUNDANT? %%%
+
+\newcommand{\obsmatlin}[1]{\left.\obsmat\right|_{#1}}    % Linear observation matrix formed by differentiation of the observation function
+
+\DeclareMathOperator{\lambert}{W}                               % Product-log function
+\newcommand{\tensorD}[3]{\textbf{D}^{#1}_{#2} #3 \:}            % Tensor derivative operator
+\newcommand{\divtensorD}[3]{\tilde{\textbf{D}}^{#1}_{#2} #3 \:} % Divergence of a tensor derivative operator
+
+% Particle flow
+\newcommand{\flowbm}[1]{\epsilon_{#1}}          % Particle flow Brownian motion
+\newcommand{\flowdrift}[1]{\zeta_{#1}}          % Particle flow drift
+\newcommand{\flowdiffuse}[1]{\eta_{#1}}         % Particle flow diffusion
+\newcommand{\flowcov}[1]{D_{#1}}                % Particle flow "Covariance" matrix
+\newcommand{\flowtd}{\alpha}                    % Flow dervation transition density
+\newcommand{\flowod}{\beta}                     % Flow derivation observation density
+\newcommand{\flowmap}[2]{\phi_{#1}^{#2}}        % Flow transport map
+
+% Linear flow
+\newcommand{\lfmat}[1]{A_{#1}}                  % Linear flow matrix
+\newcommand{\lfshift}[1]{b_{#1}}                % Linear flow shift
+\newcommand{\lfdiffsf}{\gamma}                  % Linear flow diffusion matrix scale factor
+\newcommand{\lfmapmat}[1]{\Gamma_{#1}}          % Linear flow map matrix
+\newcommand{\lfmapshift}[1]{g_{#1}}             % Linear flow map shift
+\newcommand{\lfmapcov}[1]{\Omega_{#1}}          % Linear flow map covariance
+\newcommand{\rotategen}{\Theta_{\pt}}           % Arbitrary rotation infinitessimal generator
+
+
+
+
+
+\newcommand{\lginterm}[1]{S_{#1}}               % Useful intermediate term equal to \transcov / \lgoicov
+
+% Taylor expansions
+\newcommand{\lsfixed}{\ls{}^* }                 % Expansion point
+\newcommand{\obdiff}[1]{\tilde{y}_{#1}}          % Observation difference: y - h(x^*)
+\newcommand{\lsdiff}[1]{\tilde{x}_{#1}}          % Latent state difference: x - x^*
+\newcommand{\transmeandiff}{\tilde{m}}           % Transition mean difference: m - x^*
+\newcommand{\lgoimeandiff}[1]{\tilde{\mu}_{#1}}  % OID mean difference: \mu - x^*
+\newcommand{\hTSlin}{\left.\frac{\partial \obsfun}{\partial \ls{}}\right|_{\lsfixed}}   % Linear term of Taylor series of h
+\newcommand{\hTSquad}{\sum_{i,j} \left.\frac{\partial^2 \obsfun}{\partial \ls{i,j}^2}\right|_{\lsfixed} \lsdiff{\pt,i}\lsdiff{\pt,j}}   % Quadratic term of Taylor series of h
+
+% Miscellany
+\newcommand{\bels}[1]{\hat{x}_{#1}}             % Backwards estimate of linear state (for step-size control) 

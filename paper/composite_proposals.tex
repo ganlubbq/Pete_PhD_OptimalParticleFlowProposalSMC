@@ -24,7 +24,7 @@
 
 
 %%% Macros %%%
-\input{supf_macros}
+\input{composite_proposals_macros}
 
 
 
@@ -35,7 +35,7 @@
 
 
 %%% Titles and stuff %%%
-\title[Smooth Update Particle Filter]{The Smooth Update Particle Filter: Composite Approximations to the Optimal Importance Density}
+\title[Composite Proposal Particle Filter]{The Composite Proposal Particle Filter: Better Approximations to the Optimal Importance Density}
 \author[Bunch {\it et al.}]{Pete Bunch}
 \address{Cambridge University Engineering Department,
 Cambridge,
@@ -80,34 +80,11 @@ Another way in which degeneracy may be mitigated is by introducing the effect of
 
 It is possible to take the idea of bridging distributions to a limit and define a continuous sequence of distributions between the prior and the posterior. This device was used by \citet{Gelman1998} for the related task of simulating normalising constants, and has been used to design sophisticated assumed density filters \citep{Hanebeck2003a,Hanebeck2012,Hagmar2011}. More recently, particle filters have appeared which exploit the same principle, including the ``particle flow'' methods described in series of papers including \citep{Daum2008,Daum2011d}, and the ``optimal transport'' methods of \cite{Reich2011,Reich2012a}.
 
-{\meta \\****** Good to here *************\\}
+\subsection{Composite Proposals}
 
-%In a particle flow filter, a sequence of densities is defined at each time step between the predictive and filtering densities, parameterised by a ``pseudo-time'' variable which increases from $0$ to $1$. Each frame of the filtering algorithm begins with the sampling of a set of particles from the predictive density. The particles are then imbued with some appropriate dynamics such that they are always distributed according to the density sequence as they advance through pseudo-time, and thus follow the required filtering density when the interval of pseudo-time ends. The dynamics may be deterministic \citep{Daum2008}, or stochastic \citep{Daum2013,Reich2011}. In either case, correct drift and diffusion terms may be derived using the Fokker-Planck equation, which relates the evolution of densities (which is specified) to the corresponding flow of particles.
-%
-%A significant advantage of particle flow filters is that particles are equally weighted throughout. Consequently, they do not require any resampling and are easily parallelised. However, while extremely elegant, they suffer from a number of drawbacks:
-%\begin{enumerate}
-%  \item There is only one model for which the particle dynamics can be derived and integrated analytically: the linear Gaussian case, for which there already exists the optimal and far more efficient Kalman filter. For every other model, it is necessary to make either numerical or functional approximations in order to evaluate the particle flow, besides which this flow must then be numerically integrated. For example, it seems generally to be required that it be possible to evaluate the filtering density at arbitrary points. This is addressed in \citep{Daum2012} by using a Monte Carlo approximation, and in \citep{Reich2012a} by using a Gaussian-mixture approximation. The problem with these approximations is that they alter the distribution of the particles such that it is no longer exactly equal to the filtering distribution, and the resulting errors thus introduced are not easily quantified. Hence, these particle flow methods do not have the appealing asymptotic consistency of an ordinary particle filter.
-%  \item Particle flow algorithms are restricted to certain classes of state space. Only continuous states can be handled, and for these the density must be nowhere vanishing. Bounds on the state, such as are frequently available in physical problems, cannot be handled easily.
-%  \item A by-product of standard particle filtering is that, for no extra computational cost, an estimate of the smoothing distribution may be formed by simply tracing the ancestry of each particle. This is sometimes useful directly, but more often as a starting point for more sophisticated smoothing algorithms \citep{Godsill2004,Bunch2012} or parameter estimation schemes \citep{Andrieu2010}. Particle flow filters do not retain this property --- only a filtering estimate is produced.
-%\end{enumerate}
+In this paper, a new method is introduced for sampling from an approximation of the optimal importance density. We name this the composite proposal particle filter (CPPF). In common with progressive filtering and particle flow algorithms, the procedure relies on introducing the observation likelihood gradually. Beginning with a sample from the transition density, a series of local approximations are then used to move the particle to a new state, either deterministically or stochastically. This method is shown to yield significant improvements in effective sample size for challenging nonlinear models.
 
-\subsection{Smooth Updates}
-
-In this paper, we attempt to reconcile the elegant and powerful techniques of particle flows with the standard framework for particle filtering. This is achieved by using a particle flow as a mechanism for sampling from an approximation to the OID, rather than attempting to sample directly from the filtering distribution, and by exploiting the analytic results available for a particular class of models. The resulting algorithm, which we dub the smooth update particle filter (SUPF), is free from the drawbacks of existing particle flow filters discussed above, but also loses the property of equally weighted particles.
-
-{\meta ******* ADDING HERE *********}
-
-A modification of the algorithm is also presented which introduces intermediate resampling steps during the smooth update. This helps further to limit degeneracy of the particle weights, at the cost of introducing dependency between the particles. This latter algorithm resembles an annealed particle filter {\meta citations}, but uses gradient information from the model densities to lead particles towards maxima. In this sense, there are also connections with adaptive MCMC methods, such as those of \citep{Girolami2011}. Furthermore, the SUPF is not simply a special case of annealing algorithms since there exists a special case where the particle updates are entirely deterministic.
-
-
-
-
-
-
-
-The SUPF resembles an SMC-based annealing algorithm of the form described in \citep{DelMoral2006}, but equipped with near-optimal importance densities for each step. Furthermore, there exists a special case in which the procedure ceases to use sampling at all, but moves the particles deterministically. Since the algorithm relies on the use of gradient and curvature information from the target density, there are also connections with adaptive MCMC methods, such as those of \citep{Girolami2011}.
-
-Having covered some particle filter basics in section , we introduce a framework for new algorithm in section . In section , an optimal solution is derived for the partially nonlinear Gaussian case, and in section , this is employed as a tool for implementing quasi-optimal solutions for other models. Numerical illustrations are presented in section . {\meta Update this.}
+A modification of the algorithm is also presented which introduces intermediate resampling steps during the smooth update. This helps further to limit degeneracy of the particle weights, at the cost of introducing dependency between the particles. This latter algorithm resembles (and yet is significantly different from) an annealed particle filter \citep{Gall2007,Deutscher2000}, but uses gradient information from the model densities to lead particles towards peaks in the OID. In this sense, there are also connections with adaptive MCMC methods, such as those of \citep{Girolami2011}.
 
 
 
@@ -133,7 +110,7 @@ where $\delta_{\ls{1:\rt}\pss{i}}(\ls{1:\rt})$ denotes a unit probability mass a
 
 The particle filter recursion may be separated into two stages --- prediction and update --- which produce approximations to the predictive, $p(\ls{1:\rt} | \ob{1:\rt-1})$, and filtering, $p(\ls{1:\rt} | \ob{1:\rt})$, densities respectively. (Note, these terms more conventionally refer to the density of the latest state only, rather than the entire path.)
 
-At time $\rt$, the prediction stage begins with selection (or ``resampling'') of a parent from amongst the $\rt-1$ particles; an index, $\anc{j}$, is chosen with probability (or ``auxiliary weight'') $\naw{t-1}\pss{j}$. This is equivalent to sampling from a density $\impden(\ls{1:\rt-1} | \ob{1:\rt-1})$, where,
+At time $\rt$, the prediction stage begins with selection (resampling) of a parent from amongst the $\rt-1$ particles; an index, $\anc{j}$, is chosen with probability (auxiliary weight) $\naw{t-1}\pss{j}$. This is equivalent to sampling from a density $\impden(\ls{1:\rt-1} | \ob{1:\rt-1})$, where,
 %
 \begin{IEEEeqnarray}{rCl}
  \impden(\ls{1:\rt-1}\pss{i} | \ob{1:\rt-1}) & \propto & \frac{ \naw{\rt-1}\pss{i} }{ \npw{\rt-1}\pss{i} } p(\ls{1:\rt-1}\pss{i} | \ob{1:\rt-1}) \nonumber      .
@@ -230,18 +207,166 @@ This choice is thus known as the ``optimal importance density'' (OID). It may be
 
 
 
-\section{The Smooth Update Particle Filter: General Structure}
+\section{Composite Proposals}
 
-The SUPF uses the same prediction step as a bootstrap filter, starting with particle selection and then proposing a new state from the transition density. The novelty lies in the update step.
+The composite proposal method is a procedure for sampling approximately from the OID by introducing the likelihood progressively and making a series of local linear approximations. In order to achieve this, an auxiliary variable $\pt \in [0,1]$ is used. Intuitively, this is a stretch of ``pseudo-time'' between the predictive and filtering densities. Define $\ls{\rt,\pt}$ as the state at time $\rt$ and pseudo-time $\pt$. Finally, for the $(j)$th particle, define the continuous sequence of densities,
+%
+\begin{IEEEeqnarray}{rCl}
+ \oiden{\rt,\pt}(\ls{\rt,\pt} | \ls{\rt-1}\pss{\anc{j}}) & = & \frac{ p(\ob{\rt} | \ls{\rt,\pt})^{\pt} p(\ls{\rt,\pt} | \ls{\rt-1}\pss{\anc{j}}) }{ \oinorm{\pt}(\ls{\rt-1}\pss{\anc{j}}) } \label{eq:OID_sequence} \\
+ \oinorm{\pt}(\ls{\rt-1}\pss{\anc{j}}) & = & \int p(\ob{\rt} | \ls{\rt,\pt})^{\pt} p(\ls{\rt,\pt} | \ls{\rt-1}\pss{\anc{j}}) d\ls{\rt,\pt}      .
+\end{IEEEeqnarray}
+%
+This sequence begins with the transition density at $\pt=0$ and finishes with the OID at $\pt=1$. Rather than attempting to sample directly from the OID, a state is sampled from the transition density and then moved, either deterministically or stochastically, such that it is approximately distributed according to \eqref{eq:OID_sequence} throughout the pseudo-time interval.
 
-First, as in \citep{Daum2011d}, a variable $\pt \in [0,1]$ is introduced. Intuitively, this is a stretch of ``pseudo-time'' between the predictive and filtering densities, allowing the effect of the observation to be introduced gradually. Define $\ls{\rt,\pt}$ as the state at time $\rt$ and pseudo-time $\pt$, and a continuous sequence of target densities,
+Throughout this section, subscript $\rt$s are omitted for clarity on variables which vary with $\pt$. Particle superscripts are also omitted where appropriate.
+
+
+
+\subsection{State Updates}
+
+There is one class of models for which the OID has an analytic form, those which have a linear observation function and Gaussian transition and observation densities. The transition function need not be linear.
+%
+\begin{IEEEeqnarray}{rCl}
+ p(\ls{\rt} | \ls{\rt-1}) & = & \normal{\ls{\rt}}{\transfun(\ls{\rt-1})}{\transcov} \nonumber \\
+ p(\ob{\rt} | \ls{\rt})     & = & \normal{\ob{\rt}}{\obsmat \ls{\rt}}{\obscov}
+\end{IEEEeqnarray}
+%
+For such models, the OID sequence~\eqref{eq:OID_sequence} is,
+%
+\begin{IEEEeqnarray}{rCl}
+ \oiden{\pt}(\ls{\pt} | \ls{\rt-1}) & = & \mathcal{N}(\ls{\pt}|\lgoimean{\pt},\lgoicov{\pt}) \nonumber    ,
+\end{IEEEeqnarray}
+%
+where
+%
+\begin{IEEEeqnarray}{rCl}
+ \lgoicov{\pt} & = & \left[ \transcov^{-1} + \pt \obsmat^T \obscov^{-1} \obsmat \right]^{-1} \nonumber \\
+ \lgoimean{\pt}    & = & \lgoicov{\pt} \left[ \transcov^{-1} \transfun(\ls{\rt-1}) + \pt \obsmat^T \obscov^{-1} \ob{\rt} \right] \nonumber     .
+\end{IEEEeqnarray}
+%
+Since the OID may be sampled and the density evaluated, a composite proposal is redundant. However, the analytic formulas derived from this case may be used for other classes of models using local approximations.
+
+Consider the transition from $\pt_0$ to $\pt_1$. How should $\ls{\pt_1}$ be generated from $\ls{\pt_0}$ such that it is distributed correctly? Since $\ls{\pt_0}|\ls{\rt-1}$ and $\ls{\pt_1}|\ls{\rt-1}$ are Gaussian random variables, they may be written,
+%
+\begin{IEEEeqnarray}{rCl}
+ \ls{\pt_0} & = & \lgoimean{\pt_0} + \lgoicov{\pt_0}^{\frac{1}{2}} \stdnorm{\pt_0} \nonumber \\
+ \ls{\pt_1} & = & \lgoimean{\pt_1} + \lgoicov{\pt_1}^{\frac{1}{2}} \stdnorm{\pt_1} \nonumber      ,
+\end{IEEEeqnarray}
+%
+where $\stdnorm{\pt}$ is a standard normal random variable (zero mean, identity covariance matrix). One option is now simply to equate $\stdnorm{\pt_0}$ and $\stdnorm{\pt_1}$. However, it will be desirable later that if multiple particles have the same state at $\pt_0$, then they should move to different states at $\pt_1$. This may be achieved by adding a new random variable $\stdnorm{\Delta}$, which allows identical particles to `de-correlate'. Thus, to achieve the correct distribution of $\stdnorm{\pt_1}$, the following transformation is used,
+%
+\begin{IEEEeqnarray}{rCl}
+ \stdnorm{\pt_1} & = & \lgdecayfunc(\pt_1-\pt_0) \stdnorm{\pt_0} + \sqrt{1-\lgdecayfunc(\pt_1-\pt_0)^2} \stdnorm{\Delta} \nonumber      ,
+\end{IEEEeqnarray}
+%
+where $\lgdecayfunc(\pt) \in [0,1]$ is monotonically decreasing, and $\lgdecayfunc(\pt)\rightarrow0$ as $\pt\rightarrow0$. A suitable function is,
+%
+\begin{IEEEeqnarray}{rCl}
+ \lgdecayfunc(\pt_1-\pt_0) & = & \exp\left\{-\half \lgexpsf (\pt_1-\pt_0)\right\} \nonumber       ,
+\end{IEEEeqnarray}
+%
+where $\lgexpsf>0$. The resulting update formula for the state is,
+%
+\begin{IEEEeqnarray}{rCl}
+ \ls{\pt_1} & = & \lgoimean{\pt_1} + \lgupdmeanmat{\pt_0,\pt_1}(\ls{\pt_0}-\lgoimean{\pt_0}) + \lgupdcov{\pt_0,\pt_1}^{\half} \stdnorm{\Delta} \nonumber \\
+ \lgupdmeanmat{\pt_0,\pt_1} & = & \exp\left\{-\half\lgexpsf(\pt_1-\pt_0)\right\} \lgoicov{\pt_1}^{\half}\lgoicov{\pt_0}^{-\half} \nonumber \\
+ \lgupdcov{\pt_0,\pt_1} & = & \left[1-\exp\left\{-\lgexpsf(\pt_1-\pt_0)\right\}\right]\lgoicov{\pt_1} \label{eq:state_update}      .
+\end{IEEEeqnarray}
+%
+Provided $\lgexpsf\ne0$ this map has an associated incremental importance density,
+%
+\begin{IEEEeqnarray}{rCl}
+ \impden(\ls{\pt_1} | \ls{\pt_0}) & = & \normal{\ls{\pt_1}}{\lgoimean{\pt_1} + \lgupdmeanmat{\pt_0,\pt_1}(\ls{\pt_0}-\lgoimean{\pt_0})}{ \lgupdcov{\pt_0,\pt_1}} \label{eq:importance_density}     .
+\end{IEEEeqnarray}
+
+Advancing the state through pseudo-time using \eqref{eq:state_update} generates a particle which is distributed exactly according to the OID for partially linear-Gaussian models. For other models, such exact analytic updates do not exist. Instead, the state may be updated using Gaussian approximations of the OID formed, for example, by linearisation at the current state $\ls{\pt_0}$,
+%
+\begin{IEEEeqnarray}{rCl}
+ \approxoiden{\pt}{\ls{\pt_0}}(\ls{\pt} | \ls{\rt-1}) & = & \mathcal{N}(\ls{\pt}|\lgoimeanapprox{\pt}{\ls{\pt_0}},\lgoicovapprox{\pt}{\ls{\pt_0}}) \nonumber \\
+\end{IEEEeqnarray}
+%
+and then using \eqref{eq:state_update}. Suitable approximations are discussed in section~\ref{}{\meta ADD REF}. Provided the pseudo-time increments are not too large, this process often leads to a more effective proposal than a simple Gaussian approximation to the OID using linearisation about a single point.
+
+
+
+\subsection{Weight Updates}
+
+Next we consider how to correctly weight particles generated using the composite proposal method. Two cases are considered separately, $\lgexpsf=0$ and $\lgexpsf\ne0$. Denote here the pseudo-time update points as $\{\pt_0,\pt_1,\pt_2,\dots,\pt_L\}$, where $\pt_0=0$ and $\pt_L=1$ (so that $\ls{\rt,\pt_L}=\ls{\rt}$).
+
+\subsubsection{Stochastic updates}
+
+When $\lgexpsf\ne0$, particles are advanced through pseudo-time using a stochastic mechanism. The combined importance density for the transition from $\rt-1$ to $\rt$ is,
+%
+\begin{IEEEeqnarray}{rCl}
+ \impden(\ls{\rt} | \ls{\rt-1}) & = & \int \cdots \int \impden(\ls{\rt,\pt_L}|\ls{\rt,\pt_{L-1}}) \dots \impden(\ls{\rt,\pt_1}|\ls{\rt,\pt_0}) p(\ls{\rt,\pt_0}|\ls{\rt-1}) d\ls{\rt,\pt_{L-1}}\dots d\ls{\rt,\pt_0} \nonumber      .
+\end{IEEEeqnarray}
+%
+In the case of partially linear Gaussian models this may be calculated analytically, and is of course equal to the OID. For other models, when approximations are used, this integral is not tractable because of the dependence of the approximations on the current state. Instead, tractable weight updates require the use of the extended target distribution method popularised by \citep{DelMoral2006}.
+
+Instead of marginalising, the trajectory of intermediate states is added to the target distribution by extending it with an artificial conditional density,
+%
+\begin{IEEEeqnarray}{rCl}
+ p(\ls{1:\rt} | \ob{1:\rt}) \artden(\ls{\rt,\pt_0},\dots,\ls{\rt,\pt_{L-1}} | \ls{\rt,\pt_L}) \nonumber      .
+\end{IEEEeqnarray}
+%
+The integrals in the combined importance density are then no longer required,
+%
+\begin{IEEEeqnarray}{rCl}
+ \impden(\ls{\rt,\pt_0},\dots,\ls{\rt,\pt_{L}} | \ls{\rt-1}) & = & \impden(\ls{\rt,\pt_L}|\ls{\rt,\pt_{L-1}}) \dots \impden(\ls{\rt,\pt_1}|\ls{\rt,\pt_0}) p(\ls{\rt,\pt_0}|\ls{\rt-1}) \nonumber  .
+\end{IEEEeqnarray}
+%
+To limit the complexity, assume the same Markovian factorisation on $\artden$ as $\impden$,
+%
+\begin{IEEEeqnarray}{rCl}
+ \artden(\ls{\rt,\pt_0},\dots,\ls{\rt,\pt_{L-1}} | \ls{\rt,\pt_L}) & = & \artden(\ls{\rt,\pt_{L-1}} | \ls{\rt,\pt_L}) \dots \artden(\ls{\rt,\pt_0} | \ls{\rt,\pt_1}) \nonumber      .
+\end{IEEEeqnarray}
+%
+The weight update formula is then,
+%
+\begin{IEEEeqnarray}{rCl}
+ \pw{\rt} & \propto & \frac{\npw{\rt-1}}{\naw{t-1}} \times \frac{ p(\ob{\rt} | \ls{\rt}) p(\ls{\rt} | \ls{\rt-1}) }{ p(\ls{\rt,\pt_0}|\ls{\rt-1}) } \times \frac{\artden(\ls{\rt,\pt_0} | \ls{\rt,\pt_1})}{\impden(\ls{\rt,\pt_1}|\ls{\rt,\pt_0})} \times\dots\times \frac{\artden(\ls{\rt,\pt_{L-1}} | \ls{\rt,\pt_L})}{\impden(\ls{\rt,\pt_L}|\ls{\rt,\pt_{L-1}})} \nonumber       .
+\end{IEEEeqnarray}
+%
+Using results from \citep{DelMoral2006}, the optimal form for the artificial density factors is,
+%
+\begin{IEEEeqnarray}{rCl}
+ \artden(\ls{\rt,\pt_0} | \ls{\rt,\pt_1}) & = & \frac{ \approxoiden{\rt,\pt_0}{\ls{\pt_0}}(\ls{1:\rt-1}, \ls{\rt,\pt_0}) \impden(\ls{\rt,\pt_1} | \ls{\rt,\pt_0}) }{ \int \approxoiden{\rt,\pt_0}{\ls{\pt_0}}(\ls{1:\rt-1}, \ls{}) \impden(\ls{\rt,\pt_1} | \ls{}) d\ls{} } \nonumber \\
+ & = & \frac{ \approxoiden{\rt,\pt_0}{\ls{\pt_0}}(\ls{1:\rt-1}, \ls{\rt,\pt_0}) \impden(\ls{\rt,\pt_1} | \ls{\rt,\pt_0}) }{ \approxoiden{\rt,\pt_1}{\ls{\pt_0}}(\ls{1:\rt-1}, \ls{\pt_1}) } \label{eq:optimal_artificial_density}     .
+\end{IEEEeqnarray}
+%
+Hence, the weight update for the CPPF is,
+%
+\begin{IEEEeqnarray}{rCl}
+ \pw{\rt} & \propto & \frac{\npw{\rt-1}}{\naw{t-1}} \times \frac{ p(\ob{\rt} | \ls{\rt}) p(\ls{\rt} | \ls{\rt-1}) }{ p(\ls{\rt,\pt_0}|\ls{\rt-1}) } \nonumber \\
+  &   & \times \frac{\mathcal{N}(\ls{\pt_0}|\lgoimeanapprox{\pt_0}{\ls{\pt_0}},\lgoicovapprox{\pt_0}{\ls{\pt_0}})} {\mathcal{N}(\ls{\pt_1}|\lgoimeanapprox{\pt_1}{\ls{\pt_0}},\lgoicovapprox{\pt_1}{\ls{\pt_0}})} \times\dots\times \frac{\mathcal{N}(\ls{\pt_{L-1}}|\lgoimeanapprox{\pt_{L-1}}{\ls{\pt_{L-1}}},\lgoicovapprox{\pt_{L-1}}{\ls{\pt_{L-1}}})} {\mathcal{N}(\ls{\pt_L}|\lgoimeanapprox{\pt_L}{\ls{\pt_{L-1}}},\lgoicovapprox{\pt_L}{\ls{\pt_{L-1}}})} \label{eq:CPPF_weight_update}       .
+\end{IEEEeqnarray}
+
+\subsection{Adaptive Step Sizes}
+
+\subsection{Algorithm Summary}
+
+
+
+\section{Gaussian Approximations for Various Model Classes}
+
+
+
+\section{Intermediate Resampling}
+
+
+\section{OLD STUFF}
+
+ of target densities,
 %
 \begin{IEEEeqnarray}{rCl}
  \augfiltden{\rt,\pt}(\ls{1:\rt-1}, \ls{\rt,\pt}) & = & \frac{ p(\ob{\rt} | \ls{\rt,\pt})^{\pt} p(\ls{\rt,\pt} | \ls{\rt-1}) p(\ls{1:\rt-1}|\ob{1:\rt-1}) }{ \augfiltnorm{\pt} } \nonumber \\
  \augfiltnorm{\pt} & = & \int p(\ob{\rt} | \ls{\rt,\pt})^{\pt} p(\ls{\rt,\pt} | \ob{1:\rt-1}) d\ls{\rt,\pt}      .
 \end{IEEEeqnarray}
 %
-This is equal to the predictive density when $\pt=0$ and the desired filtering density when $\lambda=1$. Rather than using the same particles for the filtering density as the predictive density, we allow them to move around as we progress incrementally through pseudo-time, targeting $\augfiltden{\rt,\pt}$ at each point with standard SMC methods.
+This is equal to the predictive density when $\pt=0$ and the desired filtering density when $\lambda=1$. 
+
+
+Rather than using the same particles for the filtering density as the predictive density, we allow them to move around as we progress incrementally through pseudo-time, targeting $\augfiltden{\rt,\pt}$ at each point with standard SMC methods.
 
 \subsection{The Optimal Particle Flow}
 
