@@ -30,7 +30,7 @@
 \newcommand{\impden}{q}                         % Importance density
 \newcommand{\artden}{\rho}                      % Artificial conditional density
 \newcommand{\oiden}[1]{\pi_{#1}}                % Optimal importance density
-\newcommand{\approxoiden}[2]{\hat{\pi}_{#1,#2}} % Approximation of the optimal importance density
+\newcommand{\approxoiden}[2]{\hat{\pi}_{#1|#2}} % Approximation of the optimal importance density
 \newcommand{\augfiltden}[1]{\tilde{\pi}_{#1}}   % Augmented filtering density
 \newcommand{\oinorm}[1]{K_{#1}}                 % Normalising constant for the optimal importance density
 \newcommand{\augfiltnorm}[1]{\tilde{K}_{#1}}    % Normalising constant for the augmented filtering density
@@ -59,10 +59,21 @@
 \newcommand{\lgexpsf}{\gamma}                   % Linear Gaussian exponential scale factor for OID transformation
 \newcommand{\lgupdmeanmat}[1]{\Gamma_{#1}}      % Mean mapping matrix for the OID transformation
 \newcommand{\lgupdcov}[1]{\Omega_{#1}}          % Covariance matrix for the OID transformation
+\newcommand{\lginfbm}[1]{\epsilon_{#1}}         % Brownian motion for the infinitesimal form of the OID transformation
 
 % Linear Gaussian approximations
-\newcommand{\lgoimeanapprox}[2]{\hat{\mu}_{#1}(#2)}     % Mean of the Gaussian approximation to the OID at time #1 and state #2
-\newcommand{\lgoicovapprox}[2]{\hat{\Sigma}_{#1}(#2)}   % Covariance of the Gaussian approximation to the OID at time #1 and state #2
+%\newcommand{\lgoimeanapprox}[2]{\hat{\mu}_{#1}(#2)}     % Mean of the Gaussian approximation to the OID at time #1 and state #2
+%\newcommand{\lgoicovapprox}[2]{\hat{\Sigma}_{#1}(#2)}   % Covariance of the Gaussian approximation to the OID at time #1 and state #2
+\newcommand{\lgoimeanapprox}[2]{\hat{\mu}_{#1|#2}}     % Mean of the Gaussian approximation to the OID at time #1 and state #2
+\newcommand{\lgoicovapprox}[2]{\hat{\Sigma}_{#1|#2}}   % Covariance of the Gaussian approximation to the OID at time #1 and state #2
+
+% State evolution SDE
+\newcommand{\sdedrift}[1]{\zeta_{#1}}           % Drift
+\newcommand{\sdediffuse}[1]{\eta_{#1}}          % Diffusion
+\newcommand{\drifterror}[2]{e_{\zeta,#1|#2}}    % Drift error due to finite sampling
+\newcommand{\diffuseerror}[2]{e_{\eta,#1|#2}}   % Diffusion error due to finite sampling
+\newcommand{\lserror}[2]{e_{#1|#2}}             % State error due to finite sampling
+
 
 
 
