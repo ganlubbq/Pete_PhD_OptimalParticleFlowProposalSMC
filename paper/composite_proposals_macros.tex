@@ -66,6 +66,7 @@
 %\newcommand{\lgoicovapprox}[2]{\hat{\Sigma}_{#1}(#2)}   % Covariance of the Gaussian approximation to the OID at time #1 and state #2
 \newcommand{\lgoimeanapprox}[2]{\hat{\mu}_{#1|#2}}     % Mean of the Gaussian approximation to the OID at time #1 and state #2
 \newcommand{\lgoicovapprox}[2]{\hat{\Sigma}_{#1|#2}}   % Covariance of the Gaussian approximation to the OID at time #1 and state #2
+\newcommand{\obsmatapprox}[1]{\hat{\obsmat}_{#1}}      % Linear observation matrix formed by differentiation of the observation function
 
 % State evolution SDE
 \newcommand{\sdedrift}[1]{\zeta_{#1}}           % Drift
@@ -80,7 +81,7 @@
 
 %%% REDUNDANT? %%%
 
-\newcommand{\obsmatlin}[1]{\left.\obsmat\right|_{#1}}    % Linear observation matrix formed by differentiation of the observation function
+
 
 \DeclareMathOperator{\lambert}{W}                               % Product-log function
 \newcommand{\tensorD}[3]{\textbf{D}^{#1}_{#2} #3 \:}            % Tensor derivative operator

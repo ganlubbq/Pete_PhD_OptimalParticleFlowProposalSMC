@@ -367,9 +367,60 @@ It may easily be shown that as $\lgexpsf\rightarrow0$, \eqref{eq:CPPF_stochastic
 
 
 
+\subsection{Gaussian Approximations}
+
+The CPPF relies on making a Gaussian approximations of the OID at each point in pseudo-time by selecting $\lgoicovapprox{\pt}{\lsfixed}$ and $\lgoimeanapprox{\pt}{\lsfixed}$. This may be achieved using standard linearisation methods. The quality of the approximation does not affect the validity of the algorithm, since it only form part of the particle filter proposal. However, better approximations will lead to higher effective sample sizes and thus more accurate estimates.
+
+\subsubsection{Nonlinear Gaussian Models}
+
+We begin with a class of models which are reasonably benign, and yet common in practice; those which have Gaussian transition and observation densities, but which are not linear,
+%
+\begin{IEEEeqnarray}{rCl}
+ p(\ls{\rt} | \ls{\rt-1}) & = & \normal{\ls{\rt}}{\transfun(\ls{\rt-1})}{\transcov} \nonumber \\
+ p(\ob{\rt} | \ls{\rt})   & = & \normal{\ob{\rt}}{\obsfun(\ls{\rt})}{\obscov}     .
+\end{IEEEeqnarray}
+
+For such models, the observation function may be linearised in the usual way, by truncating the Taylor series expansion,
+%
+\begin{IEEEeqnarray}{rCl}
+ \obsfun(\ls{}) & \approx & \obsfun(\ls{}^*) + \underbrace{\left.\frac{\partial \obsfun}{\partial \ls{}}\right|_{\ls{}^*}}_{\obsmatapprox{\lsfixed}} (\ls{} - \ls{}^*)
+\end{IEEEeqnarray}
+\begin{IEEEeqnarray}{rCl}
+ p(\ob{\rt} | \ls{\rt}) & \approx & \normal{\ob{\rt}}{\obsfun(\lsfixed)+\obsmatapprox{\lsfixed}(\ls{\rt} - \lsfixed)}{\obscov} \nonumber      ,
+\end{IEEEeqnarray}
+%
+where $\lsfixed$ is the point around which the function is linearised. An approximation of the OID is then given by,
+%
+\begin{IEEEeqnarray}{rCl}
+ \lgoicovapprox{\pt}{\lsfixed}  & = & \left[ \transcov^{-1} + \pt \obsmatapprox{\lsfixed}^T \obscov^{-1} \obsmatapprox{\lsfixed} \right]^{-1} \nonumber \\
+ \lgoimeanapprox{\pt}{\lsfixed} & = & \lsfixed + \lgoicov{\pt} \left[ \transcov^{-1} (\transfun(\ls{\rt-1})-\lsfixed) + \pt \obsmatapprox{\lsfixed}^T \obscov^{-1} (\ob{\rt}-\obsfun(\lsfixed)) \right] \nonumber     .
+\end{IEEEeqnarray}
+
+\subsubsection{Non-Gaussian Models}
+
+If either model density is not Gaussian, a more generic linearisation method may be used. The parameters $\lgoicovapprox{\pt}{\lsfixed}$ and $\lgoimeanapprox{\pt}{\lsfixed}$ are chosen so as to match the gradient and curvature of the log-density to those of the true OID, as suggested by \citet{Doucet2000a} for selecting a single Gaussian importance density.
+
+For the Gaussian approximation,
+%
+\begin{IEEEeqnarray}{rCl}
+ \frac{\partial}{\partial \ls{\pt}} \log\left(\approxoiden{\pt}{\lsfixed}\right) & = & - \lgoicovapprox{\pt}{\lsfixed}^{-1} \left( \ls{\pt}- \lgoimeanapprox{\pt}{\lsfixed}\right) \nonumber \\
+ \frac{\partial^2}{\partial \ls{\pt}^2} \log\left(\approxoiden{\pt}{\lsfixed}\right) & = & - \lgoicovapprox{\pt}{\lsfixed}^{-1} \nonumber      .
+\end{IEEEeqnarray}
+%
+Thus, we use,
+%
+\begin{IEEEeqnarray}{rCl}
+ \lgoicovapprox{\pt}{\lsfixed} & = & \left[ \frac{\partial^2}{\partial \ls{\pt}^2} \log\left(\oiden{\rt,\pt}(\ls{\rt,\pt} | \ls{\rt-1})\right) \right]^{-1} \nonumber \\
+ \lgoimeanapprox{\pt}{\lsfixed} & = & \lsfixed + \lgoicovapprox{\pt}{\lsfixed} \left[ \frac{\partial}{\partial \ls{\pt}} \log\left(\oiden{\rt,\pt}(\ls{\rt,\pt} | \ls{\rt-1})\right) \right] \nonumber      .
+\end{IEEEeqnarray}
+%
+This approximation may only be used when the Hessian of the log-density is negative definite, otherwise the matrix square root may not exist and the state update will not work. If this condition is not satisfied then modifications may be used, for example by subtracting a scaled identity matrix from the Hessian to force the eigenvalues to be negative, or by diagonalising and setting the offending negative eigenvalues to a small negative constant.
+
+
+
 \subsection{Adaptive Step Sizes}
 
-An important aspect of the CPPF is how the sizes of the pseudo-time steps are chosen. State updates are calculated using local Gaussian approximations of the OID, so the best-case algorithm would take infinitesimal steps and use the appropriate approximation at each point on a continuous trajectory. (Note that such an algorithm still would not lead to proposals exactly from the OID, because it is still locally approximated.) In practice, the number of steps needs to be kept low, to minimise the computational burden.
+An important aspect of the CPPF is how the sizes of the pseudo-time steps are chosen. State updates are calculated using local Gaussian approximations of the OID, so the best-case algorithm would take infinitesimal steps and use the appropriate approximation at each point on a continuous trajectory. (Note that such an algorithm still would not lead to proposals exactly from the OID, because it is still locally approximated.) In practice, the number of steps needs to be kept low, to minimise the computational burden. In some instances, it may be sufficient to use a fixed step size, or a predetermined time grid. However, an adaptive scheme is preferable for greatest efficiency.
 
 \subsubsection{Local Error Estimates}
 
@@ -445,29 +496,9 @@ Algorithm~\ref{alg:general_CPPF} summarises the CPPF.
 \end{algorithm}
 
 
-\section{Local Gaussian Approximations for Various Model Classes}
-
-The CPPF relies on making Gaussian approximations of the OID. In this section, we consider how these may be chosen effectively.
-
-\subsection{Nonlinear Gaussian Models}
-
-We begin with a class of models which are reasonably benign, and yet common in practice; those which have Gaussian transition and observation densities, but which are not linear,
-%
-\begin{IEEEeqnarray}{rCl}
- p(\ls{\rt} | \ls{\rt-1}) & = & \normal{\ls{\rt}}{\transfun(\ls{\rt-1})}{\transcov} \nonumber \\
- p(\ob{\rt} | \ls{\rt})   & = & \normal{\ob{\rt}}{\obsfun(\ls{\rt})}{\obscov}     .
-\end{IEEEeqnarray}
-
-
-
+\section{Extensions to the CPPF}
 \subsection{Gaussian Mixtures}
-
-
-
-\subsection{Other Densities}
-
-
-\section{Intermediate Resampling}
+\subsection{Intermediate Resampling}
 
 
 
@@ -502,13 +533,13 @@ Hence,
 \begin{IEEEeqnarray}{rCl}
  \ls{\pt+\dpt} - \ls{\pt} & = & \lgoimean{\pt} + \dpt \frac{\partial \lgoimean{\pt}}{\partial \pt} + \left(1 - \half\lgexpsf\dpt + \bigo{\dpt^2}\right) \left( I + \half \dpt \frac{\partial \lgoicov{\pt} }{\partial \pt} \lgoicov{\pt}^{-1} \right)(\ls{\pt}-\lgoimean{\pt}) \nonumber \\
  &   & \qquad \qquad + \: \dpt^{\half} \lgexpsf^{\half} \left( I + \half \dpt \frac{\partial \lgoicov{\pt} }{\partial \pt} \lgoicov{\pt}^{-1} \right) \lgoicov{\pt}^{\half} \stdnorm{\Delta} + \bigo{\dpt^2} - \ls{\pt} \nonumber \\
-  & = & \left[ \frac{\partial \lgoimean{\pt}}{\partial \pt} + \half \left( \frac{\partial \lgoicov{\pt} }{\partial \pt} \lgoicov{\pt}^{-1} (\ls{\pt}-\lgoimean{\pt}) \right) - \lgexpsf I \right] \dpt + \lgexpsf^{\half} \lgoicov{\pt}^{\half} \dpt^{\half} \stdnorm{\Delta} + \bigo{\dpt^2} \nonumber      .
+  & = & \left[ \frac{\partial \lgoimean{\pt}}{\partial \pt} + \half \left( \frac{\partial \lgoicov{\pt} }{\partial \pt} \lgoicov{\pt}^{-1} - \lgexpsf I \right) (\ls{\pt}-\lgoimean{\pt}) \right] \dpt + \lgexpsf^{\half} \lgoicov{\pt}^{\half} \dpt^{\half} \stdnorm{\Delta} + \bigo{\dpt^2} \nonumber      .
 \end{IEEEeqnarray}
 %
 In the limit $\dpt\rightarrow0$, this becomes a stochastic differential equation,
 %
 \begin{IEEEeqnarray}{rCl}
- d\ls{\pt} & = & \left[ \frac{\partial \lgoimean{\pt}}{\partial \pt} + \half \left( \frac{\partial \lgoicov{\pt} }{\partial \pt} \lgoicov{\pt}^{-1} (\ls{\pt}-\lgoimean{\pt}) \right) - \lgexpsf I \right] d\pt + \lgexpsf^{\half} \lgoicov{\pt}^{\half} d\lginfbm{\pt}      ,
+ d\ls{\pt} & = & \left[ \frac{\partial \lgoimean{\pt}}{\partial \pt} + \half \left( \frac{\partial \lgoicov{\pt} }{\partial \pt} \lgoicov{\pt}^{-1} - \lgexpsf I \right) (\ls{\pt}-\lgoimean{\pt}) \right] d\pt + \lgexpsf^{\half} \lgoicov{\pt}^{\half} d\lginfbm{\pt}      ,
 \end{IEEEeqnarray}
 %
 where $\lginfbm{\pt}$ is a standard Brownian motion process.
@@ -530,7 +561,7 @@ then
 and the state evolution stochastic differential equation is,
 %
 \begin{IEEEeqnarray}{rCl}
- d\ls{\pt} & = & \left[ \lgoicov{\pt} \obsmat^T \obscov^{-1} \left( (\ob{\rt}-\obsmat\lgoimean{\pt}) + \half (\ls{\pt}-\lgoimean{\pt}) \right) - \lgexpsf I \right] d\pt + \lgexpsf^{\half} \lgoicov{\pt}^{\half} d\lginfbm{\pt} \nonumber       .
+ d\ls{\pt} & = & \left[ \lgoicov{\pt} \obsmat^T \obscov^{-1} \left( (\ob{\rt}-\obsmat\lgoimean{\pt}) - \half \obsmat (\ls{\pt}-\lgoimean{\pt}) \right) - \half \lgexpsf (\ls{\pt}-\lgoimean{\pt}) \right] d\pt + \lgexpsf^{\half} \lgoicov{\pt}^{\half} d\lginfbm{\pt} \nonumber       .
 \end{IEEEeqnarray}
 
 
