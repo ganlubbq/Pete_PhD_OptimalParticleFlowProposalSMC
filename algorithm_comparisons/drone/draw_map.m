@@ -1,7 +1,7 @@
 function draw_map(map)
 % Draw the terrain map for the drone model
 
-x_rng = -100:100;
+x_rng = -1000:10:1000;
 Nx = length(x_rng);
 
 height = zeros(Nx^2,1);

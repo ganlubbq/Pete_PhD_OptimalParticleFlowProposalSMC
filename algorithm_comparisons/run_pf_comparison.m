@@ -20,10 +20,10 @@ if ~exist('test', 'var') || ~isfield(test,'flag_batch') || (~test.flag_batch)
     %%% SETTINGS %%%
     
     % DEFINE RANDOM SEED
-    rand_seed = 0;
+    rand_seed = 3;
     
     % Which model?
-    model_flag = 3;     % 1 = linear Gaussian
+    model_flag = 5;     % 1 = linear Gaussian
                         % 2 = nonlinear non-Gaussian benchmark
                         % 3 = heartbeat alignment
                         % 4 = tracking
@@ -64,7 +64,7 @@ if ~exist('test', 'var') || ~isfield(test,'flag_batch') || (~test.flag_batch)
 %     test.num_filt_pts = [20000 12000 3500 10 100];               % Time normalised for model 4
 
     % Model settings
-    test.STdof = 3;
+    test.STdof = Inf;
 
     % SUPF settings
     test.flag_stochastic = false;
@@ -140,6 +140,7 @@ elseif model_flag == 5
     fh.ukfproposal = @drone_ukfproposal;
     fh.linearisedoidproposal = @drone_linearisedoidproposal;
     fh.smoothupdate = @drone_smoothupdate;
+    fh.smoothupdatebyparticle = @drone_smoothupdatebyparticle;
 end
 
 % Set model parameters

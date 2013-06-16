@@ -48,8 +48,8 @@ model.map.mn = zeros(2,num_hills);
 model.map.vr = zeros(2,2,num_hills);
 for hh = 1:num_hills
     model.map.alt(hh) = 10000*chi2rnd(3);
-    model.map.mn(:,hh) = mvnrnd(zeros(2,1), 10000*eye(2));
-    model.map.vr(:,:,hh) = wishrnd(100*eye(2), 5);
+    model.map.mn(:,hh) = mvnrnd(zeros(2,1), 500^2*eye(2));
+    model.map.vr(:,:,hh) = wishrnd(20000*eye(2), 5);
 end
 
 end

@@ -1,17 +1,15 @@
 function [ drift ] = linear_drift( t, x, m, P, y, H, R, Dscale )
 %linear_drift Calculate the drift for a linear flow for a set of matrixes.
 
-% Preliminaries
-ds = size(m, 1);
-I = eye(ds);
-
 % Useful matrixes
 HRH = H'*(R\H); HRH = (HRH+HRH')/2;
-St = I + t*P*HRH;
+
+% OID approx
+Sigmat = inv(inv(P)+t*HRH);
+mut = Sigmat*(t*H'*(R\y)+P\m);
 
 % Drift
-mu = St\(m+t*P*H'*(R\y));
-drift = 0.5*( ((St^2)\P*H')*(R\(y-H*m)) + St\P*H'*(R\(y-H*x)) - Dscale*(x-mu) );
+drift =  Sigmat*(H'/R)*( (y-H*mut)-0.5*H*(x-mut) ) - Dscale*(x-mut);
 
 end
 
