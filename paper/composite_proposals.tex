@@ -500,13 +500,37 @@ The distinguishing novel components of the CPPF are the incremental state and we
 \caption{Generic form of the smooth update particle filter.}
 \end{algorithm}
 
+The CPPF bears a resemblance to annealed particle filter algorithms {\meta CITE THINGS}, in its use of a stretch of pseudo-time between the predictive and filtering densities, yet it is quite distinct. The CPPF allows each particle to be handled independently, using different pseudo-time step sizes for each, and allows potentially deterministic state trajectories. In contrast, an annealed particle filter moves all the particles simultaneously through pseudo-time via a consistent set of bridging densities, interspersed with resampling and MCMC steps.
+
 
 
 \section{Extensions to the CPPF}
 \subsection{Gaussian Mixtures}
 \subsection{Intermediate Resampling}
 
-The CPPF bares a resemblance to an annealing algorithm, yet it is quite distinct. Rather than moving all the particles simultaneously through pseudo-time via a fixed set of bridging densities, the CPPF allows each particle to be handled individually, using different step sizes for each. 
+The CPPF samples a particle from an approximation to the optimal importance density. However, even sampling the OID exactly would be no guarantee of a high effective sample size. The weight corresponding to a particles sampled from the OID is,
+%
+\begin{IEEEeqnarray}{rCl}
+ p(\ob{\rt} | \ls{\rt-1}\pss{j})     ,
+\end{IEEEeqnarray}
+%
+and the variance of a set of such weights can still be high, particularly if the transition and observation densities are both informative but the $t-1$ states are widely spread.
+
+
+
+
+
+This often results in the proposal of a particle whose distribution is closer to the OID than simple one-step approximations, and consequently the effective sample size of the particle set is improved.
+
+ At each step in pseudo-time, the particle weights are updated, after which resampling may be used to control the weight variance, and finally MCMC steps are used to recover particle diversity.
+
+Rather than moving all the particles simultaneously through pseudo-time via a consistent set of bridging densities, the CPPF allows each particle to be handled individually, using different step sizes for each, and allowing for potentially deterministic state trajectories. However, since the pseudo-time time device is already in use, it is easy to include intermediate resampling steps along the way in order to further improve the filter performance.
+ 
+
+\section{Numerical Simulations}
+\subsection{A Toy Example}
+\subsection{A Tracking Example}
+
 
 
 
