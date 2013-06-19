@@ -1,4 +1,4 @@
-\documentclass{statsoc}
+\documentclass{article}
 
 %%% Packages %%%
 
@@ -35,12 +35,10 @@
 
 
 %%% Titles and stuff %%%
-\title[Composite Proposal Particle Filter]{The Composite Proposal Particle Filter: Better Approximations to the Optimal Importance Density}
-\author[Bunch {\it et al.}]{Pete Bunch}
-\address{Cambridge University Engineering Department,
-Cambridge,
-UK.}
-\email{pb404@cam.ac.uk}
+%\title[Composite Proposal Particle Filter]{The Composite Proposal Particle Filter: Better Approximations to the Optimal Importance Density}
+%\author[Bunch {\it et al.}]{Pete Bunch}
+%\address{Cambridge University Engineering Department,Cambridge,UK.}
+%\email{pb404@cam.ac.uk}
 
 
 
@@ -56,7 +54,7 @@ Abstract here.
 
 
 
-\keywords{particle filter, sequential Monte Carlo, optimal importance distribution}
+%\keywords{particle filter, sequential Monte Carlo, optimal importance distribution}
 
 
 
@@ -90,7 +88,7 @@ A modification of the algorithm is also presented which introduces intermediate 
 
 \section{Particle Filtering}
 
-\subsection{Basics}
+\subsection{Basics}\label{sec:pf_basics}
 
 We consider a standard discrete-time HMM in which the transition, observation and prior models have closed-form densities,
 %
@@ -209,14 +207,23 @@ This choice is thus known as the ``optimal importance density'' (OID). It may be
 
 \section{Composite Proposals}
 
-The composite proposal method is a procedure for sampling approximately from the OID by introducing the likelihood progressively and making a series of local linear approximations. In order to achieve this, an auxiliary variable $\pt \in [0,1]$ is used. Intuitively, this is a stretch of ``pseudo-time'' between the predictive and filtering densities. Define $\ls{\rt,\pt}$ as the state at time $\rt$ and pseudo-time $\pt$. Finally, for the $(j)$th particle, define the continuous sequence of densities,
+The composite proposal method is a procedure for sampling approximately from the OID by introducing the likelihood progressively and making a series of local Gaussian approximations. In order to achieve this, an auxiliary variable $\pt \in [0,1]$ is used. Intuitively, this is a stretch of ``pseudo-time'' between the predictive and filtering densities, which we link via a continuous sequence of densities,
+%
+\begin{IEEEeqnarray}{rCl}
+ \augfiltden{\rt,\pt}(\ls{1:\rt-1}, \ls{\rt,\pt}) & = & \frac{ p(\ob{\rt} | \ls{\rt,\pt})^{\pt} p(\ls{\rt,\pt} | \ls{\rt-1}) p(\ls{1:\rt-1}|\ob{1:\rt-1}) }{ \augfiltnorm{\pt} } \label{eq:filtering_sequence} \\
+ \augfiltnorm{\pt} & = & \int p(\ob{\rt} | \ls{\rt,\pt})^{\pt} p(\ls{\rt,\pt} | \ob{1:\rt-1}) d\ls{\rt,\pt}      ,
+\end{IEEEeqnarray}
+%
+in which $\ls{\rt,\pt}$ is defined as the state at time $\rt$ and pseudo-time $\pt$. This filtering sequence becomes the predictive density when $\pt=0$ and the desired filtering density when $\pt=1$. In the composite proposal method, rather than attempting to sample directly from the OID, a series of incremental updates are applied in order to advance a particle state $\ls{\rt,\pt}\pss{j}$ and its associated weight $\pw{\rt,\pt}\pss{j}$ through pseudo-time, so that it is correctly distributed according to \eqref{eq:filtering_sequence} throughout.
+
+State updates are derived by considering a sequence of optimal importance densities for the particle,
 %
 \begin{IEEEeqnarray}{rCl}
  \oiden{\rt,\pt}(\ls{\rt,\pt} | \ls{\rt-1}\pss{\anc{j}}) & = & \frac{ p(\ob{\rt} | \ls{\rt,\pt})^{\pt} p(\ls{\rt,\pt} | \ls{\rt-1}\pss{\anc{j}}) }{ \oinorm{\pt}(\ls{\rt-1}\pss{\anc{j}}) } \label{eq:OID_sequence} \\
  \oinorm{\pt}(\ls{\rt-1}\pss{\anc{j}}) & = & \int p(\ob{\rt} | \ls{\rt,\pt})^{\pt} p(\ls{\rt,\pt} | \ls{\rt-1}\pss{\anc{j}}) d\ls{\rt,\pt}      .
 \end{IEEEeqnarray}
 %
-This sequence begins with the transition density at $\pt=0$ and finishes with the OID at $\pt=1$. Rather than attempting to sample directly from the OID, a state is sampled from the transition density and then moved, either deterministically or stochastically, such that it is approximately distributed according to \eqref{eq:OID_sequence} throughout the pseudo-time interval.
+This sequence begins with the transition density at $\pt=0$ and finishes with the OID at $\pt=1$. By considering the evolution of this optimal density sequence and making local approximations, particle updates may be chosen which advance the state in an approximately optimal fashion. The process may be initialised by sampling from the transition density and weighting appropriately, in exactly the same manner as the prediction step of a bootstrap filter. (See section~\ref{sec:pf_basics}.)
 
 Throughout this section, subscript $\rt$s are omitted for clarity on variables which vary with $\pt$. Particle superscripts are also omitted where appropriate.
 
@@ -244,9 +251,9 @@ where
  \lgoimean{\pt}    & = & \lgoicov{\pt} \left[ \transcov^{-1} \transfun(\ls{\rt-1}) + \pt \obsmat^T \obscov^{-1} \ob{\rt} \right] \nonumber     .
 \end{IEEEeqnarray}
 %
-Since the OID may be sampled and the density evaluated, a composite proposal is redundant. However, the analytic formulas derived from this case may be used for other classes of models using local approximations.
+Since the OID may be sampled and the density evaluated, a composite proposal is redundant. However, the analytic formulas derived from this case may be used with other classes of models if local Gaussian approximations are made.
 
-Consider the transition from $\pt_0$ to $\pt_1$. How should $\ls{\pt_1}$ be generated from $\ls{\pt_0}$ such that it is distributed correctly? Since $\ls{\pt_0}|\ls{\rt-1}$ and $\ls{\pt_1}|\ls{\rt-1}$ are Gaussian random variables, they may be written,
+Consider the transition from $\pt_0$ to $\pt_1$. How should $\ls{\pt_0}$ be updated to get $\ls{\pt_1}$ such that it is distributed correctly? Since $\ls{\pt_0}|\ls{\rt-1}$ and $\ls{\pt_1}|\ls{\rt-1}$ are Gaussian random variables, they may be written,
 %
 \begin{IEEEeqnarray}{rCl}
  \ls{\pt_0} & = & \lgoimean{\pt_0} + \lgoicov{\pt_0}^{\frac{1}{2}} \stdnorm{\pt_0} \nonumber \\
@@ -276,100 +283,22 @@ where $\lgexpsf>0$. The resulting update formula for the state is,
 Provided $\lgexpsf\ne0$ this map has an associated incremental importance density,
 %
 \begin{IEEEeqnarray}{rCl}
- \impden(\ls{\pt_1} | \ls{\pt_0}) & = & \normal{\ls{\pt_1}}{\lgoimean{\pt_1} + \lgupdmeanmat{\pt_0,\pt_1}(\ls{\pt_0}-\lgoimean{\pt_0})}{ \lgupdcov{\pt_0,\pt_1}} \label{eq:importance_density}     .
+ \impden(\ls{\pt_1} | \ls{\pt_0}) & = & \normal{\ls{\pt_1}}{\lgoimean{\pt_1} + \lgupdmeanmat{\pt_0,\pt_1}(\ls{\pt_0}-\lgoimean{\pt_0})}{ \lgupdcov{\pt_0,\pt_1}} \label{eq:incremental_importance_density}     .
 \end{IEEEeqnarray}
 
-Advancing the state through pseudo-time using \eqref{eq:state_update} generates a particle which is distributed exactly according to the OID for partially linear-Gaussian models. For other models, such exact analytic updates do not exist. Instead, the state may be updated using Gaussian approximations of the OID formed, for example, by linearisation at the current state $\ls{\pt_0}$,
+For partially linear-Gaussian models, advancing the state through pseudo-time using \eqref{eq:state_update} generates a particle which is distributed exactly according to the current density in the OID sequence. For other models, such exact analytic updates do not exist. Instead, state updates may be conducted by forming a local Gaussian approximation to the OID sequence,
 %
 \begin{IEEEeqnarray}{rCl}
  \approxoiden{\pt}{\ls{\pt_0}}(\ls{\pt} | \ls{\rt-1}) & = & \mathcal{N}(\ls{\pt}|\lgoimeanapprox{\pt}{\ls{\pt_0}},\lgoicovapprox{\pt}{\ls{\pt_0}}) \nonumber \\
 \end{IEEEeqnarray}
 %
-and then using \eqref{eq:state_update}. Suitable approximations are discussed in section~\ref{}{\meta ADD REF}. Provided the pseudo-time increments are not too large, this process often leads to a more effective proposal than a simple Gaussian approximation to the OID using linearisation about a single point.
-
-
-
-\subsection{Weight Updates}
-
-Next we consider how to correctly weight particles generated using the composite proposal method. Two cases are considered separately, $\lgexpsf=0$ and $\lgexpsf\ne0$. Denote here the pseudo-time update points as $\{\pt_0,\pt_1,\pt_2,\dots,\pt_L\}$, where $\pt_0=0$ and $\pt_L=1$ (so that $\ls{\rt,\pt_L}=\ls{\rt}$).
-
-\subsubsection{Stochastic updates}
-
-When $\lgexpsf\ne0$, particles are advanced through pseudo-time using a stochastic mechanism. The combined importance density for the transition from $\rt-1$ to $\rt$ is,
-%
-\begin{IEEEeqnarray}{rCl}
- \impden(\ls{\rt} | \ls{\rt-1}) & = & \int \cdots \int \impden(\ls{\rt,\pt_L}|\ls{\rt,\pt_{L-1}}) \dots \impden(\ls{\rt,\pt_1}|\ls{\rt,\pt_0}) p(\ls{\rt,\pt_0}|\ls{\rt-1}) d\ls{\rt,\pt_{L-1}}\dots d\ls{\rt,\pt_0} \nonumber      .
-\end{IEEEeqnarray}
-%
-In the case of partially linear Gaussian models this may be calculated analytically, and is of course equal to the OID. For other models, when approximations are used, this integral is not tractable because of the dependence of the approximations on the current state. Instead, tractable weight updates require the use of the extended target distribution method popularised by \citep{DelMoral2006}.
-
-Instead of marginalising, the trajectory of intermediate states is added to the target distribution by extending it with an artificial conditional density,
-%
-\begin{IEEEeqnarray}{rCl}
- p(\ls{1:\rt} | \ob{1:\rt}) \artden(\ls{\rt,\pt_0},\dots,\ls{\rt,\pt_{L-1}} | \ls{\rt,\pt_L}) \nonumber      .
-\end{IEEEeqnarray}
-%
-The integrals in the combined importance density are then no longer required,
-%
-\begin{IEEEeqnarray}{rCl}
- \impden(\ls{\rt,\pt_0},\dots,\ls{\rt,\pt_{L}} | \ls{\rt-1}) & = & \impden(\ls{\rt,\pt_L}|\ls{\rt,\pt_{L-1}}) \dots \impden(\ls{\rt,\pt_1}|\ls{\rt,\pt_0}) p(\ls{\rt,\pt_0}|\ls{\rt-1}) \nonumber  .
-\end{IEEEeqnarray}
-%
-To limit the complexity, assume the same Markovian factorisation on $\artden$ as $\impden$,
-%
-\begin{IEEEeqnarray}{rCl}
- \artden(\ls{\rt,\pt_0},\dots,\ls{\rt,\pt_{L-1}} | \ls{\rt,\pt_L}) & = & \artden(\ls{\rt,\pt_{L-1}} | \ls{\rt,\pt_L}) \dots \artden(\ls{\rt,\pt_0} | \ls{\rt,\pt_1}) \nonumber      .
-\end{IEEEeqnarray}
-%
-The weight update formula is then,
-%
-\begin{IEEEeqnarray}{rCl}
- \pw{\rt} & \propto & \frac{\npw{\rt-1}}{\naw{t-1}} \times \frac{ p(\ob{\rt} | \ls{\rt}) p(\ls{\rt} | \ls{\rt-1}) }{ p(\ls{\rt,\pt_0}|\ls{\rt-1}) } \times \frac{\artden(\ls{\rt,\pt_0} | \ls{\rt,\pt_1})}{\impden(\ls{\rt,\pt_1}|\ls{\rt,\pt_0})} \times\dots\times \frac{\artden(\ls{\rt,\pt_{L-1}} | \ls{\rt,\pt_L})}{\impden(\ls{\rt,\pt_L}|\ls{\rt,\pt_{L-1}})} \nonumber       .
-\end{IEEEeqnarray}
-%
-Using results from \citep{DelMoral2006}, the optimal form for the artificial density factors is,
-%
-\begin{IEEEeqnarray}{rCl}
- \artden(\ls{\rt,\pt_0} | \ls{\rt,\pt_1}) & = & \frac{ \approxoiden{\rt,\pt_0}{\ls{\pt_0}}(\ls{1:\rt-1}, \ls{\rt,\pt_0}) \impden(\ls{\rt,\pt_1} | \ls{\rt,\pt_0}) }{ \int \approxoiden{\rt,\pt_0}{\ls{\pt_0}}(\ls{1:\rt-1}, \ls{}) \impden(\ls{\rt,\pt_1} | \ls{}) d\ls{} } \nonumber \\
- & = & \frac{ \approxoiden{\rt,\pt_0}{\ls{\pt_0}}(\ls{1:\rt-1}, \ls{\rt,\pt_0}) \impden(\ls{\rt,\pt_1} | \ls{\rt,\pt_0}) }{ \approxoiden{\rt,\pt_1}{\ls{\pt_0}}(\ls{1:\rt-1}, \ls{\pt_1}) } \label{eq:optimal_artificial_density}     .
-\end{IEEEeqnarray}
-%
-Hence, the weight update for the CPPF is,
-%
-\begin{IEEEeqnarray}{rCl}
- \pw{\rt} & \propto & \frac{\npw{\rt-1}}{\naw{t-1}} \times \frac{ p(\ob{\rt} | \ls{\rt}) p(\ls{\rt} | \ls{\rt-1}) }{ p(\ls{\rt,\pt_0}|\ls{\rt-1}) } \nonumber \\
-  &   & \times \frac{\mathcal{N}(\ls{\pt_0}|\lgoimeanapprox{\pt_0}{\ls{\pt_0}},\lgoicovapprox{\pt_0}{\ls{\pt_0}})} {\mathcal{N}(\ls{\pt_1}|\lgoimeanapprox{\pt_1}{\ls{\pt_0}},\lgoicovapprox{\pt_1}{\ls{\pt_0}})} \times\dots\times \frac{\mathcal{N}(\ls{\pt_{L-1}}|\lgoimeanapprox{\pt_{L-1}}{\ls{\pt_{L-1}}},\lgoicovapprox{\pt_{L-1}}{\ls{\pt_{L-1}}})} {\mathcal{N}(\ls{\pt_L}|\lgoimeanapprox{\pt_L}{\ls{\pt_{L-1}}},\lgoicovapprox{\pt_L}{\ls{\pt_{L-1}}})} \label{eq:CPPF_stochastic_weight_update}       .
-\end{IEEEeqnarray}
-
-\subsubsection{Deterministic Updates}
-
-The previous results are not strictly valid when $\lgexpsf=0$. In this case, the state updates are completely deterministic, and the incremental importance densities are not defined. However, since the proposal consists of sampling from the transition density and then applying linear transformations, the combined importance density may be written down using the standard change of variables approach,
-%
-\begin{IEEEeqnarray}{rCl}
- \impden(\ls{\rt,\pt_0},\dots,\ls{\rt,\pt_{L}} | \ls{\rt-1}) & = & p(\ls{\rt,\pt_0}|\ls{\rt-1}) \times \magdet{\frac{\partial \ls{\rt,\pt_{L-1}}}{\partial \ls{\rt,\pt_L}}} \times\dots\times \magdet{\frac{\partial \ls{\rt,\pt_{0}}}{\partial \ls{\rt,\pt_1}}}  \nonumber  .
-\end{IEEEeqnarray}
-%
-Each Jacobian has the same form,
-%
-\begin{IEEEeqnarray}{rCl}
- \magdet{\frac{\partial \ls{\rt,\pt_{0}}}{\partial \ls{\rt,\pt_1}}} & = & \magdet{ \lgupdmeanmat{\pt_0,\pt_1} } \nonumber \\
- & = & \exp\left\{-\half\lgexpsf(\pt_1-\pt_0)\right\} \sqrt{\frac{\magdet{\lgoicovapprox{\pt_1}{\ls{\pt_0}}}}{\magdet{\lgoicovapprox{\pt_0}{\ls{\pt_0}}}}} \nonumber      .
-\end{IEEEeqnarray}
-%
-Hence, the weight update is,
-%
-\begin{IEEEeqnarray}{rCl}
- \pw{\rt} & \propto & \frac{\npw{\rt-1}}{\naw{t-1}} \times \frac{ p(\ob{\rt} | \ls{\rt}) p(\ls{\rt} | \ls{\rt-1}) }{ p(\ls{\rt,\pt_0}|\ls{\rt-1}) } \nonumber \\
-  &   & \times \sqrt{\frac{\magdet{\lgoicovapprox{\pt_0}{\ls{\pt_0}}}}{\magdet{\lgoicovapprox{\pt_1}{\ls{\pt_0}}}}} \times\dots\times \sqrt{\frac{\magdet{\lgoicovapprox{\pt_{L-1}}{\ls{\pt_{L-1}}}}}{\magdet{\lgoicovapprox{\pt_L}{\ls{\pt_{L-1}}}}}} \label{eq:CPPF_deterministic_weight_update}       .
-\end{IEEEeqnarray}
-%
-It may easily be shown that as $\lgexpsf\rightarrow0$, \eqref{eq:CPPF_stochastic_weight_update} is equal to \eqref{eq:CPPF_deterministic_weight_update}.
+and then using \eqref{eq:state_update} again. Provided the pseudo-time increments are not too large, this process often leads to a more effective proposal than simpler approximations of the OID using a single Gaussian.
 
 
 
 \subsection{Gaussian Approximations}
 
-The CPPF relies on making a Gaussian approximations of the OID at each point in pseudo-time by selecting $\lgoicovapprox{\pt}{\lsfixed}$ and $\lgoimeanapprox{\pt}{\lsfixed}$. This may be achieved using standard linearisation methods. The quality of the approximation does not affect the validity of the algorithm, since it only form part of the particle filter proposal. However, better approximations will lead to higher effective sample sizes and thus more accurate estimates.
+The CPPF relies on making a Gaussian approximations of the OID sequence at each point in pseudo-time by selecting $\lgoicovapprox{\pt}{\lsfixed}$ and $\lgoimeanapprox{\pt}{\lsfixed}$. This may be achieved using standard linearisation methods. The quality of the approximation does not affect the validity of the algorithm, since it will be corrected for in the assignment of a particle weight. However, better approximations will lead to higher effective sample sizes and thus more accurate estimates.
 
 \subsubsection{Nonlinear Gaussian Models}
 
@@ -389,7 +318,7 @@ For such models, the observation function may be linearised in the usual way, by
  p(\ob{\rt} | \ls{\rt}) & \approx & \normal{\ob{\rt}}{\obsfun(\lsfixed)+\obsmatapprox{\lsfixed}(\ls{\rt} - \lsfixed)}{\obscov} \nonumber      ,
 \end{IEEEeqnarray}
 %
-where $\lsfixed$ is the point around which the function is linearised. An approximation of the OID is then given by,
+where $\lsfixed$ is the point around which the function is linearised. An approximation of the OID sequence is then given by,
 %
 \begin{IEEEeqnarray}{rCl}
  \lgoicovapprox{\pt}{\lsfixed}  & = & \left[ \transcov^{-1} + \pt \obsmatapprox{\lsfixed}^T \obscov^{-1} \obsmatapprox{\lsfixed} \right]^{-1} \nonumber \\
@@ -398,7 +327,7 @@ where $\lsfixed$ is the point around which the function is linearised. An approx
 
 \subsubsection{Non-Gaussian Models}
 
-If either model density is not Gaussian, a more generic linearisation method may be used. The parameters $\lgoicovapprox{\pt}{\lsfixed}$ and $\lgoimeanapprox{\pt}{\lsfixed}$ are chosen so as to match the gradient and curvature of the log-density to those of the true OID, as suggested by \citet{Doucet2000a} for selecting a single Gaussian importance density.
+If either model density is not Gaussian, a more generic approximation method may be used. The parameters $\lgoicovapprox{\pt}{\lsfixed}$ and $\lgoimeanapprox{\pt}{\lsfixed}$ are chosen so as to match the gradient and curvature of the log-density of the Gaussian approximation to those of the current true density in the OID sequence, in much the same way as \citet{Doucet2000a} suggested for selecting a single Gaussian importance density.
 
 For the Gaussian approximation,
 %
@@ -410,17 +339,93 @@ For the Gaussian approximation,
 Thus, we use,
 %
 \begin{IEEEeqnarray}{rCl}
- \lgoicovapprox{\pt}{\lsfixed} & = & \left[ \frac{\partial^2}{\partial \ls{\pt}^2} \log\left(\oiden{\rt,\pt}(\ls{\rt,\pt} | \ls{\rt-1})\right) \right]^{-1} \nonumber \\
- \lgoimeanapprox{\pt}{\lsfixed} & = & \lsfixed + \lgoicovapprox{\pt}{\lsfixed} \left[ \frac{\partial}{\partial \ls{\pt}} \log\left(\oiden{\rt,\pt}(\ls{\rt,\pt} | \ls{\rt-1})\right) \right] \nonumber      .
+ \lgoicovapprox{\pt}{\lsfixed} & = & \left[ \frac{\partial^2}{\partial \ls{\pt}^2} \log\left(\oiden{\rt,\pt}\right) \right]^{-1} \nonumber \\
+ \lgoimeanapprox{\pt}{\lsfixed} & = & \lsfixed + \lgoicovapprox{\pt}{\lsfixed} \left[ \frac{\partial}{\partial \ls{\pt}} \log\left(\oiden{\rt,\pt}\right) \right] \nonumber      .
 \end{IEEEeqnarray}
 %
 This approximation may only be used when the Hessian of the log-density is negative definite, otherwise the matrix square root may not exist and the state update will not work. If this condition is not satisfied then modifications may be used, for example by subtracting a scaled identity matrix from the Hessian to force the eigenvalues to be negative, or by diagonalising and setting the offending negative eigenvalues to a small negative constant.
 
 
+\subsection{Weight Updates}
+
+Next we consider how to correctly weight particles generated using the composite proposal method. Two cases are considered separately, $\lgexpsf=0$ and $\lgexpsf\ne0$.
+
+\subsubsection{Stochastic updates}
+
+When $\lgexpsf\ne0$, particles are advanced through pseudo-time using a stochastic mechanism. Suppose a particle $\{\ls{1:\rt-1},\ls{\pt_0}\}$ with weight $\pw{\pt_0}$ distributed as $\augfiltden{\pt_0}$ already exists. This could be updated to $\pt_1$ by sampling $\ls{\pt_1}$ from the incremental importance density \eqref{eq:incremental_importance_density} and then discarding the old state $\ls{\pt_0}$. The distribution of the new particle would then be,
+%
+\begin{IEEEeqnarray}{rCl}
+ \impden(\ls{1:\rt-1}, \ls{\pt_1}) & = & \int \augfiltden{\pt_0}(\ls{1:\rt-1},\ls{\pt_0}) \impden(\ls{\pt_1}|\ls{\pt_0}) d\ls{\pt_0} \nonumber      .
+\end{IEEEeqnarray}
+%
+In the case of partially linear Gaussian models this may be calculated analytically, and is equal to the current density in the OID sequence. For other models, when approximations are used, this integral is not tractable because of the dependence of the approximations on the current state. Instead, tractable weight updates require the use of the extended target distribution method popularised by \citep{DelMoral2006}.
+
+Instead of marginalising, the old state is added to the target distribution by extending it with an artificial conditional density,
+%
+\begin{IEEEeqnarray}{rCl}
+ \augfiltden{\pt_1}(\ls{1:\rt-1},\ls{\pt_1}) \artden(\ls{\pt_0} | \ls{\pt_1}) \nonumber      .
+\end{IEEEeqnarray}
+%
+After sampling, the distribution of the augmented particle $\{\ls{1:\rt-1},\ls{\pt_0},\ls{\pt_0}\}$ is now,
+%
+\begin{IEEEeqnarray}{rCl}
+ \impden(\ls{1:\rt-1}, \ls{\pt_1}) & = & \augfiltden{\pt_0}(\ls{1:\rt-1},\ls{\pt_0}) \impden(\ls{\pt_1}|\ls{\pt_0}) \nonumber      .
+\end{IEEEeqnarray}
+
+The resulting incremental weight update formula is then,
+%
+\begin{IEEEeqnarray}{rCl}
+ \pw{\pt_1} & \propto & \pw{\pt_0} \times \frac{ p(\ob{\rt} | \ls{\pt_1})^{\pt_1} p(\ls{\pt_1} | \ls{\rt-1}) }{ p(\ob{\rt} | \ls{\pt_0})^{\pt_0} p(\ls{\pt_0} | \ls{\rt-1}) } \times \frac{\artden(\ls{\pt_0} | \ls{\pt_1})}{\impden(\ls{\pt_1}|\ls{\pt_0})} \nonumber       .
+\end{IEEEeqnarray}
+%
+In \citep{DelMoral2006}, the optimal form for the artificial density is shown to be,
+%
+\begin{IEEEeqnarray}{rCl}
+ \artden(\ls{\pt_0} | \ls{\pt_1}) & = & \frac{ \approxoiden{\pt_0}{\ls{\pt_0}}(\ls{1:\rt-1}, \ls{\pt_0}) \impden(\ls{\pt_1} | \ls{\pt_0}) }{ \int \approxoiden{\pt_0}{\ls{\pt_0}}(\ls{1:\rt-1}, \ls{\pt_0}) \impden(\ls{\pt_1} | \ls{\pt_0}) d\ls{\pt_0} } \nonumber \\
+ & = & \frac{ \approxoiden{\pt_0}{\ls{\pt_0}}(\ls{1:\rt-1}, \ls{\pt_0}) \impden(\ls{\pt_1} | \ls{\pt_0}) }{ \approxoiden{\pt_1}{\ls{\pt_0}}(\ls{1:\rt-1}, \ls{\pt_1}) } \label{eq:optimal_artificial_density}     .
+\end{IEEEeqnarray}
+%
+Using this, the weight update for the CPPF becomes,
+%
+\begin{IEEEeqnarray}{rCl}
+ \pw{\pt_1} & \propto & \pw{\pt_0} \times \frac{ p(\ob{\rt} | \ls{\pt_1})^{\pt_1} p(\ls{\pt_1} | \ls{\rt-1}) }{ p(\ob{\rt} | \ls{\pt_0})^{\pt_0} p(\ls{\pt_0} | \ls{\rt-1}) } \times \frac{\mathcal{N}(\ls{\pt_0}|\lgoimeanapprox{\pt_0}{\ls{\pt_0}},\lgoicovapprox{\pt_0}{\ls{\pt_0}})} {\mathcal{N}(\ls{\pt_1}|\lgoimeanapprox{\pt_1}{\ls{\pt_0}},\lgoicovapprox{\pt_1}{\ls{\pt_0}})} \label{eq:CPPF_stochastic_weight_update}       .
+\end{IEEEeqnarray}
+
+
+
+\subsubsection{Deterministic Updates}
+
+The previous results are not strictly valid when $\lgexpsf=0$. In this case, the state update is completely deterministic, and the incremental importance density is not defined. Again suppose we have a particle $\{\ls{1:\rt-1},\ls{\pt_0}\}$ with weight $\pw{\pt_0}$ distributed as $\augfiltden{\pt_0}$. If a new state $\ls{\pt_1}$ is generated using \eqref{eq:state_update} and the old state $\ls{\pt_0}$ discarded, then the distribution of the resulting particle may be determined using the standard change of variable approach for a probability density,
+%
+\begin{IEEEeqnarray}{rCl}
+ \impden(\ls{1:\rt-1},\ls{\pt_1} | \ls{\rt-1}) & = & \impden(\ls{1:\rt-1},\ls{\pt_0} | \ls{\rt-1}) \times \magdet{\frac{\partial \ls{\pt_{0}}}{\partial \ls{\pt_1}}}  \nonumber  .
+\end{IEEEeqnarray}
+%
+The Jacobian for the state update \eqref{eq:state_update} is,
+%
+\begin{IEEEeqnarray}{rCl}
+ \magdet{\frac{\partial \ls{\pt_{0}}}{\partial \ls{\pt_1}}} & = & \magdet{ \lgupdmeanmat{\pt_0,\pt_1} } \nonumber \\
+ & = & \exp\left\{-\half\lgexpsf(\pt_1-\pt_0)\right\} \sqrt{\frac{\magdet{\lgoicovapprox{\pt_1}{\ls{\pt_0}}}}{\magdet{\lgoicovapprox{\pt_0}{\ls{\pt_0}}}}} \nonumber      .
+\end{IEEEeqnarray}
+%
+Hence, the weight update is,
+%
+\begin{IEEEeqnarray}{rCl}
+ \pw{\pt_1} & \propto & \pw{\pt_0} \times \frac{ p(\ob{\rt} | \ls{\pt_1})^{\pt_1} p(\ls{\pt_1} | \ls{\rt-1}) }{ p(\ob{\rt} | \ls{\pt_0})^{\pt_0} p(\ls{\pt_0} | \ls{\rt-1}) } \nonumber \\
+  &   & \times \sqrt{\frac{\magdet{\lgoicovapprox{\pt_0}{\ls{\pt_0}}}}{\magdet{\lgoicovapprox{\pt_1}{\ls{\pt_0}}}}} \label{eq:CPPF_deterministic_weight_update}       .
+\end{IEEEeqnarray}
+%
+It may easily be shown that as $\lgexpsf\rightarrow0$, \eqref{eq:CPPF_stochastic_weight_update} is equal to \eqref{eq:CPPF_deterministic_weight_update}.
+
+
+
+
+
+
 
 \subsection{Adaptive Step Sizes}
 
-An important aspect of the CPPF is how the sizes of the pseudo-time steps are chosen. State updates are calculated using local Gaussian approximations of the OID, so the best-case algorithm would take infinitesimal steps and use the appropriate approximation at each point on a continuous trajectory. (Note that such an algorithm still would not lead to proposals exactly from the OID, because it is still locally approximated.) In practice, the number of steps needs to be kept low, to minimise the computational burden. In some instances, it may be sufficient to use a fixed step size, or a predetermined time grid. However, an adaptive scheme is preferable for greatest efficiency.
+An important consideration for the CPPF is how the sizes of the pseudo-time steps are chosen. State updates are calculated using local Gaussian approximations of the OID, so the best-case algorithm would take infinitesimal steps and use the appropriate approximation at each point on a continuous trajectory. (Note that such an algorithm still would not lead to proposals exactly from the OID, because it is still locally approximated.) In practice, the number of steps needs to be kept low, to minimise the computational burden. In some instances, it may be sufficient to use a fixed step size, or a predetermined time grid. However, an adaptive scheme is preferable for greatest efficiency.
 
 \subsubsection{Local Error Estimates}
 
@@ -434,7 +439,7 @@ A state evolving according to the best-case algorithm obeys the following stocha
 %
 where,
 \begin{IEEEeqnarray}{rCl}
- \sdedrift{\pt|\ls{\pt_0}}(\ls{\pt}) & = & \frac{\partial \lgoimeanapprox{\pt}{\ls{\pt_0}}}{\partial \pt} + \half \left( \frac{\partial \lgoicovapprox{\pt}{\ls{\pt_0}} }{\partial \pt} \lgoicovapprox{\pt}{\ls{\pt_0}}^{-1} (\ls{\pt}-\lgoimeanapprox{\pt}{\ls{\pt_0}}) \right) - \lgexpsf I \nonumber \\
+ \sdedrift{\pt|\ls{\pt_0}}(\ls{\pt}) & = & \lgoicov{\pt} \obsmat^T \obscov^{-1} \left( (\ob{\rt}-\obsmat\lgoimean{\pt}) - \half \obsmat (\ls{\pt}-\lgoimean{\pt}) \right) - \half \lgexpsf (\ls{\pt}-\lgoimean{\pt}) \nonumber \\
  \sdediffuse{\pt}         & = & \lgexpsf^{\half} \lgoicovapprox{\pt}{\ls{\pt_0}}^{\half} \nonumber      ,
 \end{IEEEeqnarray}
 %
@@ -444,10 +449,10 @@ and $\lginfbm{\pt}$ is a standard Brownian motion process. See appendix~\ref{app
 The state error due to finite step sizes is then,
 %
 \begin{IEEEeqnarray}{rCl}
- \lserror{\pt_1}{\pt_0} & = & \int_{\pt_0}^{\pt_1} \left[\sdedrift{\pt|\ls{\pt_0}}(\ls{\pt}) - \sdedrift{\pt|\ls{\pt}}(\ls{\pt})\right] dl + \int_{\pt_0}^{\pt_1} \left[\sdediffuse{\pt|\ls{\pt_0}}(\ls{\pt}) - \sdediffuse{\pt|\ls{\pt}}(\ls{\pt})\right] d\lginfbm{l} \nonumber      .
+ \lserror{\pt_1}{\pt_0} & = & \int_{\pt_0}^{\pt_1} \left[\sdedrift{l|\ls{\pt_0}}(\ls{l}) - \sdedrift{l|\ls{l}}(\ls{l})\right] dl + \int_{\pt_0}^{\pt_1} \left[\sdediffuse{l|\ls{\pt_0}}(\ls{l}) - \sdediffuse{l|\ls{l}}(\ls{l})\right] d\lginfbm{l} \nonumber      .
 \end{IEEEeqnarray}
 %
-The expectation of the second integral is $0$. The first integral may be crudely approximated by assuming that the argument grows linearly from $0$ to some final at $\pt_1$. This leaves us with a rough, but easily calculated, estimate of the local error associated with this finite step,
+The expectation of the second integral is $0$. The first integral may be crudely approximated by assuming that the argument grows linearly from $0$ to some final value at $\pt_1$. This leaves us with a rough, but easily calculated, estimate of the local error associated with this finite step,
 %
 \begin{IEEEeqnarray}{rCl}
  \widehat{\expect{}\left[\lserror{\pt_1}{\pt_0}\right]} & = & \half \sdedrift{\pt_1|\ls{\pt_0}}(\ls{\pt_1}) (\pt_1-\pt_0)     .
@@ -467,7 +472,7 @@ where $a$, $b$ and $e_{\text{tol}}$ are fixed parameters: $e_{\text{tol}}$ is th
 
 \subsection{Algorithm Summary}
 
-Algorithm~\ref{alg:general_CPPF} summarises the CPPF.
+The distinguishing novel components of the CPPF are the incremental state and weight update formulas for advancing the particles through pseudo-time. Algorithm~\ref{alg:general_CPPF} summarises the CPPF.
 
 \begin{algorithm} \label{alg:general_CPPF}
 \begin{algorithmic}[1]
@@ -483,7 +488,7 @@ Algorithm~\ref{alg:general_CPPF} summarises the CPPF.
       \STATE Initialise state by sampling from the transition/prior density, $\ls{\rt,0} \sim p(\ls{\rt} | \ls{\rt-1})$ or $\ls{\rt,0} \sim p(\ls{\rt})$.
       \STATE Initialise weight, $\pw{\rt,0}\pss{i} = \ls{\rt}\pss{i}$.
       \WHILE{$\pt<1$}
-        \STATE Increment pseudo-time, $\pt \leftarrow \pt+\dpt$.
+        \STATE Increment pseudo-time, $\pt \leftarrow \pt+\dpt$, using a fixed or adaptive method.
         \STATE Update state $\ls{\rt,\pt}\pss{i}$ using \eqref{eq:state_update}.
       \ENDWHILE
       \STATE Finalise, $\ls{\rt}\pss{i} = \ls{\rt,1}\pss{i}$, $\pw{\rt}\pss{i} = \pw{\rt,1}\pss{i}$.
@@ -496,9 +501,12 @@ Algorithm~\ref{alg:general_CPPF} summarises the CPPF.
 \end{algorithm}
 
 
+
 \section{Extensions to the CPPF}
 \subsection{Gaussian Mixtures}
 \subsection{Intermediate Resampling}
+
+The CPPF bares a resemblance to an annealing algorithm, yet it is quite distinct. Rather than moving all the particles simultaneously through pseudo-time via a fixed set of bridging densities, the CPPF allows each particle to be handled individually, using different step sizes for each. 
 
 
 
@@ -567,6 +575,7 @@ and the state evolution stochastic differential equation is,
 
 
 \bibliographystyle{chicago}
-\bibliography{D:/pb404/Dropbox/PhD/OTbib}
+%\bibliography{D:/pb404/Dropbox/PhD/OTbib}
+\bibliography{/home/pete/Dropbox/PhD/OTbib}
 
 \end{document} 
