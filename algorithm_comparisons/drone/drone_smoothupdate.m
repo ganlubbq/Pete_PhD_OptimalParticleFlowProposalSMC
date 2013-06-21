@@ -34,6 +34,8 @@ pf(1).origin = 1:algo.N;
 % Loop initialisation
 last_prob = init_trans_prob;
 
+errors = zeros(algo.N,L);
+
 % Pseudo-time loop
 for ll = 1:L-1
     
@@ -125,14 +127,30 @@ for ll = 1:L-1
 %         
 %         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
+        % Sample perturbation
+        if algo.Dscale > 0
+            zD = mvnrnd(zeros(model.ds,1)',eye(model.ds))';
+        else
+            zD = zeros(model.ds,1);
+        end
+        
         % Analytical flow
-        [ x, wt_jac, prob_ratio] = linear_flow_move( lam, lam0, x0, m, P, y, H, R, algo.Dscale );
+        [ x, prob_ratio, drift, diffuse] = linear_flow_move( lam, lam0, x0, m, P, y, H, R, algo.Dscale, zD );
 %         HRH = H'*(R\H);
 %         invSigma = -prior_hess + lam*HRH;
 %         A = -0.5*invSigma\HRH;
 %         b = invSigma\( H'*(R\y) + A'*( prior_grad + lam*H'*(R\y) ) );
 %         x = x0 + (b)*(lam-lam0);
 %         wt_jac = det(eye(ds)+(lam-lam0)*A);
+
+        % Error estimate
+        H_new = drone_obsjacobian(model, x);
+        y_new = obs - drone_h(model, x) + H_new*x;
+        [drift_new, diffuse_new] = linear_drift( lam, x, m, P, y_new, H_new, R, algo.Dscale );
+        deter_err_est = 0.5*(lam-lam0)*(drift_new-drift);
+        stoch_err_est = 0;%0.5*(diffuse_new-diffuse)*zD*sqrt(lam1-lam0);
+        err_crit = deter_err_est'*deter_err_est + stoch_err_est'*stoch_err_est;
+        errors(ii,ll+1) = err_crit;
         
         % Store state
         state = x;
@@ -153,11 +171,7 @@ for ll = 1:L-1
         else
             resamp_weight = pf(ll).weight(pf(ll+1).ancestor(ii));
         end
-        if algo.Dscale == 0
-            pf(ll+1).weight(ii) = resamp_weight + prob(ii) - last_prob(pf(ll+1).ancestor(ii)) + log(wt_jac);
-        else
-            pf(ll+1).weight(ii) = resamp_weight + prob(ii) - last_prob(pf(ll+1).ancestor(ii)) + prob_ratio;
-        end
+        pf(ll+1).weight(ii) = resamp_weight + prob(ii) - last_prob(pf(ll+1).ancestor(ii)) + log(prob_ratio);
         
         if ~isreal(pf(ll+1).weight(ii))
             pf(ll+1).weight(ii) = -inf;
@@ -224,6 +238,8 @@ if display.plot_particle_paths
         drawnow;
     end
 end
+
+figure(4), plot(lam_rng, errors), drawnow
 
 end
 

@@ -1,14 +1,14 @@
-function [ state, ppsl_prob ] = nlng_smoothupdatebyparticle( display, algo, model, fh, prev_state, obs )
+function [ state, ppsl_prob ] = nlng_smoothupdatebyparticle_scalemix( display, algo, model, fh, prev_state, obs )
 %nlng_smoothupdatebyparticle Apply a smooth update for the nonlinear non-Gaussian
 %benchmark model for a single particle (which means no intermediate
 %resampling, but step size control is easier.)
 
-ds = model.ds-1;
+Dscale = algo.Dscale;
 
 dl_start = 1E-3;
 dl_min = 1E-7;
 dl_max = 0.5;
-err_thresh_rate = 1;
+err_thresh = 0.001;
 dl_sf = 0.8;
 dl_pow = 0.7;
 
@@ -32,9 +32,9 @@ end
 
 % SMoN scaling.
 if ~isinf(model.dfy)
-    xi = chi2rnd(model.dfy);
+    mix = chi2rnd(model.dfy);
 else
-    xi = 1;
+    mix = 1;
 end
 
 % Initialise evolution arrays
@@ -42,7 +42,7 @@ dl_evo = dl_start;
 lam_evo = 0;
 err_evo = 0;
 state_evo = init_state;
-xi_evo = xi;
+mix_evo = mix;
 post_prob_evo = init_trans_prob;
 ppsl_prob_evo = init_trans_prob;
 
@@ -53,19 +53,12 @@ ppsl_prob = init_trans_prob;
 dl = dl_start;
 lam = 0;
 
-% Sample perturbation
-if algo.Dscale > 0
-    zD = mvnrnd(zeros(ds,1)',eye(ds))';
-else
-    zD = zeros(ds,1);
-end
-
 % Loop
 while lam < 1
     
     % Pseudo-time and step-size
     lam0 = lam;
-    lam1 = lam + dl/(1+zD'*zD);
+    lam1 = lam + dl;
     if lam1 > 1
         lam1 = 1;
     end
@@ -73,6 +66,7 @@ while lam < 1
     % Starting point
     x0 = state(2:end);
     kk = state(1);
+    xi0 = mix;
     
     % Observation mean
     obs_mn = nlng_h(model, x0);
@@ -80,54 +74,55 @@ while lam < 1
     % Linearise observation model around the current point
     H = nlng_obsjacobian(model, x0);
     y = obs - obs_mn + H*x0;
-    
-    % SMoN scaling.
-    if ~isinf(model.dfy)
-        xi = chi2rnd(model.dfy);
-    else
-        xi = 1;
-    end
-    R = model.R / xi;
+    R = model.R/xi0;
     
     % Analytical flow
-    [ x, prob_ratio, drift, diffuse] = linear_flow_move( lam1, lam0, x0, m, P, y, H, R, algo.Dscale, zD );
+    [ x, wt_jac, prob_ratio, drift] = linear_flow_move( lam1, lam0, x0, m, P, y, H, R, algo.Dscale );
     
     % Error estimate
     H_new = nlng_obsjacobian(model, x);
     y_new = obs - nlng_h(model, x) + H_new*x;
-    [drift_new, diffuse_new] = linear_drift( lam1, x, m, P, y_new, H_new, R, algo.Dscale );
-    %%%%%%%
-%     stoch_err_vr = 0.5*(lam1-lam0)*(diffuse_new-diffuse)*(diffuse_new-diffuse)';
-    deter_err_est = 0.5*(lam1-lam0)*(drift_new-drift);
-%     stoch_err_est = sqrt(1-exp(-algo.Dscale*(lam1-lam0)))*(diffuse_new-diffuse)*zD/sqrt(algo.Dscale);
-    stoch_err_est = 0.5*(diffuse_new-diffuse)*zD*sqrt(lam1-lam0);
-%     err_crit = deter_err_est'*deter_err_est + trace(stoch_err_vr);% + 2*sqrt(trace(2*stoch_err_vr^2));
-    err_crit = deter_err_est'*deter_err_est + stoch_err_est'*stoch_err_est;
+    drift_new = linear_drift( lam1, x, m, P, y_new, H_new, R, algo.Dscale );
+    err_est = 0.5*dl*( drift_new - drift );
     
     % Step size adjustment
-    err_thresh = 0.01;%err_thresh_rate*(lam1-lam0);%
-    dl = min(dl_max, min(sqrt(dl), dl_sf * (err_thresh/err_crit)^dl_pow * dl));
+    err_crit = norm(err_est, 2);
+    dl = min(dl_max, min(10*dl, dl_sf * (err_thresh/err_crit)^dl_pow * dl));
     if dl < dl_min
-        %             dl = dl_min;
-        %             warning('nlng_smoothupdatebyparticle:ErrorTolerance', 'Minimum step size reached. Local error tolerance exceeded.');
+%         dl = dl_min;
+%         warning('nlng_smoothupdatebyparticle:ErrorTolerance', 'Minimum step size reached. Local error tolerance exceeded.');
         break;
     end
     
     % Accept/reject step
     if err_crit < err_thresh
         
+        % Mixing parameter update
+        dyR0 = (obs-nlng_h(model, x0))'*(model.R\(obs-nlng_h(model, x0)));
+        dyR1 = (obs-nlng_h(model, x))'*(model.R\(obs-nlng_h(model, x)));
+        gama1 = (model.dfy+lam1*model.do)/2;
+        gama0 = (model.dfy+lam0*model.do)/2;
+        gamb1 = 2/(1+lam1*dyR1);
+        gamb0 = 2/(1+lam0*dyR0);
+        
+%         xi = gamrnd(gama1,gamb1);
+%         xi_prob_ratio = gampdf(xi,gama1,gamb1)/gampdf(xi0,gama0,gamb0);
+        
+        xi = chi2rnd(model.dfy);
+        xi_prob_ratio = 1;
+        
+%         xi_upd = gamrnd((gama1-gama0),gamb1);
+%         xi = (gamb1/gamb0)*xi0 + xi_upd;
+%         xi_prob_ratio = gampdf(xi,gama1,gamb1)/gampdf(xi0,gama0,gamb0);
+        
+        xi_post = log(chi2pdf(xi, model.dfy));
+        
         % Update time
         lam = lam1;
         
         % Update state
         state = [kk; x];
-        
-        % Sample perturbation
-        if algo.Dscale > 0
-            zD = mvnrnd(zeros(ds,1)',eye(ds))';
-        else
-            zD = zeros(ds,1);
-        end
+        mix = xi;
         
         % Densities
         if ~isempty(prev_state)
@@ -138,15 +133,20 @@ while lam < 1
         [~, lhood_prob] = feval(fh.observation, model, state, obs);
         
         % Update probabilities
-        post_prob = trans_prob + lam*lhood_prob;
-        ppsl_prob = ppsl_prob - log(prob_ratio);
+        post_prob = trans_prob + lam*lhood_prob + xi_post;
+        if algo.Dscale == 0
+            ppsl_prob = ppsl_prob - log(wt_jac);
+        else
+            ppsl_prob = ppsl_prob - log(prob_ratio);
+        end
+        ppsl_prob = ppsl_prob - log(xi_prob_ratio);
         
         % Update evolution
         dl_evo = [dl_evo dl];
         lam_evo = [lam_evo lam];
         err_evo = [err_evo err_crit];
         state_evo = [state_evo state];
-        xi_evo = [xi_evo xi];
+        mix_evo = [mix_evo mix];
         post_prob_evo = [post_prob_evo post_prob];
         ppsl_prob_evo = [ppsl_prob_evo ppsl_prob];
         
@@ -185,7 +185,7 @@ if display.plot_particle_paths
     
     % Mixing variable
     figure(display.h_ppp(6));
-    plot(lam_evo, xi_evo);
+    plot(lam_evo, mix_evo);
     
 end
 

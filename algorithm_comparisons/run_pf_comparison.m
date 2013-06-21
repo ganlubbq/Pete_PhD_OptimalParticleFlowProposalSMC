@@ -49,7 +49,7 @@ if ~exist('test', 'var') || ~isfield(test,'flag_batch') || (~test.flag_batch)
     end
     
     % Select algorithms to run
-    test.algs_to_run = [4];     % Vector of algorithm indexes to run
+    test.algs_to_run = [6];     % Vector of algorithm indexes to run
                                     % 1 = bootstrap
                                     % 2 = EKF proposal
                                     % 3 = UKF proposal
@@ -67,9 +67,9 @@ if ~exist('test', 'var') || ~isfield(test,'flag_batch') || (~test.flag_batch)
     test.STdof = Inf;
 
     % SUPF settings
-    test.flag_stochastic = false;
+    test.flag_stochastic = true;
     test.flag_intermediate_resample = false;
-    test.Dscale = 0.01;
+    test.Dscale = 1;
 
 end
 
@@ -103,6 +103,7 @@ elseif model_flag == 2
     fh.linearisedoidproposal = @nlng_linearisedoidproposal;
     fh.smoothupdate = @nlng_smoothupdate;
     fh.smoothupdatebyparticle = @nlng_smoothupdatebyparticle;
+%     fh.smoothupdatebyparticle = @nlng_smoothupdatebyparticle_scalemix;
 elseif model_flag == 3
     addpath('ha');
     fh.setmodel = @ha_setmodel;

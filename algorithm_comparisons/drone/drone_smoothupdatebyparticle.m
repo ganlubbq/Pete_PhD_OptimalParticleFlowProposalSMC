@@ -6,7 +6,7 @@ function [ state, ppsl_prob ] = drone_smoothupdatebyparticle( display, algo, mod
 dl_start = 1E-3;
 dl_min = 1E-8;
 dl_max = 0.5;
-err_thresh = 1;
+err_thresh = 0.1;
 dl_sf = 0.8;
 dl_pow = 0.7;
 
@@ -41,17 +41,25 @@ ppsl_prob = init_trans_prob;
 dl = dl_start;
 lam = 0;
 
+% Sample perturbation
+if algo.Dscale > 0
+    zD = mvnrnd(zeros(model.ds,1)',eye(model.ds))';
+else
+    zD = zeros(model.ds,1);
+end
+
 % Loop
 ll_count = 0;
 while lam < 1
     
     if ll_count > 100
+        ppsl_prob = 1E10;
         break;
     end
     
     % Pseudo-time and step-size
     lam0 = lam;
-    lam1 = lam + dl;
+    lam1 = lam + dl/(1+zD'*zD);
     if lam1 > 1
         lam1 = 1;
     end
@@ -76,27 +84,35 @@ while lam < 1
     
     % SMoN scaling.
     if ~isinf(model.dfx)
-        xi = chi2rnd(model.dfx);
+        gama = (model.dfx+model.ds)/2;
+        gamb = 1/(1 + (x0-m)'*(P\(x0-m)));
+        xi = gamrnd(gama, gamb);
+        xi_ppsl_prob = log(gampdf(xi, gama, gamb)) - log(chi2pdf(xi, model.dfx));
+%         xi = chi2rnd(model.dfx);
     else
         xi = 1;
+        xi_ppsl_prob = 0;
     end
     Pxi = P / xi;
     
     % Analytical flow
-    [ x, wt_jac, prob_ratio, drift] = linear_flow_move( lam1, lam0, x0, m, Pxi, y, H, R, algo.Dscale );
+    [ x, prob_ratio, drift, diffuse] = linear_flow_move( lam1, lam0, x0, m, Pxi, y, H, R, algo.Dscale, zD );
     
     % Error estimate
     H_new = drone_obsjacobian(model, x);
     y_new = obs - drone_h(model, x) + H_new*x;
-    drift_new = linear_drift( lam1, x, m, Pxi, y_new, H_new, R, algo.Dscale );
-    err_est = 0.5*dl*( drift_new - drift );
+    [drift_new, diffuse_new] = linear_drift( lam1, x, m, Pxi, y_new, H_new, R, algo.Dscale );
+    
+    deter_err_est = 0.5*(lam1-lam0)*(drift_new-drift);
+    stoch_err_est = 0.5*(diffuse_new-diffuse)*zD*sqrt(lam1-lam0);
+    err_crit = deter_err_est'*deter_err_est + stoch_err_est'*stoch_err_est;
     
     % Step size adjustment
-    err_crit = norm(err_est, 2);
     dl = min(dl_max, min(10*dl, dl_sf * (err_thresh/err_crit)^dl_pow * dl));
     if dl < dl_min
 %         dl = dl_min;
 %         warning('nlng_smoothupdatebyparticle:ErrorTolerance', 'Minimum step size reached. Local error tolerance exceeded.');
+        ppsl_prob = 1E10;
         break;
     end
     
@@ -111,6 +127,13 @@ while lam < 1
         % Update state
         state = x;
         
+        % Sample perturbation
+        if algo.Dscale > 0
+            zD = mvnrnd(zeros(model.ds,1)',eye(model.ds))';
+        else
+            zD = zeros(model.ds,1);
+        end
+        
         % Densities
         if ~isempty(prev_state)
             [~, trans_prob] = feval(fh.transition, model, prev_state, state);
@@ -120,12 +143,8 @@ while lam < 1
         [~, lhood_prob] = feval(fh.observation, model, state, obs);
         
         % Update probabilities
-        post_prob = trans_prob + lam*lhood_prob;
-        if algo.Dscale == 0
-            ppsl_prob = ppsl_prob - log(wt_jac);
-        else
-            ppsl_prob = ppsl_prob - log(prob_ratio);
-        end
+        post_prob = trans_prob + lam*lhood_prob + xi_ppsl_prob;
+        ppsl_prob = ppsl_prob - log(prob_ratio);
         
         % Update evolution
         dl_evo = [dl_evo dl];
@@ -152,9 +171,11 @@ if display.plot_particle_paths
     plot(init_state(1), init_state(2), 'o');
     plot(state(1), state(2), 'xr');
     
-    % 1D state trajectories
+    % 2D state trajectories
     figure(display.h_ppp(2));
-    plot(lam_evo, state_evo(1,:));
+    plot(state_evo(1,:), state_evo(3,:));
+    plot(init_state(1), init_state(3), 'o');
+    plot(state(1), state(3), 'xr');
     
     % Step size
     figure(display.h_ppp(3));

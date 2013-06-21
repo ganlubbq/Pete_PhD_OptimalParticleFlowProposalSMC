@@ -1,4 +1,4 @@
-function [ drift ] = linear_drift( t, x, m, P, y, H, R, Dscale )
+function [ drift, diffuse ] = linear_drift( t, x, m, P, y, H, R, Dscale )
 %linear_drift Calculate the drift for a linear flow for a set of matrixes.
 
 % Useful matrixes
@@ -10,6 +10,7 @@ mut = Sigmat*(t*H'*(R\y)+P\m);
 
 % Drift
 drift =  Sigmat*(H'/R)*( (y-H*mut)-0.5*H*(x-mut) ) - Dscale*(x-mut);
+diffuse = sqrtm(Sigmat)*sqrt(Dscale);
 
 end
 

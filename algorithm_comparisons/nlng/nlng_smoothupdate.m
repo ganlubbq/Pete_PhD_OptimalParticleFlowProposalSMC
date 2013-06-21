@@ -44,8 +44,7 @@ last_prob = init_trans_prob;
 %     figure(1), clf, hold on
 % end
 
-errors1 = zeros(algo.N, L);
-errors2 = zeros(algo.N, L);
+errors = zeros(algo.N, L);
 
 % Pseudo-time loop
 for ll = 1:L-1
@@ -105,53 +104,28 @@ for ll = 1:L-1
         end
         R = model.R / xi;
         
+        % Sample perturbation
+        if algo.Dscale > 0
+            zD = mvnrnd(zeros(model.ds-1,1)',eye(model.ds-1))';
+        else
+            zD = zeros(model.ds-1,1);
+        end
+        
         % Analytical flow
-        [ x, wt_jac, prob_ratio, flow] = linear_flow_move( lam, lam0, x0, m, P, y, H, R, algo.Dscale );
+        [ x, prob_ratio, drift, diffuse] = linear_flow_move( lam, lam0, x0, m, P, y, H, R, algo.Dscale, zD );
         
-%         % Reverse transform
-%         obs_mn_rev = nlng_h(model, x);
-%         H_rev = nlng_obsjacobian(model, x);
-%         R_rev = R;
-%         y_rev = obs - obs_mn_rev + H*x;
-%         [ x0_rev, ~, ~] = linear_flow_move( lam0, lam, x, m, P, y_rev, H_rev, R_rev, algo.Dscale );
-%         errors1(ii,ll+1) = norm(x0 - x0_rev);
-
-        %%% Step size control testing %%%
-        
-        [ A0, b0 ] = linear_flow( lam0, m, P, y, H, R, algo.Dscale );
-        
-        H1 = nlng_obsjacobian(model, x);
-        obs_mn1 = nlng_h(model, x0);
-        y1 = obs - obs_mn1 + H1*x;
-        [ A1, b1 ] = linear_flow( lam , m, P, y1, H1, R, algo.Dscale );
-        err_est = 0.5*(lam-lam0)*( (A0*x+b0)-(A1*x+b1) );
-        errors1(ii,ll+1) = err_est'*err_est;
-        
-        
-%         T = nlng_obssecondderivtensor(model,x0);
-%         
-%         err_est = zeros(model.ds,1);
-%         for dd = 1:model.do
-%             err_est = err_est + 0.5 * (lam-lam0)^2 * flow'*T(:,:,dd)*flow;
-%         end
-        
-        
-        
-%         Rdy = R\(obs-obs_mn);
-%         curv_est = zeros(model.ds-1);
-%         for dd = 1:model.do
-%             curv_est = curv_est + T(:,:,dd)*Rdy(dd);
-%         end
-%         err_est = curv_est*flow*(lam-lam0);
-        
-%         errors1(ii,ll+1) = err_est'*err_est;
-        
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        % Error estimate
+        H_new = nlng_obsjacobian(model, x);
+        y_new = obs - nlng_h(model, x) + H_new*x;
+        [drift_new, diffuse_new] = linear_drift( lam, x, m, P, y_new, H_new, R, algo.Dscale, zD );
+        err_est = 0.5*(lam-lam0)*(drift_new-drift);% + 0.5*(diffuse_new-diffuse)*zD;
+        err_crit = norm(err_est, 2);
         
         % Store state
         state = [kk; x];
         pf(ll+1).state(:,ii) = state;
 %         state_evo(:,ii,ll+1) = state;
+        errors(ii,ll+1) = err_crit;
         
         % Densities
         if ~isempty(prev_state)
@@ -168,11 +142,7 @@ for ll = 1:L-1
         else
             resamp_weight = pf(ll).weight(pf(ll+1).ancestor(ii));
         end
-        if algo.Dscale == 0
-            pf(ll+1).weight(ii) = resamp_weight + prob(ii) - last_prob(pf(ll+1).ancestor(ii)) + log(wt_jac);
-        else
-            pf(ll+1).weight(ii) = resamp_weight + prob(ii) - last_prob(pf(ll+1).ancestor(ii)) + prob_ratio;%log(wt_jac);%
-        end
+        pf(ll+1).weight(ii) = resamp_weight + prob(ii) - last_prob(pf(ll+1).ancestor(ii)) + log(prob_ratio);
         
         if ~isreal(pf(ll+1).weight(ii))
             pf(ll+1).weight(ii) = -inf;
@@ -248,8 +218,7 @@ if display.plot_particle_paths
     end
 end
 
-figure(4), plot(errors1'), drawnow;
-figure(5), plot(log(errors1)'), drawnow;
+figure(4), plot(lam_rng, errors'), drawnow;
 
 end
 

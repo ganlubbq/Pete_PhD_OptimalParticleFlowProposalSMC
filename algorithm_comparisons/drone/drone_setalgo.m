@@ -6,7 +6,7 @@ function algo = drone_setalgo(test, model, al)
 algo.N = test.num_filt_pts(al);
 
 % Stochastic smooth update?
-if (al==5) && (test.flag_stochastic)
+if ((al==5)||(al==6)) && (test.flag_stochastic)
     algo.Dscale = test.Dscale;
 else
     algo.Dscale = 0;

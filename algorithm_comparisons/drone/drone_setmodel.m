@@ -13,7 +13,7 @@ model.ds = 6;                   % Dimension of the state
 model.do = 4;                   % Dimension of the observations
 
 % Parameters
-sigx     = 100^2;
+sigx     = 10^2;
 sigtheta = ( 10*(pi/180) )^2;   % Bearing variance
 sigalt   = 0.1^2;               % Altitude variance
 sigr     = 0.1^2;               % Range variance
@@ -47,9 +47,9 @@ model.map.alt = zeros(1,num_hills);
 model.map.mn = zeros(2,num_hills);
 model.map.vr = zeros(2,2,num_hills);
 for hh = 1:num_hills
-    model.map.alt(hh) = 10000*chi2rnd(3);
-    model.map.mn(:,hh) = mvnrnd(zeros(2,1), 500^2*eye(2));
-    model.map.vr(:,:,hh) = wishrnd(20000*eye(2), 5);
+    model.map.alt(hh) = 10000*chi2rnd(2);
+    model.map.mn(:,hh) = mvnrnd(zeros(2,1), 100^2*eye(2));
+    model.map.vr(:,:,hh) = wishrnd(200*eye(2), 5);
 end
 
 end
