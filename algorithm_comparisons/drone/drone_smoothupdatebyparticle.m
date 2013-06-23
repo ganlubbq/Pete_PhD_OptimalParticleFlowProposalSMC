@@ -52,7 +52,7 @@ end
 ll_count = 0;
 while lam < 1
     
-    if ll_count > 100
+    if ll_count > 50
         ppsl_prob = 1E10;
         break;
     end
@@ -84,11 +84,8 @@ while lam < 1
     
     % SMoN scaling.
     if ~isinf(model.dfx)
-        gama = (model.dfx+model.ds)/2;
-        gamb = 1/(1 + (x0-m)'*(P\(x0-m)));
-        xi = gamrnd(gama, gamb);
-        xi_ppsl_prob = log(gampdf(xi, gama, gamb)) - log(chi2pdf(xi, model.dfx));
-%         xi = chi2rnd(model.dfx);
+        xi = chi2rnd(model.dfx);
+        xi_ppsl_prob = 0;
     else
         xi = 1;
         xi_ppsl_prob = 0;
@@ -105,7 +102,8 @@ while lam < 1
     
     deter_err_est = 0.5*(lam1-lam0)*(drift_new-drift);
     stoch_err_est = 0.5*(diffuse_new-diffuse)*zD*sqrt(lam1-lam0);
-    err_crit = deter_err_est'*deter_err_est + stoch_err_est'*stoch_err_est;
+    err_est = deter_err_est + stoch_err_est;
+    err_crit = err_est'*err_est;
     
     % Step size adjustment
     dl = min(dl_max, min(10*dl, dl_sf * (err_thresh/err_crit)^dl_pow * dl));

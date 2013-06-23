@@ -90,42 +90,42 @@ for ll = 1:L-1
             P = model.Q;
         end
         
-        % SMoN scaling of transition density
-        if ~isinf(model.dfx)
-            xi = chi2rnd(model.dfx);
-        else
-            xi = 1;
-        end
-        P = P / xi;
+%         % SMoN scaling of transition density
+%         if ~isinf(model.dfx)
+%             xi = chi2rnd(model.dfx);
+%         else
+%             xi = 1;
+%         end
+%         P = P / xi;
         
-%         %%%%%% TESTING 1ST ORDER TS MATCHING %%%%%%%%
-%         
-%         dx = x0 - m;
-%         dfx = model.dfx;
-%         ds = model.ds;
-%         xP = (P\dx);
-%         t_dist = 1 + xP'*dx/dfx;
-%         HRH = H'*(R\H);
-%         
-%         prior_grad = -((dfx+ds)/dfx)*xP/t_dist;
-%         prior_hess = ((dfx+ds)/dfx)*( - inv(P) + (2/dfx)*( xP*xP' )/t_dist )/t_dist;
-%         
-%         [hess_eigvec, hess_eigval] = eig(prior_hess);
-%         hess_eigval(hess_eigval>0) = -1;
-%         prior_hess = hess_eigvec*hess_eigval*hess_eigvec';
-%         
-% %         max_eig = max(eig(prior_hess));
-% %         while ~isposdef(eye(ds) - lam*prior_hess\HRH)
-% %             prior_hess = prior_hess - 1.1 * max_eig*eye(ds);
-% %             fprintf(1,'.');
-% %         end
-%         
-%         P = -pinv(prior_hess);
-%         m = x0 + P*prior_grad;
-%         
-% %         assert(isposdef(P));
-%         
-%         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %%%%%% TESTING 1ST ORDER TS MATCHING %%%%%%%%
+        
+        dx = x0 - m;
+        dfx = model.dfx;
+        ds = model.ds;
+        xP = (P\dx);
+        t_dist = 1 + xP'*dx/dfx;
+        HRH = H'*(R\H);
+        
+        prior_grad = -((dfx+ds)/dfx)*xP/t_dist;
+        prior_hess = ((dfx+ds)/dfx)*( - inv(P) + (2/dfx)*( xP*xP' )/t_dist )/t_dist;
+        
+        [hess_eigvec, hess_eigval] = eig(prior_hess);
+        hess_eigval(hess_eigval>0) = -1;
+        prior_hess = hess_eigvec*hess_eigval*hess_eigvec';
+        
+%         max_eig = max(eig(prior_hess));
+%         while ~isposdef(eye(ds) - lam*prior_hess\HRH)
+%             prior_hess = prior_hess - 1.1 * max_eig*eye(ds);
+%             fprintf(1,'.');
+%         end
+        
+        P = -inv(prior_hess);
+        m = x0 + P*prior_grad;
+        
+%         assert(isposdef(P));
+        
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
         % Sample perturbation
         if algo.Dscale > 0

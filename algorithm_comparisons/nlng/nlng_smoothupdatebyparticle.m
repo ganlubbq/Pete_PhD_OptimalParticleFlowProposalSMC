@@ -8,9 +8,9 @@ ds = model.ds-1;
 dl_start = 1E-3;
 dl_min = 1E-7;
 dl_max = 0.5;
-err_thresh_rate = 1;
-dl_sf = 0.8;
-dl_pow = 0.7;
+err_thresh = 0.1;
+dl_sf = 0.8;1;
+dl_pow = 0.7;1;
 
 % Prior
 if isempty(prev_state)
@@ -89,6 +89,36 @@ while lam < 1
     end
     R = model.R / xi;
     
+%     %%%%%% TESTING 1ST ORDER TS MATCHING %%%%%%%%
+%     
+%     R = model.R;
+%     dy = obs - obs_mn;
+%     dfy = model.dfy;
+%     do = model.do;
+%     yR = (R\dy);
+%     t_dist = 1 + yR'*yR/dfy;
+%     HRH = H'*(R\H);
+%     
+%     lhood_grad = -((dfy+do)/dfy)*H'*yR/t_dist;
+%     lhood_hess = ((dfy+do)/dfy)*( - inv(P) + (2/dfx)*( xP*xP' )/t_dist )/t_dist;
+%     
+%     [hess_eigvec, hess_eigval] = eig(prior_hess);
+%     hess_eigval(hess_eigval>0) = -1;
+%     prior_hess = hess_eigvec*hess_eigval*hess_eigvec';
+%     
+%     %         max_eig = max(eig(prior_hess));
+%     %         while ~isposdef(eye(ds) - lam*prior_hess\HRH)
+%     %             prior_hess = prior_hess - 1.1 * max_eig*eye(ds);
+%     %             fprintf(1,'.');
+%     %         end
+%     
+%     P = -pinv(prior_hess);
+%     m = x0 + P*prior_grad;
+%     
+%     %         assert(isposdef(P));
+%     
+%     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    
     % Analytical flow
     [ x, prob_ratio, drift, diffuse] = linear_flow_move( lam1, lam0, x0, m, P, y, H, R, algo.Dscale, zD );
     
@@ -101,17 +131,10 @@ while lam < 1
     deter_err_est = 0.5*(lam1-lam0)*(drift_new-drift);
 %     stoch_err_est = sqrt(1-exp(-algo.Dscale*(lam1-lam0)))*(diffuse_new-diffuse)*zD/sqrt(algo.Dscale);
     stoch_err_est = 0.5*(diffuse_new-diffuse)*zD*sqrt(lam1-lam0);
+    err_est = deter_err_est + stoch_err_est;
 %     err_crit = deter_err_est'*deter_err_est + trace(stoch_err_vr);% + 2*sqrt(trace(2*stoch_err_vr^2));
-    err_crit = deter_err_est'*deter_err_est + stoch_err_est'*stoch_err_est;
-    
-    % Step size adjustment
-    err_thresh = 0.01;%err_thresh_rate*(lam1-lam0);%
-    dl = min(dl_max, min(sqrt(dl), dl_sf * (err_thresh/err_crit)^dl_pow * dl));
-    if dl < dl_min
-        %             dl = dl_min;
-        %             warning('nlng_smoothupdatebyparticle:ErrorTolerance', 'Minimum step size reached. Local error tolerance exceeded.');
-        break;
-    end
+%     err_crit = deter_err_est'*deter_err_est + stoch_err_est'*stoch_err_est;
+    err_crit = err_est'*err_est;
     
     % Accept/reject step
     if err_crit < err_thresh
@@ -128,6 +151,9 @@ while lam < 1
         else
             zD = zeros(ds,1);
         end
+        
+        % Step size adjustment
+        dl = min(dl_max, min(sqrt(dl), dl_sf * (err_thresh/err_crit)^(dl_pow) * dl));
         
         % Densities
         if ~isempty(prev_state)
@@ -151,6 +177,13 @@ while lam < 1
         ppsl_prob_evo = [ppsl_prob_evo ppsl_prob];
         
     else
+        
+        % Step size adjustment
+        dl = min(dl_max, min(sqrt(dl), dl_sf * (err_thresh/err_crit)^dl_pow * dl));
+        if dl < dl_min
+            warning('nlng_smoothupdatebyparticle:ErrorTolerance', 'Minimum step size reached. Local error tolerance exceeded.');
+            break;
+        end
         
 %         disp('Error too large. Reducing step size');
         

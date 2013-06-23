@@ -8,7 +8,7 @@ Dscale = algo.Dscale;
 dl_start = 1E-3;
 dl_min = 1E-7;
 dl_max = 0.5;
-err_thresh = 0.001;
+err_thresh = 0.01;
 dl_sf = 0.8;
 dl_pow = 0.7;
 
@@ -53,6 +53,13 @@ ppsl_prob = init_trans_prob;
 dl = dl_start;
 lam = 0;
 
+% Sample perturbation
+if algo.Dscale > 0
+    zD = mvnrnd(zeros(ds,1)',eye(model.ds-1))';
+else
+    zD = zeros(model.ds-1,1);
+end
+
 % Loop
 while lam < 1
     
@@ -77,7 +84,7 @@ while lam < 1
     R = model.R/xi0;
     
     % Analytical flow
-    [ x, wt_jac, prob_ratio, drift] = linear_flow_move( lam1, lam0, x0, m, P, y, H, R, algo.Dscale );
+    [ x, prob_ratio, drift, diffuse] = linear_flow_move( lam1, lam0, x0, m, P, y, H, R, algo.Dscale, zD );
     
     % Error estimate
     H_new = nlng_obsjacobian(model, x);
@@ -97,25 +104,43 @@ while lam < 1
     % Accept/reject step
     if err_crit < err_thresh
         
-        % Mixing parameter update
-        dyR0 = (obs-nlng_h(model, x0))'*(model.R\(obs-nlng_h(model, x0)));
-        dyR1 = (obs-nlng_h(model, x))'*(model.R\(obs-nlng_h(model, x)));
-        gama1 = (model.dfy+lam1*model.do)/2;
-        gama0 = (model.dfy+lam0*model.do)/2;
-        gamb1 = 2/(1+lam1*dyR1);
-        gamb0 = 2/(1+lam0*dyR0);
-        
-%         xi = gamrnd(gama1,gamb1);
-%         xi_prob_ratio = gampdf(xi,gama1,gamb1)/gampdf(xi0,gama0,gamb0);
-        
-        xi = chi2rnd(model.dfy);
-        xi_prob_ratio = 1;
-        
-%         xi_upd = gamrnd((gama1-gama0),gamb1);
-%         xi = (gamb1/gamb0)*xi0 + xi_upd;
-%         xi_prob_ratio = gampdf(xi,gama1,gamb1)/gampdf(xi0,gama0,gamb0);
-        
-        xi_post = log(chi2pdf(xi, model.dfy));
+        if ~isinf(model.dfy)
+%             % Mixing parameter update
+%             dyR0 = (obs-nlng_h(model, x0))'*(model.R\(obs-nlng_h(model, x0)));
+%             dyR1 = (obs-nlng_h(model, x))'*(model.R\(obs-nlng_h(model, x)));
+%             gama1 = (model.dfy+lam1*model.do)/2;
+%             gama0 = (model.dfy+lam0*model.do)/2;
+%             gamb1 = 2/(1+lam1*dyR1);
+%             gamb0 = 2/(1+lam0*dyR0);
+            
+            %         xi = gamrnd(gama1,gamb1);
+            %         xi_prob_ratio = gampdf(xi,gama1,gamb1)/gampdf(xi0,gama0,gamb0);
+            
+%             xi = chi2rnd(model.dfy);
+%             xi_prob_ratio = 1;
+            
+            %         xi_upd = gamrnd((gama1-gama0),gamb1);
+            %         xi = (gamb1/gamb0)*xi0 + xi_upd;
+            %         xi_prob_ratio = gampdf(xi,gama1,gamb1)/gampdf(xi0,gama0,gamb0);
+            
+%             xi_post = log(chi2pdf(xi, model.dfy));
+
+            xi_mhppsl = chi2rnd(model.dfy);
+            old_prob = (0.5*(model.dfy+(lam1-1)*model.do)-1)*log(xi0)       - xi0/2       + loggausspdf(obs, nlng_h(model, m), model.R/(lam1*xi0)+H_new*P*H_new');
+            new_prob = (0.5*(model.dfy+(lam1-1)*model.do)-1)*log(xi_mhppsl) - xi_mhppsl/2 + loggausspdf(obs, nlng_h(model, m), model.R/(lam1*xi_mhppsl)+H_new*P*H_new');
+            if log(rand)<(new_prob-old_prob)
+                xi = xi_mhppsl;
+            else
+                xi = xi0;
+            end
+            xi_post = 0;
+            xi_prob_ratio = 1;
+            
+        else
+            xi = 1;
+            xi_post = 0;
+            xi_prob_ratio = 1;
+        end
         
         % Update time
         lam = lam1;
@@ -123,6 +148,13 @@ while lam < 1
         % Update state
         state = [kk; x];
         mix = xi;
+        
+        % Sample perturbation
+        if algo.Dscale > 0
+            zD = mvnrnd(zeros(ds,1)',eye(model.ds-1))';
+        else
+            zD = zeros(model.ds-1,1);
+        end
         
         % Densities
         if ~isempty(prev_state)
@@ -134,12 +166,7 @@ while lam < 1
         
         % Update probabilities
         post_prob = trans_prob + lam*lhood_prob + xi_post;
-        if algo.Dscale == 0
-            ppsl_prob = ppsl_prob - log(wt_jac);
-        else
-            ppsl_prob = ppsl_prob - log(prob_ratio);
-        end
-        ppsl_prob = ppsl_prob - log(xi_prob_ratio);
+        ppsl_prob = ppsl_prob - log(prob_ratio) - log(xi_prob_ratio);
         
         % Update evolution
         dl_evo = [dl_evo dl];

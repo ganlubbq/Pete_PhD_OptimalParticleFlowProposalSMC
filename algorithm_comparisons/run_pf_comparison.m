@@ -20,10 +20,10 @@ if ~exist('test', 'var') || ~isfield(test,'flag_batch') || (~test.flag_batch)
     %%% SETTINGS %%%
     
     % DEFINE RANDOM SEED
-    rand_seed = 3;
+    rand_seed = 0;
     
     % Which model?
-    model_flag = 5;     % 1 = linear Gaussian
+    model_flag = 2;     % 1 = linear Gaussian
                         % 2 = nonlinear non-Gaussian benchmark
                         % 3 = heartbeat alignment
                         % 4 = tracking
@@ -60,16 +60,17 @@ if ~exist('test', 'var') || ~isfield(test,'flag_batch') || (~test.flag_batch)
 	% Set number of particles for each algorithm
     test.num_filt_pts = 100*ones(1,6);
 %     test.num_filt_pts = [185, 100, 100, 100, 100];          % Time normalised for model 1
-%     test.num_filt_pts = [20000, 15000, 5000, 90, 125, 300];       % Time normalised for model 2
+%     test.num_filt_pts = [20000, 15000, 5000, 90, 125, 300];       % Time normalised for model 2 with Gaussian densities
 %     test.num_filt_pts = [20000 12000 3500 10 100];               % Time normalised for model 4
+%     test.num_filt_pts = [3000 100 300 10 100 100];               % Time normalised for model 5
 
     % Model settings
-    test.STdof = Inf;
+    test.STdof = 3;
 
     % SUPF settings
-    test.flag_stochastic = true;
+    test.flag_stochastic = false;
     test.flag_intermediate_resample = false;
-    test.Dscale = 1;
+    test.Dscale = 0.1;
 
 end
 
@@ -140,9 +141,13 @@ elseif model_flag == 5
     fh.ekfproposal = @drone_ekfproposal;
     fh.ukfproposal = @drone_ukfproposal;
     fh.linearisedoidproposal = @drone_linearisedoidproposal;
-    fh.smoothupdate = @drone_smoothupdate;
+    fh.smoothupdate = @drone_smoothupdatewithIR;
+%     fh.smoothupdate = @drone_smoothupdate;
     fh.smoothupdatebyparticle = @drone_smoothupdatebyparticle;
 end
+
+% Set random seed
+rng(rand_seed);
 
 % Set model parameters
 [model] = feval(fh.setmodel, test);
