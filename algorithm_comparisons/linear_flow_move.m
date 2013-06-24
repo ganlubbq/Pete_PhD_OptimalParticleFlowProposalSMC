@@ -16,7 +16,7 @@ mut = Sigmat*(t*H'*(R\y)+P\m);
 sqrtSigmat = sqrtm(Sigmat);
 
 % Rotation
-% [rot, tmp] = qr(randn(ds));
+% [rot, tmp] = qr(randn(size(m,1)));
 % if det(rot)<0
 %     rot(:,1)=-rot(:,1);
 % end

@@ -20,14 +20,15 @@ if ~exist('test', 'var') || ~isfield(test,'flag_batch') || (~test.flag_batch)
     %%% SETTINGS %%%
     
     % DEFINE RANDOM SEED
-    rand_seed = 0;
+    rand_seed = 1;
     
     % Which model?
-    model_flag = 2;     % 1 = linear Gaussian
+    model_flag = 6;     % 1 = linear Gaussian
                         % 2 = nonlinear non-Gaussian benchmark
                         % 3 = heartbeat alignment
                         % 4 = tracking
                         % 5 = drone navigation
+                        % 6 = parametric sine-wave heartbeat alignment
     
     % Set display options
     display.text = true;
@@ -58,14 +59,15 @@ if ~exist('test', 'var') || ~isfield(test,'flag_batch') || (~test.flag_batch)
                                     % 6 = SUPF by particle
     
 	% Set number of particles for each algorithm
-    test.num_filt_pts = 100*ones(1,6);
+%     test.num_filt_pts = 100*ones(1,6);
 %     test.num_filt_pts = [185, 100, 100, 100, 100];          % Time normalised for model 1
 %     test.num_filt_pts = [20000, 15000, 5000, 90, 125, 300];       % Time normalised for model 2 with Gaussian densities
+    test.num_filt_pts = [5000, 1000, 1000, 50, 100, 200];       % Time normalised for model 3
 %     test.num_filt_pts = [20000 12000 3500 10 100];               % Time normalised for model 4
 %     test.num_filt_pts = [3000 100 300 10 100 100];               % Time normalised for model 5
 
     % Model settings
-    test.STdof = 3;
+    test.STdof = Inf;
 
     % SUPF settings
     test.flag_stochastic = false;
@@ -144,6 +146,19 @@ elseif model_flag == 5
     fh.smoothupdate = @drone_smoothupdatewithIR;
 %     fh.smoothupdate = @drone_smoothupdate;
     fh.smoothupdatebyparticle = @drone_smoothupdatebyparticle;
+elseif model_flag == 6
+    addpath('sineha');
+    fh.setmodel = @sineha_setmodel;
+    fh.setalgo = @sineha_setalgo;
+    fh.generatedata = @sineha_generatedata;
+    fh.transition = @sineha_transition;
+    fh.observation = @sineha_observation;
+    fh.stateprior = @sineha_stateprior;
+    fh.ekfproposal = @sineha_ekfproposal;
+    fh.ukfproposal = @sineha_ukfproposal;
+    fh.linearisedoidproposal = @sineha_linearisedoidproposal;
+    fh.smoothupdate = @sineha_smoothupdate;
+    fh.smoothupdatebyparticle = @sineha_smoothupdatebyparticle;
 end
 
 % Set random seed
@@ -196,7 +211,7 @@ for aa = 1:num_to_run
     for kk = 1:model.K
         
         switch model_flag
-            case{1 3 4 5}
+            case{1 3 4 5 6}
                 se = diagnostics{aa}(kk).se;
                 vr = pf{aa}(kk).vr;
             case{2}
