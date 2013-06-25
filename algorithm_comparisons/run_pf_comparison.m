@@ -20,7 +20,7 @@ if ~exist('test', 'var') || ~isfield(test,'flag_batch') || (~test.flag_batch)
     %%% SETTINGS %%%
     
     % DEFINE RANDOM SEED
-    rand_seed = 1;
+    rand_seed = 0;
     
     % Which model?
     model_flag = 6;     % 1 = linear Gaussian
@@ -34,7 +34,7 @@ if ~exist('test', 'var') || ~isfield(test,'flag_batch') || (~test.flag_batch)
     display.text = true;
     display.plot_during = false;    
     display.plot_after = true;
-    display.plot_particle_paths = true;
+    display.plot_particle_paths = false;
     display.plot_colours = {'k', 'b', 'c', 'm', 'g', 'g'};
     if display.plot_during
         display.h_pf(1) = figure;
@@ -50,7 +50,7 @@ if ~exist('test', 'var') || ~isfield(test,'flag_batch') || (~test.flag_batch)
     end
     
     % Select algorithms to run
-    test.algs_to_run = [6];     % Vector of algorithm indexes to run
+    test.algs_to_run = [1 4 6];     % Vector of algorithm indexes to run
                                     % 1 = bootstrap
                                     % 2 = EKF proposal
                                     % 3 = UKF proposal
@@ -62,9 +62,10 @@ if ~exist('test', 'var') || ~isfield(test,'flag_batch') || (~test.flag_batch)
 %     test.num_filt_pts = 100*ones(1,6);
 %     test.num_filt_pts = [185, 100, 100, 100, 100];          % Time normalised for model 1
 %     test.num_filt_pts = [20000, 15000, 5000, 90, 125, 300];       % Time normalised for model 2 with Gaussian densities
-    test.num_filt_pts = [5000, 1000, 1000, 50, 100, 200];       % Time normalised for model 3
+%     test.num_filt_pts = [2500, 1000, 1000, 50, 100, 100];       % Time normalised for model 3
 %     test.num_filt_pts = [20000 12000 3500 10 100];               % Time normalised for model 4
 %     test.num_filt_pts = [3000 100 300 10 100 100];               % Time normalised for model 5
+    test.num_filt_pts = [2500, 1000, 1000, 50, 100, 200];       % Time normalised for model 6
 
     % Model settings
     test.STdof = Inf;
@@ -200,11 +201,13 @@ end
 % This is going to depend on the model, e.g. whether its a mixed state or
 % not, but here's some generic bits
 
+sse = cell(num_to_run,1);
 rmse = cell(num_to_run,1);
 nees = cell(num_to_run,1);
 tnees = cell(num_to_run,1);
 
 for aa = 1:num_to_run
+    rmse{aa} = zeros(model.ds,model.K);
     rmse{aa} = zeros(1,model.K);
     nees{aa} = zeros(1,model.K);
     tnees{aa} = zeros(1,model.K);
@@ -219,6 +222,7 @@ for aa = 1:num_to_run
                 vr = pf{aa}(kk).vr(2:end, 2:end);
         end
         
+        sse{aa}(:,kk) = se;
         rmse{aa}(kk) = sqrt(sum(se.^2));   %abs(se(1));%
         if det(vr) > 1E-12
             nees{aa}(kk) = (se'/vr)*se;
@@ -271,6 +275,15 @@ if ~test.flag_batch
             plot(time, tnees{aa}, display.plot_colours{alg});
         end
         
+%         % State errors
+%         for dd = 1:model.ds
+%             figure; hold on;
+%             for aa = 1:num_to_run
+%                 alg = test.algs_to_run(aa);
+%                 plot(time, sse{aa}(dd,:), display.plot_colours{alg});
+%             end
+%         end
+        
     end
     
     if (model_flag == 4) || (model_flag == 5)
@@ -284,6 +297,21 @@ if ~test.flag_batch
             mmse_est = [pf{aa}.mn];
             plot3(mmse_est(1,:), mmse_est(2,:), mmse_est(3,:), display.plot_colours{alg})
             plot3(mmse_est(1,1), mmse_est(2,1), mmse_est(3,1), 'o', 'color', display.plot_colours{alg})
+        end
+        
+    end
+    
+    if (model_flag == 6)
+       
+        for dd=1:model.ds
+            figure; hold on;
+            plot(state(dd,:), ':k');
+            for aa = 1:num_to_run
+                alg = test.algs_to_run(aa);
+                mmse_est = [pf{aa}.mn];
+                plot(mmse_est(dd,:), 'color', display.plot_colours{alg});
+            end
+        
         end
         
     end

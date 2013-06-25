@@ -9,20 +9,20 @@ function [state, ppsl_prob] = sineha_ekfproposal( model, prev_state, obs, state 
 if isempty(prev_state)
     prior_mn = [model.A_shape*model.A_scale+model.A_shift;
                 model.T1_mn;
-                model.tau_mn;
+                model.tau_shape*model.tau_scale;
                 model.omega1_mn;
                 model.phi1_mn;
                 model.B1_mn];
 else
     prior_mn = [model.A_shape*model.A_scale+model.A_shift;
                 prev_state(2);
-                model.tau_mn;
+                model.tau_shape*model.tau_scale;
                 prev_state(4:6)];
 end
 prior_vr = diag([model.A_shape*model.A_scale^2;
                  (exp(model.T_vol)-1)*exp(2*prior_mn(2)+model.T_vol);
-%                  (prior_mn(3)-prior_mn(2))^2/model.tau_shape;
-                prior_mn(3)^2/model.tau_shape;
+                 model.tau_shape*model.tau_scale^2;
+%                 prior_mn(3)^2/model.tau_shape;
                  model.omega_vr;
                  model.phi_vr;
                  model.B_vr]);

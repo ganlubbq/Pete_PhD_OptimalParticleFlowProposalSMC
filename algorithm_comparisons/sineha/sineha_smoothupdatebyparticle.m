@@ -16,16 +16,22 @@ dl_pow = 0.7;
 if isempty(prev_state)
     prior_mn = [model.A_shape*model.A_scale+model.A_shift;
                 model.T1_mn;
-                model.tau_mn;
+                model.tau_shape*model.tau_scale;
                 model.omega1_mn;
                 model.phi1_mn;
                 model.B1_mn];
 else
     prior_mn = [model.A_shape*model.A_scale+model.A_shift;
                 prev_state(2);
-                model.tau_mn;
+                model.tau_shape*model.tau_scale;
                 prev_state(4:6)];
 end
+prior_vr = diag([model.A_shape*model.A_scale^2;
+                 (exp(model.T_vol)-1)*exp(2*prior_mn(2)+model.T_vol);
+                 model.tau_shape*model.tau_scale^2;
+                 model.omega_vr;
+                 model.phi_vr;
+                 model.B_vr]);
 
 % Sample initial state
 if ~isempty(prev_state)
@@ -78,18 +84,13 @@ while lam < 1
     R = model.R;
     
     % Approximate prior
-    [grad_prior, hess_prior] = diff_prior(model, x0, prior_mn);
-    P = -inv(hess_prior);
-    m = x0 + P*grad_prior;
+    [P, m] = diff_prior(model, x0, prior_mn, prior_vr);
     
     % Analytical flow
     [ x, prob_ratio, drift, diffuse] = linear_flow_move( lam1, lam0, x0, m, P, y, H, R, algo.Dscale, zD );
     
     % Error estimate
-    [grad_prior, hess_prior] = diff_prior(model, x, prior_mn);
-    %     min(-1/prior_hess,0.02);
-    P_new = -inv(hess_prior);
-    m_new = x + P_new*grad_prior;
+    [P_new, m_new] = diff_prior(model, x, prior_mn, prior_vr);
     H_new = sineha_obsjacobian(model, x);
     y_new = obs - sineha_h(model, x) + H_new*x;
     [drift_new, diffuse_new] = linear_drift( lam1, x, m_new, P_new, y_new, H_new, R, algo.Dscale );
@@ -194,7 +195,10 @@ end
 
 end
 
-function [grad_prior, hess_prior] = diff_prior(model, x, prior_mn)
+function [P, m] = diff_prior(model, x, prior_mn, prior_vr)
+
+% P = prior_vr;
+% m = prior_mn;
 
 % Unpack state
 A = x(1);
@@ -204,36 +208,36 @@ omega = x(4);
 phi = x(5);
 B = x(6);
 
-% tau_scale = (prior_mn(3)-prior_mn(2))/model.tau_shape;
-tau_scale = prior_mn(3)/model.tau_shape;
+% tau_scale = prior_mn(3)/model.tau_shape;
 Tminusmean = log(T)-log(prior_mn(2))+0.5*model.T_vol;
 
 % Prior matching
 grad_prior = [(model.A_shape-1)/A-1/model.A_scale;
+%     -1/T-Tminusmean/(T*model.T_vol)-(model.tau_shape-1)/(tau-T)+1/model.tau_scale;
+%     (model.tau_shape-1)/(tau-T)-1/model.tau_scale;
     -1/T-Tminusmean/(T*model.T_vol);
-     (model.tau_shape-1)/(tau)-1/tau_scale;
+    (model.tau_shape-1)/(tau)-1/model.tau_scale;
     -(omega-prior_mn(4))/model.omega_vr;
     -(phi-prior_mn(5))/model.phi_vr;
     -(B-prior_mn(6))/model.B_vr];
-%     -1/T-Tminusmean/(T*model.T_vol)-(model.tau_shape-1)/(tau-T)+1/tau_scale;
-%     (model.tau_shape-1)/(tau-T)-1/tau_scale;
 hess_prior = diag([-(model.A_shape-1)/(A^2);
-    ((Tminusmean - 1)/model.T_vol+1)/T^2;
-    -(model.tau_shape-1)/(tau)^2;
-    -1/model.omega_vr;
-    -1/model.phi_vr;
-    -1/model.B_vr]);
-%         ((Tminusmean - 1)/model.T_vol+1)/T^2 - (model.tau_shape-1)/(tau-T)^2;
-%         -(model.tau_shape-1)/(tau-T)^2;
+    %         ((Tminusmean - 1)/model.T_vol+1)/T^2 - (model.tau_shape-1)/(tau-T)^2;
+    %         -(model.tau_shape-1)/(tau-T)^2;
+        ((Tminusmean - 1)/model.T_vol+1)/T^2;
+        -(model.tau_shape-1)/(tau)^2;
+        -1/model.omega_vr;
+        -1/model.phi_vr;
+        -1/model.B_vr]);
 %     off_diagional = (model.tau_shape-1)/(tau-T)^2;
 %     hess_prior(2,3) = off_diagional;
 %     hess_prior(3,2) = off_diagional;
 
-% Adjustments
+% % Adjustments
 % P_sub = -inv(hess_prior(2:3,2:3));
 % [V, D] = eig(P_sub);
-% max_vr = max((exp(model.T_vol)-1)*exp(2*prior_mn(2)+model.T_vol),  (prior_mn(3)-prior_mn(2))^2/model.tau_shape);
-% D(D>max_vr) = max_vr;
+% limits = [(exp(model.T_vol)-1)*exp(2)*prior_mn(2),  model.tau_shape*model.tau_scale^2];
+% max_vr = limits*abs(V);
+% D = min(D, diag(max_vr));
 % P_sub = V*D*V';
 % hess_prior(2:3,2:3) = -inv(P_sub);
 
@@ -249,9 +253,12 @@ P_sub(P_sub<0) = max_vr;
 hess_prior(2,2) = -1/P_sub;
 
 P_sub = -1/hess_prior(3,3);
-max_vr = prior_mn(3)^2/model.tau_shape;
+max_vr = model.tau_shape*model.tau_scale^2;
 P_sub(P_sub>max_vr) = max_vr;
 hess_prior(3,3) = -1/P_sub;
+
+P = -inv(hess_prior);
+m = x + P*grad_prior;
 
 end
 

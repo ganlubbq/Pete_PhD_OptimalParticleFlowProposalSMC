@@ -123,7 +123,14 @@ for kk = 1:model.K
                         % Weight
                         weight = prior_weight + lhood_prob + trans_prob - ppsl_prob;
                         
+                        if isinf(ppsl_prob)
+                            weight = -inf;
+                        end
+                        
                 end
+                
+                assert(isreal(weight));
+                assert(~isnan(weight));
                 
                 % Store new state and weight
                 pf(kk).state(:,ii) = state;
