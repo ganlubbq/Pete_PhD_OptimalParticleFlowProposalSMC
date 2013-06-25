@@ -14,9 +14,17 @@ dl_pow = 0.7;
 
 % Prior
 if isempty(prev_state)
-    prior_mn = [model.A1_mn; model.T1_mn; model.tau1_mn; model.omega1_mn; model.phi1_mn; model.B1_mn];
+    prior_mn = [model.A_shape*model.A_scale+model.A_shift;
+                model.T1_mn;
+                model.tau_mn;
+                model.omega1_mn;
+                model.phi1_mn;
+                model.B1_mn];
 else
-    prior_mn = prev_state;
+    prior_mn = [model.A_shape*model.A_scale+model.A_shift;
+                prev_state(2);
+                model.tau_mn;
+                prev_state(4:6)];
 end
 
 % Sample initial state
@@ -137,7 +145,13 @@ while lam < 1
         
         %%%%%%%%%%%%%%%%%%%%%%%
         if post_prob-ppsl_prob < - 100
+            ppsl_prob = 1E10;
             break;
+        end
+        if (~isreal(ppsl_prob-post_prob))||(~isreal(state))
+            state = real(state);
+            ppsl_prob = 1E10;
+            break
         end
         %%%%%%%%%%%%%%%%%%%%%%%
         
@@ -190,37 +204,54 @@ omega = x(4);
 phi = x(5);
 B = x(6);
 
-A_scale = prior_mn(1)/model.A_shape;
-T_scale = prior_mn(2)/model.T_shape;
-tau_scale = (prior_mn(3)-prior_mn(2))/model.tau_shape;
+% tau_scale = (prior_mn(3)-prior_mn(2))/model.tau_shape;
+tau_scale = prior_mn(3)/model.tau_shape;
+Tminusmean = log(T)-log(prior_mn(2))+0.5*model.T_vol;
 
 % Prior matching
-grad_prior = [(model.A_shape-1)/A-1/A_scale;
-    (model.T_shape-1)/T-1/T_scale - (model.tau_shape-1)/(tau-T) + 1/tau_scale;
-    (model.tau_shape-1)/(tau-T)-1/tau_scale;
+grad_prior = [(model.A_shape-1)/A-1/model.A_scale;
+    -1/T-Tminusmean/(T*model.T_vol);
+     (model.tau_shape-1)/(tau)-1/tau_scale;
     -(omega-prior_mn(4))/model.omega_vr;
     -(phi-prior_mn(5))/model.phi_vr;
     -(B-prior_mn(6))/model.B_vr];
+%     -1/T-Tminusmean/(T*model.T_vol)-(model.tau_shape-1)/(tau-T)+1/tau_scale;
+%     (model.tau_shape-1)/(tau-T)-1/tau_scale;
 hess_prior = diag([-(model.A_shape-1)/(A^2);
-    -(model.T_shape-1)/(T^2) - (model.tau_shape-1)/(tau-T)^2;
-    -(model.tau_shape-1)/(tau-T)^2;
+    ((Tminusmean - 1)/model.T_vol+1)/T^2;
+    -(model.tau_shape-1)/(tau)^2;
     -1/model.omega_vr;
     -1/model.phi_vr;
     -1/model.B_vr]);
-off_diagional = (model.tau_shape-1)/(tau-T)^2;
-hess_prior(2,3) = off_diagional;
-hess_prior(3,2) = off_diagional;
+%         ((Tminusmean - 1)/model.T_vol+1)/T^2 - (model.tau_shape-1)/(tau-T)^2;
+%         -(model.tau_shape-1)/(tau-T)^2;
+%     off_diagional = (model.tau_shape-1)/(tau-T)^2;
+%     hess_prior(2,3) = off_diagional;
+%     hess_prior(3,2) = off_diagional;
 
 % Adjustments
-P_sub = -inv(hess_prior(2:3,2:3));
-[V, D] = eig(P_sub);
+% P_sub = -inv(hess_prior(2:3,2:3));
+% [V, D] = eig(P_sub);
+% max_vr = max((exp(model.T_vol)-1)*exp(2*prior_mn(2)+model.T_vol),  (prior_mn(3)-prior_mn(2))^2/model.tau_shape);
+% D(D>max_vr) = max_vr;
+% P_sub = V*D*V';
+% hess_prior(2:3,2:3) = -inv(P_sub);
 
+P_sub = -1/hess_prior(1,1);
+max_vr = model.A_shape*model.A_scale^2;
+P_sub(P_sub>max_vr) = max_vr;
+hess_prior(1,1) = -1/P_sub;
 
-     P(1,1) = min(P(1,1), prior_mn(1)^2/model.A_shape);
-    P(2,2) = min(P(2,2), prior_mn(2)^2/model.T_shape);
-	P(3,3) = min(P(3,3), prior_mn(3)^2/model.tau_shape);
-    P(2,3) = 0;
-    P(3,2) = 0;
- 
+P_sub = -1/hess_prior(2,2);
+max_vr = (exp(model.T_vol)-1)*exp(2)*prior_mn(2);
+P_sub(P_sub>max_vr) = max_vr;
+P_sub(P_sub<0) = max_vr;
+hess_prior(2,2) = -1/P_sub;
+
+P_sub = -1/hess_prior(3,3);
+max_vr = prior_mn(3)^2/model.tau_shape;
+P_sub(P_sub>max_vr) = max_vr;
+hess_prior(3,3) = -1/P_sub;
+
 end
 

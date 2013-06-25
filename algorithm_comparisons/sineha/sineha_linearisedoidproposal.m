@@ -7,13 +7,22 @@ function [state, ppsl_prob] = sineha_linearisedoidproposal( model, prev_state, o
 
 % Prior
 if isempty(prev_state)
-    prior_mn = [model.A1_mn; model.T1_mn; model.tau1_mn; model.omega1_mn; model.phi1_mn; model.B1_mn];
+    prior_mn = [model.A_shape*model.A_scale+model.A_shift;
+                model.T1_mn;
+                model.tau_mn;
+                model.omega1_mn;
+                model.phi1_mn;
+                model.B1_mn];
 else
-    prior_mn = prev_state;
+    prior_mn = [model.A_shape*model.A_scale+model.A_shift;
+                prev_state(2);
+                model.tau_mn;
+                prev_state(4:6)];
 end
-prior_vr = diag([prior_mn(1)^2/model.A_shape;
-                 prior_mn(2)^2/model.T_shape;
-                 prior_mn(3)^2/model.tau_shape;
+prior_vr = diag([model.A_shape*model.A_scale^2;
+                 (exp(model.T_vol)-1)*exp(2*prior_mn(2)+model.T_vol);
+%                  (prior_mn(3)-prior_mn(2))^2/model.tau_shape;
+                prior_mn(3)^2/model.tau_shape;
                  model.omega_vr;
                  model.phi_vr;
                  model.B_vr]);
@@ -74,41 +83,46 @@ omega = x(4);
 phi = x(5);
 B = x(6);
 
-A_scale = prior_mn(1)/model.A_shape;
-T_scale = prior_mn(2)/model.T_shape;
-tau_scale = (prior_mn(3)-prior_mn(2))/model.tau_shape;
+% tau_scale = (prior_mn(3)-prior_mn(2))/model.tau_shape;
+tau_scale = prior_mn(3)/model.tau_shape;
+Tminusmean = log(T)-log(prior_mn(2))+0.5*model.T_vol;
 
 % Function itself
-func_prior =  (model.A_shape-1)*log(A)-A/A_scale ...
-             +(model.T_shape-1)*log(T)-T/T_scale ...
-             +(model.tau_shape-1)*log(tau-T)-(tau-T)/tau_scale ...
+func_prior =  (model.A_shape-1)*log(A)-A/model.A_scale ...
+             -log(T)-Tminusmean^2/(2*model.T_vol) ...
+             +(model.tau_shape-1)*log(tau)-tau/tau_scale ...
              -(omega-prior_mn(4))^2/(2*model.omega_vr) ...
              -(phi-prior_mn(5))^2/(2*model.phi_vr) ...
              -(B-prior_mn(6))^2/(2*model.B_vr);
+%          +(model.tau_shape-1)*log(tau-T)-(tau-T)/tau_scale ...
 func_lhood = -(dy'/R)*dy/2;
 func = - func_lhood - func_prior;
 
 % Gradient
-grad_prior = [(model.A_shape-1)/A-1/A_scale;
-    (model.T_shape-1)/T-1/T_scale - (model.tau_shape-1)/(tau-T) + 1/tau_scale;
-    (model.tau_shape-1)/(tau-T)-1/tau_scale;
+grad_prior = [(model.A_shape-1)/A-1/model.A_scale;
+    -1/T-Tminusmean/(T*model.T_vol);
+     (model.tau_shape-1)/(tau)-1/tau_scale;
     -(omega-prior_mn(4))/model.omega_vr;
     -(phi-prior_mn(5))/model.phi_vr;
     -(B-prior_mn(6))/model.B_vr];
+%     -1/T-Tminusmean/(T*model.T_vol)-(model.tau_shape-1)/(tau-T)+1/tau_scale;
+%     (model.tau_shape-1)/(tau-T)-1/tau_scale;
 grad_lhood = H'*(R\dy);
 grad = - grad_lhood - grad_prior;
 
 if nargout > 2
     
     hess_prior = diag([-(model.A_shape-1)/(A^2);
-        -(model.T_shape-1)/(T^2) - (model.tau_shape-1)/(tau-T)^2;
-        -(model.tau_shape-1)/(tau-T)^2;
+        ((Tminusmean - 1)/model.T_vol+1)/T^2;
+        -(model.tau_shape-1)/(tau)^2;
         -1/model.omega_vr;
         -1/model.phi_vr;
         -1/model.B_vr]);
-    off_diagional = (model.tau_shape-1)/(tau-T)^2;
-    hess_prior(2,3) = off_diagional;
-    hess_prior(3,2) = off_diagional;
+%         ((Tminusmean - 1)/model.T_vol+1)/T^2 - (model.tau_shape-1)/(tau-T)^2;
+%         -(model.tau_shape-1)/(tau-T)^2;
+%     off_diagional = (model.tau_shape-1)/(tau-T)^2;
+%     hess_prior(2,3) = off_diagional;
+%     hess_prior(3,2) = off_diagional;
         
     hess_lhood = - H'*(R\H);
     
