@@ -1,4 +1,4 @@
-\documentclass{article}
+\documentclass{statsoc}
 
 %%% Packages %%%
 
@@ -35,10 +35,10 @@
 
 
 %%% Titles and stuff %%%
-%\title[Composite Proposal Particle Filter]{The Composite Proposal Particle Filter: Better Approximations to the Optimal Importance Density}
-%\author[Bunch {\it et al.}]{Pete Bunch}
-%\address{Cambridge University Engineering Department,Cambridge,UK.}
-%\email{pb404@cam.ac.uk}
+\title[Composite Proposal Particle Filter]{The Composite Proposal Particle Filter: Better Approximations to the Optimal Importance Density}
+\author[Bunch {\it et al.}]{Pete Bunch}
+\address{Cambridge University Engineering Department,Cambridge,UK.}
+\email{pb404@cam.ac.uk}
 
 
 
@@ -54,7 +54,7 @@ Abstract here.
 
 
 
-%\keywords{particle filter, sequential Monte Carlo, optimal importance distribution}
+\keywords{particle filter, sequential Monte Carlo, optimal importance distribution}
 
 
 
@@ -81,6 +81,8 @@ It is possible to take the idea of bridging distributions to a limit and define 
 \subsection{Composite Proposals}
 
 In this paper, a new method is introduced for sampling from an approximation of the optimal importance density. We name this the composite proposal particle filter (CPPF). In common with progressive filtering and particle flow algorithms, the procedure relies on introducing the observation likelihood gradually. Beginning with a sample from the transition density, a series of local approximations are then used to move the particle to a new state, either deterministically or stochastically. This method is shown to yield significant improvements in effective sample size for challenging nonlinear models.
+
+The purpose of the CPPF is to provide more efficient proposals for problems {\meta Something about its raison d'etre --- to improve ESS for difficult models.}
 
 A modification of the algorithm is also presented which introduces intermediate resampling steps during the smooth update. This helps further to limit degeneracy of the particle weights, at the cost of introducing dependency between the particles. This latter algorithm resembles (and yet is significantly different from) an annealed particle filter \citep{Gall2007,Deutscher2000}, but uses gradient information from the model densities to lead particles towards peaks in the OID. In this sense, there are also connections with adaptive MCMC methods, such as those of \citep{Girolami2011}.
 
@@ -322,7 +324,7 @@ where $\lsfixed$ is the point around which the function is linearised. An approx
 %
 \begin{IEEEeqnarray}{rCl}
  \lgoicovapprox{\pt}{\lsfixed}  & = & \left[ \transcov^{-1} + \pt \obsmatapprox{\lsfixed}^T \obscov^{-1} \obsmatapprox{\lsfixed} \right]^{-1} \nonumber \\
- \lgoimeanapprox{\pt}{\lsfixed} & = & \lsfixed + \lgoicov{\pt} \left[ \transcov^{-1} (\transfun(\ls{\rt-1})-\lsfixed) + \pt \obsmatapprox{\lsfixed}^T \obscov^{-1} (\ob{\rt}-\obsfun(\lsfixed)) \right] \nonumber     .
+ \lgoimeanapprox{\pt}{\lsfixed} & = & \lsfixed + \lgoicov{\pt} \left[ \transcov^{-1} (\transfun(\ls{\rt-1})-\lsfixed) + \pt \obsmatapprox{\lsfixed}^T \obscov^{-1} (\ob{\rt}-\obsfun(\lsfixed)) \right] \label{eg:linearised_Gaussian_approx}     .
 \end{IEEEeqnarray}
 
 \subsubsection{Non-Gaussian Models}
@@ -340,10 +342,12 @@ Thus, we use,
 %
 \begin{IEEEeqnarray}{rCl}
  \lgoicovapprox{\pt}{\lsfixed} & = & \left[ \frac{\partial^2}{\partial \ls{\pt}^2} \log\left(\oiden{\rt,\pt}\right) \right]^{-1} \nonumber \\
- \lgoimeanapprox{\pt}{\lsfixed} & = & \lsfixed + \lgoicovapprox{\pt}{\lsfixed} \left[ \frac{\partial}{\partial \ls{\pt}} \log\left(\oiden{\rt,\pt}\right) \right] \nonumber      .
+ \lgoimeanapprox{\pt}{\lsfixed} & = & \lsfixed + \lgoicovapprox{\pt}{\lsfixed} \left[ \frac{\partial}{\partial \ls{\pt}} \log\left(\oiden{\rt,\pt}\right) \right] \label{eg:general_Gaussian_approx}      .
 \end{IEEEeqnarray}
 %
-This approximation may only be used when the Hessian of the log-density is negative definite, otherwise the matrix square root may not exist and the state update will not work. If this condition is not satisfied then modifications may be used, for example by subtracting a scaled identity matrix from the Hessian to force the eigenvalues to be negative, or by diagonalising and setting the offending negative eigenvalues to a small negative constant.
+This approximation may only be used when the Hessian of the log-density is negative definite, otherwise the matrix square root may not exist and the state update will not work. Intuitively, a Gaussian, whose log-density always has a negative curvature, cannot be used to approximate a log-density which curves upwards. If this condition is not satisfied then modifications may be used, for example by subtracting a scaled identity matrix from the Hessian to force the eigenvalues to be negative, or by diagonalising the Hessian and setting the offending negative eigenvalues to a negative constant.
+
+{\meta REWRITE/AUGMENT THIS BIT.}
 
 
 \subsection{Weight Updates}
@@ -404,15 +408,14 @@ The previous results are not strictly valid when $\lgexpsf=0$. In this case, the
 The Jacobian for the state update \eqref{eq:state_update} is,
 %
 \begin{IEEEeqnarray}{rCl}
- \magdet{\frac{\partial \ls{\pt_{0}}}{\partial \ls{\pt_1}}} & = & \magdet{ \lgupdmeanmat{\pt_0,\pt_1} } \nonumber \\
- & = & \exp\left\{-\half\lgexpsf(\pt_1-\pt_0)\right\} \sqrt{\frac{\magdet{\lgoicovapprox{\pt_1}{\ls{\pt_0}}}}{\magdet{\lgoicovapprox{\pt_0}{\ls{\pt_0}}}}} \nonumber      .
+ \magdet{\frac{\partial \ls{\pt_{1}}}{\partial \ls{\pt_0}}} & = & \magdet{ \lgupdmeanmat{\pt_0,\pt_1} } \nonumber \\
+ & = & \sqrt{\frac{\magdet{\lgoicovapprox{\pt_1}{\ls{\pt_0}}}}{\magdet{\lgoicovapprox{\pt_0}{\ls{\pt_0}}}}} \nonumber      .
 \end{IEEEeqnarray}
 %
 Hence, the weight update is,
 %
 \begin{IEEEeqnarray}{rCl}
- \pw{\pt_1} & \propto & \pw{\pt_0} \times \frac{ p(\ob{\rt} | \ls{\pt_1})^{\pt_1} p(\ls{\pt_1} | \ls{\rt-1}) }{ p(\ob{\rt} | \ls{\pt_0})^{\pt_0} p(\ls{\pt_0} | \ls{\rt-1}) } \nonumber \\
-  &   & \times \sqrt{\frac{\magdet{\lgoicovapprox{\pt_0}{\ls{\pt_0}}}}{\magdet{\lgoicovapprox{\pt_1}{\ls{\pt_0}}}}} \label{eq:CPPF_deterministic_weight_update}       .
+ \pw{\pt_1} & \propto & \pw{\pt_0} \times \frac{ p(\ob{\rt} | \ls{\pt_1})^{\pt_1} p(\ls{\pt_1} | \ls{\rt-1}) }{ p(\ob{\rt} | \ls{\pt_0})^{\pt_0} p(\ls{\pt_0} | \ls{\rt-1}) } \times \sqrt{\frac{\magdet{\lgoicovapprox{\pt_1}{\ls{\pt_0}}}}{\magdet{\lgoicovapprox{\pt_0}{\ls{\pt_0}}}}} \label{eq:CPPF_deterministic_weight_update}       .
 \end{IEEEeqnarray}
 %
 It may easily be shown that as $\lgexpsf\rightarrow0$, \eqref{eq:CPPF_stochastic_weight_update} is equal to \eqref{eq:CPPF_deterministic_weight_update}.
@@ -440,7 +443,7 @@ A state evolving according to the best-case algorithm obeys the following stocha
 where,
 \begin{IEEEeqnarray}{rCl}
  \sdedrift{\pt|\ls{\pt_0}}(\ls{\pt}) & = & \lgoicov{\pt} \obsmat^T \obscov^{-1} \left( (\ob{\rt}-\obsmat\lgoimean{\pt}) - \half \obsmat (\ls{\pt}-\lgoimean{\pt}) \right) - \half \lgexpsf (\ls{\pt}-\lgoimean{\pt}) \nonumber \\
- \sdediffuse{\pt}         & = & \lgexpsf^{\half} \lgoicovapprox{\pt}{\ls{\pt_0}}^{\half} \nonumber      ,
+ \sdediffuse{\pt|\ls{\pt_0}}         & = & \lgexpsf^{\half} \lgoicovapprox{\pt}{\ls{\pt_0}}^{\half} \nonumber      ,
 \end{IEEEeqnarray}
 %
 and $\lginfbm{\pt}$ is a standard Brownian motion process. See appendix~\ref{app:state_SDE} for proof.
@@ -449,13 +452,14 @@ and $\lginfbm{\pt}$ is a standard Brownian motion process. See appendix~\ref{app
 The state error due to finite step sizes is then,
 %
 \begin{IEEEeqnarray}{rCl}
- \lserror{\pt_1}{\pt_0} & = & \int_{\pt_0}^{\pt_1} \left[\sdedrift{l|\ls{\pt_0}}(\ls{l}) - \sdedrift{l|\ls{l}}(\ls{l})\right] dl + \int_{\pt_0}^{\pt_1} \left[\sdediffuse{l|\ls{\pt_0}}(\ls{l}) - \sdediffuse{l|\ls{l}}(\ls{l})\right] d\lginfbm{l} \nonumber      .
+ \lserror{\pt_1}{\pt_0} & = & \int_{\pt_0}^{\pt_1} \left[\sdedrift{l|\ls{\pt_0}}(\ls{l}) - \sdedrift{l|\ls{l}}(\ls{l})\right] dl + \int_{\pt_0}^{\pt_1} \left[\sdediffuse{l|\ls{\pt_0}} - \sdediffuse{l|\ls{l}}\right] d\lginfbm{l} \nonumber      .
 \end{IEEEeqnarray}
 %
-The expectation of the second integral is $0$. The first integral may be crudely approximated by assuming that the argument grows linearly from $0$ to some final value at $\pt_1$. This leaves us with a rough, but easily calculated, estimate of the local error associated with this finite step,
+The drift and diffusion terms are correct at $\pt_0$, so for a crude approximation of this error, replace the integrands with half their final value. Then, using the fact that $\int_{\pt_0}^{\pt_1}d\lginfbm{l}=(\pt_1-\pt_0)^{\half} \stdnorm{\Delta}$, a rough but easily calculated estimate of the local error associated with this finite step is,
 %
 \begin{IEEEeqnarray}{rCl}
- \widehat{\expect{}\left[\lserror{\pt_1}{\pt_0}\right]} & = & \half \sdedrift{\pt_1|\ls{\pt_0}}(\ls{\pt_1}) (\pt_1-\pt_0)     .
+ \widehat{\lserror{\pt_1}{\pt_0}} & = & \half \left[\sdedrift{\pt_1|\ls{\pt_0}}(\ls{\pt_1}) - \sdedrift{\pt_1|\ls{\pt_1}}(\ls{\pt_1})\right] (\pt_1-\pt_0) \nonumber \\
+ &   & \qquad \qquad + \: \half \left[\sdediffuse{\pt_1|\ls{\pt_0}}(\ls{\pt_1}) - \sdediffuse{\pt_1|\ls{\pt_1}}(\ls{\pt_1})\right] \stdnorm{\Delta} (\pt_1-\pt_0)^{\half}     .
 \end{IEEEeqnarray}
 
 \subsubsection{Step Size Control}
@@ -463,7 +467,7 @@ The expectation of the second integral is $0$. The first integral may be crudely
 Using the estimate of local error we can now borrow a step size control mechanism directly from well established numerical integration algorithms for solving differential equations. One method found to be effective in practice, inspired by \citep{Shampine1997}, is to find the Euclidean norm of the state error estimate and then scale the step size according to,
 %
 \begin{IEEEeqnarray}{rCl}
- \dpt_{\text{new}} & = & \dpt_{\text{old}} \times a \left(\frac{\magdet{ \widehat{\expect{}\left[\lserror{\pt_1}{\pt_0}\right]} }}{ e_{\text{tol}} } \right)^b \nonumber      ,
+ \Delta\pt_{\text{new}} & = & \Delta\pt_{\text{old}} \times a \left(\frac{\magdet{ \widehat{\lserror{\pt_1}{\pt_0}} }}{ e_{\text{tol}} } \right)^b \nonumber      ,
 \end{IEEEeqnarray}
 %
 where $a$, $b$ and $e_{\text{tol}}$ are fixed parameters: $e_{\text{tol}}$ is the tolerance for the local error whereas $a$ and $b$ determine the response in the step size to deviations of the error estimate away from $e_{\text{tol}}$.
@@ -478,58 +482,204 @@ The distinguishing novel components of the CPPF are the incremental state and we
 \begin{algorithmic}[1]
   \FOR{$\rt=1,2,\dots$}
     \FOR{$i=1,\dots,N_F$}
-      \IF{$\rt>1$ and $\ess{\rt-1}$ less than threshold}
+      \IF{$\rt>1$}% and $\ess{\rt-1}$ less than threshold}
         \STATE Select an ancestor, $a_i=j$, with probability $\naw{\rt-1}\pss{j}$
         \STATE Calculate predictive particle weight, $\predpw{\rt}\pss{i} = \npw{\rt-1}\pss{a_i} / \naw{\rt-1}\pss{a_i}$.
       \ELSE
         \STATE Initialise weights, $\predpw{\rt}\pss{i} = 1$.
       \ENDIF
       \STATE Initialise pseudo-time, $\pt=0$.
-      \STATE Initialise state by sampling from the transition/prior density, $\ls{\rt,0} \sim p(\ls{\rt} | \ls{\rt-1})$ or $\ls{\rt,0} \sim p(\ls{\rt})$.
-      \STATE Initialise weight, $\pw{\rt,0}\pss{i} = \ls{\rt}\pss{i}$.
+      \STATE Initialise state by sampling from the transition/prior density, $\ls{\rt,0}\pss{i} \sim p(\ls{\rt} | \ls{\rt-1}\pss{\anc{i}})$ or $\ls{\rt,0}\pss{i} \sim p(\ls{\rt})$.
+      \STATE Initialise weight, $\pw{\rt,0}\pss{i} = \predpw{\rt}\pss{i}$.
       \WHILE{$\pt<1$}
         \STATE Increment pseudo-time, $\pt \leftarrow \pt+\dpt$, using a fixed or adaptive method.
         \STATE Update state $\ls{\rt,\pt}\pss{i}$ using \eqref{eq:state_update}.
+        \STATE Update weight $\pw{\rt,\pt}\pss{i}$ using \eqref{eq:CPPF_deterministic_weight_update} or \eqref{eq:CPPF_stochastic_weight_update}.
       \ENDWHILE
       \STATE Finalise, $\ls{\rt}\pss{i} = \ls{\rt,1}\pss{i}$, $\pw{\rt}\pss{i} = \pw{\rt,1}\pss{i}$.
-      \STATE Calculate weight $\pw{\rt,\pt}\pss{i}$ using \eqref{eq:CPPF_deterministic_weight_update} or \eqref{eq:CPPF_stochastic_weight_update}.
     \ENDFOR
     \STATE Normalise weights, $\npw{\rt} = \pw{\rt}\pss{i} / \sum_j \pw{\rt}\pss{j}$ .
   \ENDFOR
 \end{algorithmic}
-\caption{Generic form of the smooth update particle filter.}
+\caption{Composite Proposal Particle Filter}
 \end{algorithm}
 
-The CPPF bears a resemblance to annealed particle filter algorithms {\meta CITE THINGS}, in its use of a stretch of pseudo-time between the predictive and filtering densities, yet it is quite distinct. The CPPF allows each particle to be handled independently, using different pseudo-time step sizes for each, and allows potentially deterministic state trajectories. In contrast, an annealed particle filter moves all the particles simultaneously through pseudo-time via a consistent set of bridging densities, interspersed with resampling and MCMC steps.
+The CPPF bears a resemblance to annealed particle filter algorithms \citep{Godsill2001b,Deutscher2000,Gall2007}, in its use of a stretch of pseudo-time between the predictive and filtering densities, yet it is quite distinct. The CPPF allows each particle to be handled independently, using different pseudo-time step sizes for each, and allows potentially deterministic state trajectories. In contrast, an annealed particle filter moves all the particles simultaneously through pseudo-time via a consistent set of bridging densities, interspersed with resampling and MCMC steps.
 
 
 
 \section{Extensions to the CPPF}
-\subsection{Gaussian Mixtures}
-\subsection{Intermediate Resampling}
 
-The CPPF samples a particle from an approximation to the optimal importance density. However, even sampling the OID exactly would be no guarantee of a high effective sample size. The weight corresponding to a particles sampled from the OID is,
+\subsection{Composite Proposals for a Subset of Variables}
+
+Some latent state variables may not be amenable to using a composite proposal, in particular discrete variables such as indicators. These may be handled by sampling them first from an ordinary importance distribution and then leaving them unchanged throughout the composite proposal process.
+
+\subsection{Scale Mixtures of Normals}
+
+Approximating a general density function by a Gaussian such as with \eqref{eg:general_Gaussian_approx} is crude, and often requires some heuristic adjustments to achieve good performance of the CPPF. A different method may be used for densities (either transition or observation) which may be represented as scale mixtures of normals,
+%
+\begin{IEEEeqnarray}{rCl}
+ p(z) & = & \int \normal{z}{m}{\frac{1}{\mix{}}P} p(\mix{}) d\mix{}     .
+\end{IEEEeqnarray}
+%
+For example, if $p(\mix{})$ is a chi-squared distribution (with $\dof$ degrees of freedom), then $p(z)$ is a student-t distribution (with $\dof$ degrees of freedom). With $1$ degree of freedom, this becomes a Cauchy distribution. Alpha-stable distributions may also be represented \citep{Godsill1999}.
+
+By extending the target distribution to include the auxiliary mixing variable $\mix{}$, the density becomes conditionally Gaussian. There are now two options: either sample a single value of $\mix{}$ for each particle for the entire update, or sample a new value $\mix{\pt}$ for each step of the composite proposal. For the latter case, we use the following target density sequence,
+%
+\begin{IEEEeqnarray}{rCl}
+ \augfiltden{\pt}(\ls{1:\rt-1}, \ls{\pt}, \mix{\pt}) & = & \frac{ p(\ob{\rt} | \ls{\rt,\pt}, \mix{\pt})^{\pt} p(\ls{\rt,\pt} | \ls{\rt-1}, \mix{\pt}) p(\mix{\pt}) p(\ls{1:\rt-1}|\ob{1:\rt-1}) }{ \augfiltnorm{\pt} } \label{eq:SMiN_filtering_sequence}      .
+\end{IEEEeqnarray}
+%
+For the update from $\pt_0$ to $\pt_1$, a value of $\mix{\pt_1}$ is first sampled from a new importance density $\impden(\mix{\pt})$, after which the state update is carried out as before with the new value of $\mix{\pt_1}$, using \eqref{eq:state_update} (and \eqref{eg:linearised_Gaussian_approx} if required). The weight update formula with this modification is,
+%
+\begin{IEEEeqnarray}{rCl}
+ \pw{\pt_1} & \propto & \pw{\pt_0} \times \frac{ p(\ob{\rt} | \ls{\pt_1}, \mix{\pt_1})^{\pt_1} p(\ls{\pt_1} | \ls{\rt-1}, \mix{\pt_1}) p(\mix{\pt_1}) }{ p(\ob{\rt} | \ls{\pt_0}, \mix{\pt_0})^{\pt_0} p(\ls{\pt_0} | \ls{\rt-1}, \mix{\pt_0}) p(\mix{\pt_0}) } \times \frac{\mathcal{N}(\ls{\pt_0}|\lgoimeanapprox{\pt_0}{\ls{\pt_0}},\lgoicovapprox{\pt_0}{\ls{\pt_0}}) \impden(\mix{\pt_1})} {\mathcal{N}(\ls{\pt_1}|\lgoimeanapprox{\pt_1}{\ls{\pt_0}},\lgoicovapprox{\pt_1}{\ls{\pt_0}}) \impden(\mix{\pt_0})} \nonumber       .
+\end{IEEEeqnarray}
+
+The simplest choice for $\impden(\mix{\pt})$ is to use the prior $p(\mix{\pt})$. This is very simple to implement, simplifies the weight formula, and has been shown to be effective in simulations. In addition, it can be used with alpha-stable distributions when the density function cannot be analytically evaluated. The optimal choice is to use the marginal conditional posterior,
+%
+\begin{IEEEeqnarray}{rCl}
+ \impden(\mix{\pt}) & \propto & \int p(\ob{\rt} | \ls{\pt_1}, \mix{\pt_1})^{\pt_1} p(\ls{\pt_1} | \ls{\rt-1}, \mix{\pt_1}) p(\mix{\pt_1}) d\ls{\pt} \nonumber      ,
+\end{IEEEeqnarray}
+%
+but in general it will be far to expensive to sample from this distribution.
+
+The effect of sampling the mixing variable $\mix{\pt}$ is that for each step through psuedo-time, the state is updated according to a different conditionally-Gaussian model. Intuitively, this ``blend'' gives us an approximation to the update corresponding to the true density.
+
+
+
+\subsection{Annealed CPPF}
+
+The CPPF samples states from an approximation to the optimal importance density. However, even sampling the OID exactly would be no guarantee of a high effective sample size. The weight corresponding to a particles sampled from the OID is,
 %
 \begin{IEEEeqnarray}{rCl}
  p(\ob{\rt} | \ls{\rt-1}\pss{j})     ,
 \end{IEEEeqnarray}
 %
-and the variance of a set of such weights can still be high, particularly if the transition and observation densities are both informative but the $t-1$ states are widely spread.
+and the variance of a set of such weights can still be high, particularly if the true value of $\ls{\rt}$ or $\ob{\rt}$ is improbable given its modelled distribution. Many of the $t-1$ particles are simply in the wrong places given the information conveyed by the new observation, and will have low weights however good the importance density.
+
+An effective method for addressing this problem is to use bridging densities \citep{Godsill2001b} or annealing \citep{Deutscher2000,Gall2007}. A full set of particles are sampled targeting \eqref{eq:filtering_sequence} for some fixed point in pseudo-time $\pt$. A selection step is then conducted before advancing the particles to the next point in pseudo-time. MCMC steps are added between selection and importance sampling to replenish the particle diversity.
+
+The effect of using annealing is that unpromising low-weight particles are discarded early on, while those in high probability regions are replicated. The price of this improvement is that dependency is introduced between the particles, and the diversity of the particle histories (i.e. the number of unique histories $\ls{1:\rt-1}$) is reduced.
+
+Annealing may be almost trivially integrated with the CPPF, since the particles are already moving through pseudo-time. A fixed grid of times is chosen at which to carry out a selection step. Each composite proposal is then stopped at these time by truncating the final step size, so that a full set of particles is collected, distributed as $\augfiltden{\pt}$. A selection step is then conducted, leaving a set of equally-weighted particles with the same distribution, and the composite proposal continues for each.
+
+Provided $\lgexpsf>0$, the particles will automatically de-correlate between selection times, so no MCMC is necessary. Larger values of $\lgexpsf$ will reduce the dependence between multiple copies of a selected particle, but they will also require smaller step sizes to be used. Hence there exists a trade-off between the quality of the particle approximation and the computational load.
+
+{\meta Diagram, algorithm pseudo-code or something to bulk this up a bit.}
 
 
-
-
-
-This often results in the proposal of a particle whose distribution is closer to the OID than simple one-step approximations, and consequently the effective sample size of the particle set is improved.
-
- At each step in pseudo-time, the particle weights are updated, after which resampling may be used to control the weight variance, and finally MCMC steps are used to recover particle diversity.
-
-Rather than moving all the particles simultaneously through pseudo-time via a consistent set of bridging densities, the CPPF allows each particle to be handled individually, using different step sizes for each, and allowing for potentially deterministic state trajectories. However, since the pseudo-time time device is already in use, it is easy to include intermediate resampling steps along the way in order to further improve the filter performance.
- 
 
 \section{Numerical Simulations}
-\subsection{A Toy Example}
-\subsection{A Tracking Example}
+
+Numerical simulations have been conducted to demonstrate the efficacy of the CPPF. The purpose of the composite proposal method is to provide a more efficient particle filter for challenging nonlinear models. Simple Gaussian approximations work poorly, because the posterior filtering distributions of such models can assume weird and wonderful shapes. Unfortunately, this makes the assessment of particle filter performance a serious challenge. Statistics such as root-mean-square error (RMSE) and normalised estimation error squared (NEES), based on only the first two moments of the distribution, may be misleading. {\meta Diagram.}
+
+Our primary indicator of performance will be the average effective sample size. RMSE values are also included, primarily to identify cases when algorithms ``lose track'' entirely. They should be treated with caution.
+
+Effective sample sizes are measured before resampling, and may only be fairly compared between algorithms which propose particle states independently. In other words, it would not be appropriate to compare the CPPF to an annealed particle filter, although we will compare the CPPF with intermediate resampling to an annealed particle filter. The main contender for the CPPF will be a particle filter using the importance density suggested by \citet{Doucet2000a}, a Gaussian formed by truncating the Taylor series of the log-density of the OID around a local maximum. We refer to this algorithm as the optimal Gaussian importance particle filter (OGIPF)
+
+\subsection{A Illustrative Problem}
+
+The CPPF was tested on a modified form of the model used by \citet{Mihaylova2011}, which is a multivariate extension of the nonlinear benchmark model \citep{}. {\meta Cite something.} The model densities are Gaussian with transition and observation functions,
+%
+\begin{IEEEeqnarray}{rCl}
+ \transfun(\ls{\rt-1}) & = & \half \ls{\rt-1} + 25 \frac{ \sum_d \ls{\rt-1,d} }{ 1 + \left(\sum_d \ls{\rt-1,d}\right)^2 } + 8 \cos(1.2 \rt) \nonumber \\
+ \obsfun(\ls{\rt})_d   & = & \alpha \left( \ls{\rt,2d-1}^2 + \ls{\rt,2d}^2 \right) \nonumber      ,
+\end{IEEEeqnarray}
+%
+where $\ls{\rt,d}$ and $\obsfun(\ls{\rt})_d$ are the $d$th components of the state vector and observation function respectively. The covariance matrixes for the transition and observation densities were set at $\transcov = 100 \times I$ and $\obscov = I$. A $10$-dimensional state and a $5$-dimensional observation were used.
+
+This model is particularly challenging because the observations give us information only about the magnitudes of a set of sub-vectors of the state. Information about the corresponding bearing is only available via the transition model. Consequently, the region of high posterior probability corresponds to a ``thin'' section of the space bounding a hyper-sphere. A Gaussian density is a very poor approximation of this region. {\meta Reference to a diagram.} Particle filters using extended or unscented Kalman-type importance densities fail immediately on this model.
+
+The following particle filters were tested on the multivariate benchmark model:
+\begin{itemize}
+  \item A bootstrap particle filter (BPF)
+  \item An optimal Gaussian importance particle filter (OGIPF).
+  \item A deterministic composite proposal particle filter with $\lgexpsf=0$ (D-CPPF).
+  \item A stochastic composite proposal particle filter with $\lgexpsf=0.1$ (S-CPPF).
+\end{itemize}
+
+The number of particles used by each algorithm was selected so that the running times were roughly equal. The CPPFs both use the adaptive step size method. Figure~\ref{} shows the motion of the particles from the stochastic CPPF on a typical frame, and the awkward shape of the posterior mode. Figure~\ref{} shows the effective sample sizes of the particle approximations over a typical run. Table~\ref{} shows the average ESSs and RMSEs for each algorithm over 100 simulated data sets, each of 100 time steps.
+
+
+
+\subsection{A Difficult Tracking Problem}
+
+Now to a more applied problem. We consider tracking a small aircraft over a mapped landscape. Time of flight and doppler measurements from a radio transmitter on the aircraft provide accurate measurements of range $\rng{\rt}$, and range rate $\rng{\rt}$, but only a low resolution measurement of bearing $\bng{\rt}$. In addition, accurate measurements are made of the height above the ground $\hei{\rt}$. The profile of the terrain (i.e. the height of the ground above a datum at each point) has been mapped.
+
+At $\rt$, the latent state for our model is,
+%
+\begin{IEEEeqnarray}{rCl}
+ \ls{\rt} & = & \begin{bmatrix} \pos{\rt} \\ \vel{\rt} \end{bmatrix} \nonumber      ,
+\end{IEEEeqnarray}
+%
+where $\pos{\rt}$ and $\vel{\rt}$ are the $3$-dimensional position and velocity of the aircraft respectively, and the observation is,
+%
+\begin{IEEEeqnarray}{rCl}
+ \ob{\rt} & = & \begin{bmatrix} \bng{\rt} \\ \rng{\rt} \\ \hei{\rt} \\ \rngrt{\rt} \end{bmatrix}       .
+\end{IEEEeqnarray}
+%
+The observation function is described by the following equations,
+%
+\begin{IEEEeqnarray}{rCl}
+ \bng{\rt}   & = & \arctan\left(\frac{\pos{\rt,1}}{\pos{\rt,2}}\right) \nonumber \\
+ \rng{\rt}   & = & \sqrt{ \pos{\rt,1}^2 + \pos{\rt,3}^2 + \pos{\rt,3}^2 } \nonumber \\
+ \hei{\rt}   & = & \pos{\rt,3} - \terrain( \pos{\rt,1}, \pos{\rt,2} ) \nonumber \\
+ \rngrt{\rt} & = & \frac{ \pos{\rt}\cdot\vel{\rt} }{ \rng{\rt} } \nonumber      ,
+\end{IEEEeqnarray}
+%
+where $\terrain( \pos{\rt,1}, \pos{\rt,2} )$ is the terrain height at the corresponding horizontal coordinates. The four measurements are independent and the respective variances are $\frac{\pi}{9}^2$, $0.1^2$, $0.1^2$, $0.1^2$.
+
+Two linear transition models have been used, both based on a near-constant velocity model, one with a Gaussian density and one with a Student-t density with $\dof = 3$ degrees of freedom,
+%
+\begin{IEEEeqnarray}{rCl}
+ p_1(\ls{\rt} | \ls{\rt-1}) & = & \normal{\ls{\rt}}{\transmat\ls{\rt-1}}{\transcov} \nonumber \\
+ p_2(\ls{\rt} | \ls{\rt-1}) & = & \studentt{\ls{\rt}}{\transmat\ls{\rt-1}}{\transcov}{\dof} \nonumber      ,
+\end{IEEEeqnarray}
+%
+\begin{IEEEeqnarray}{rCl}
+ \transmat & = & \begin{bmatrix} I & I \\ 0 & I \end{bmatrix} \nonumber \\
+ \transcov & = & 10 \begin{bmatrix} \frac{1}{3} I & \frac{1}{2} I \\ \frac{1}{2} I &\ I \end{bmatrix} \nonumber \\
+\end{IEEEeqnarray}
+
+The accurate measurements of range, range rate and height constrain the region of high posterior probability to lie on a $3$ dimensional subspace, which can take some unusual shapes (see figure~\ref{}{\meta Add ref to a diagram}). This again means that particle filters using simple Gaussian importance densities do not perform well.
+
+The following particle filters were tested on the multivariate benchmark model:
+\begin{itemize}
+  \item A bootstrap particle filter (BPF).
+  \item A particle filter using an EKF-type importance density (EPF).
+  \item A particle filter using a UKF-type importance density (UPF).
+  \item An optimal Gaussian importance particle filter (OGIPF).
+  \item A deterministic composite proposal particle filter with $\lgexpsf=0$ (D-CPPF).
+  \item A stochastic composite proposal particle filter with $\lgexpsf=0.1$ (S-CPPF).
+\end{itemize}
+
+In addition an annealed particle filter and a CPPF with intermediate resampling were also tested. The number of particles used by each algorithm was selected so that the running times were roughly equal. For the student-t transition density, the CPPFs use the scale mixture of normals method.
+
+Figure~\ref{} shows the motion of the particles from the stochastic CPPF on a typical frame, and the awkward shape of the posterior mode. Figure~\ref{} shows the effective sample sizes of the particle approximations over a typical run with the Gaussian transition density.
+
+Table~\ref{} shows the average ESSs and RMSEs for each algorithm over 100 simulated data sets, each of 100 time steps using the Gaussian transition density. The same is shown for the student-t transition density in table~\ref{}.
+
+
+
+\subsection{A Heartbeat Inference Problem}
+
+As a final example, we consider the problem of detecting heartbeats in a vibration signal. Measurements from an accelerometer are first partitioned into segments believed to contain a heartbeat, and a particle filter is then used to infer its properties. The $t$th heartbeat is modelled parametrically as the product of a Gaussian envelope with amplitude $\amp{\rt}$ and width $\wid{\rt}$, and a sine wave carrier with frequency $\freq{\rt}$ and relative phase $\pha{\rt}$. The time shift of the centre of the heartbeat within the measurement is $\del{\rt}$, and the sensor exhibits a D.C. bias $\bias{\rt}$ which varies slowly over time. The resulting observation function is highly nonlinear, with the $d$th component given by,
+%
+\begin{IEEEeqnarray}{rCl}
+ \obsfun(\ls{\rt})_d & = & \amp{\rt} \exp\left\{ -\frac{ (T\,d - \del{\rt})^2 }{ 2\wid{\rt}^2 } \right\} \sin\left( \freq{\rt}(T\,d - \del{\rt}) + \pha{\rt} \right) + \bias{\rt} \nonumber      ,
+\end{IEEEeqnarray}
+%
+where $T$ is the sampling period of the sensor. Each observation consists of $50$ time samples and the observation density is modelled as a Gaussian with a covariance matrix $0.2^2 I$.
+
+The latent state is,
+%
+\begin{IEEEeqnarray}{rCl}
+ \ls{\rt} & = & \begin{bmatrix} \amp{\rt} & \wid{\rt} & \del{\rt} & \freq{\rt} & \pha{\rt} & \bias{\rt} \end{bmatrix}^T      .
+\end{IEEEeqnarray}
+%
+The transition density 
+
 
 
 
@@ -599,7 +749,7 @@ and the state evolution stochastic differential equation is,
 
 
 \bibliographystyle{chicago}
-%\bibliography{D:/pb404/Dropbox/PhD/OTbib}
-\bibliography{/home/pete/Dropbox/PhD/OTbib}
+\bibliography{D:/pb404/Dropbox/PhD/OTbib}
+%\bibliography{/home/pete/Dropbox/PhD/OTbib}
 
 \end{document} 

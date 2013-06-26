@@ -17,6 +17,7 @@
 \newcommand{\dpt}{\delta\lambda}                % A little bit of pseudo-time
 \newcommand{\ls}[1]{x_{#1}}                     % Latent state
 \newcommand{\ob}[1]{y_{#1}}                     % Observation
+\newcommand{\mix}[1]{\xi_{#1}}                  % Mixing auxiliary variable
 
 % Particle shizzle
 \newcommand{\pss}[2][]{^{(#2)#1}}               % Particle superscript
@@ -67,6 +68,7 @@
 \newcommand{\lgoimeanapprox}[2]{\hat{\mu}_{#1|#2}}     % Mean of the Gaussian approximation to the OID at time #1 and state #2
 \newcommand{\lgoicovapprox}[2]{\hat{\Sigma}_{#1|#2}}   % Covariance of the Gaussian approximation to the OID at time #1 and state #2
 \newcommand{\obsmatapprox}[1]{\hat{\obsmat}_{#1}}      % Linear observation matrix formed by differentiation of the observation function
+\newcommand{\lsfixed}{\ls{}^*}                        % Latent state around which we linearise
 
 % State evolution SDE
 \newcommand{\sdedrift}[1]{\zeta_{#1}}           % Drift
@@ -75,50 +77,24 @@
 \newcommand{\diffuseerror}[2]{e_{\eta,#1|#2}}   % Diffusion error due to finite sampling
 \newcommand{\lserror}[2]{e_{#1|#2}}             % State error due to finite sampling
 
+% Simulation models - tracking
+\newcommand{\pos}[1]{\mathbf{p}_{#1}}           % Position
+\newcommand{\vel}[1]{\mathbf{v}_{#1}}           % Velocity
+\newcommand{\bng}[1]{\theta_{#1}}               % Bearing
+\newcommand{\rng}[1]{r_{#1}}                    % Range
+\newcommand{\hei}[1]{h_{#1}}                    % Height
+\newcommand{\rngrt}[1]{s_{#1}}                  % Range rate
+\newcommand{\terrain}{T}                        % Terrain height
 
+% Simulation models - heartbeats
+\newcommand{\amp}[1]{A_{#1}}                    % Amplitude
+\newcommand{\wid}[1]{W_{#1}}                    % Width
+\newcommand{\del}[1]{\tau_{#1}}                 % Delay
+\newcommand{\freq}[1]{\omega_{#1}}              % Width
+\newcommand{\pha}[1]{\phi_{#1}}                 % Phase
+\newcommand{\bias}[1]{B_{#1}}                   % Bias
 
 
 
 %%% REDUNDANT? %%%
 
-
-
-\DeclareMathOperator{\lambert}{W}                               % Product-log function
-\newcommand{\tensorD}[3]{\textbf{D}^{#1}_{#2} #3 \:}            % Tensor derivative operator
-\newcommand{\divtensorD}[3]{\tilde{\textbf{D}}^{#1}_{#2} #3 \:} % Divergence of a tensor derivative operator
-
-% Particle flow
-\newcommand{\flowbm}[1]{\epsilon_{#1}}          % Particle flow Brownian motion
-\newcommand{\flowdrift}[1]{\zeta_{#1}}          % Particle flow drift
-\newcommand{\flowdiffuse}[1]{\eta_{#1}}         % Particle flow diffusion
-\newcommand{\flowcov}[1]{D_{#1}}                % Particle flow "Covariance" matrix
-\newcommand{\flowtd}{\alpha}                    % Flow dervation transition density
-\newcommand{\flowod}{\beta}                     % Flow derivation observation density
-\newcommand{\flowmap}[2]{\phi_{#1}^{#2}}        % Flow transport map
-
-% Linear flow
-\newcommand{\lfmat}[1]{A_{#1}}                  % Linear flow matrix
-\newcommand{\lfshift}[1]{b_{#1}}                % Linear flow shift
-\newcommand{\lfdiffsf}{\gamma}                  % Linear flow diffusion matrix scale factor
-\newcommand{\lfmapmat}[1]{\Gamma_{#1}}          % Linear flow map matrix
-\newcommand{\lfmapshift}[1]{g_{#1}}             % Linear flow map shift
-\newcommand{\lfmapcov}[1]{\Omega_{#1}}          % Linear flow map covariance
-\newcommand{\rotategen}{\Theta_{\pt}}           % Arbitrary rotation infinitessimal generator
-
-
-
-
-
-\newcommand{\lginterm}[1]{S_{#1}}               % Useful intermediate term equal to \transcov / \lgoicov
-
-% Taylor expansions
-\newcommand{\lsfixed}{\ls{}^* }                 % Expansion point
-\newcommand{\obdiff}[1]{\tilde{y}_{#1}}          % Observation difference: y - h(x^*)
-\newcommand{\lsdiff}[1]{\tilde{x}_{#1}}          % Latent state difference: x - x^*
-\newcommand{\transmeandiff}{\tilde{m}}           % Transition mean difference: m - x^*
-\newcommand{\lgoimeandiff}[1]{\tilde{\mu}_{#1}}  % OID mean difference: \mu - x^*
-\newcommand{\hTSlin}{\left.\frac{\partial \obsfun}{\partial \ls{}}\right|_{\lsfixed}}   % Linear term of Taylor series of h
-\newcommand{\hTSquad}{\sum_{i,j} \left.\frac{\partial^2 \obsfun}{\partial \ls{i,j}^2}\right|_{\lsfixed} \lsdiff{\pt,i}\lsdiff{\pt,j}}   % Quadratic term of Taylor series of h
-
-% Miscellany
-\newcommand{\bels}[1]{\hat{x}_{#1}}             % Backwards estimate of linear state (for step-size control) 
