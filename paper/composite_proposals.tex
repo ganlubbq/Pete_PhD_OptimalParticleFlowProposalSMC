@@ -80,9 +80,7 @@ It is possible to take the idea of bridging distributions to a limit and define 
 
 \subsection{Composite Proposals}
 
-In this paper, a new method is introduced for sampling from an approximation of the optimal importance density. We name this the composite proposal particle filter (CPPF). In common with progressive filtering and particle flow algorithms, the procedure relies on introducing the observation likelihood gradually. Beginning with a sample from the transition density, a series of local approximations are then used to move the particle to a new state, either deterministically or stochastically. This method is shown to yield significant improvements in effective sample size for challenging nonlinear models.
-
-The purpose of the CPPF is to provide more efficient proposals for problems {\meta Something about its raison d'etre --- to improve ESS for difficult models.}
+In this paper, a new method is introduced for sampling from an approximation of the optimal importance density, which we name the composite proposal particle filter (CPPF). The purpose of the CPPF is to provide more efficient proposals for particularly challenging problems, on which standard particle filters fail. In common with progressive filtering and particle flow algorithms, the procedure relies on introducing the observation likelihood gradually. Beginning with a sample from the transition density, a series of local approximations are then used to move the particle to a new state, either deterministically or stochastically. This method is shown to yield significant improvements in effective sample size for challenging nonlinear models.
 
 A modification of the algorithm is also presented which introduces intermediate resampling steps during the smooth update. This helps further to limit degeneracy of the particle weights, at the cost of introducing dependency between the particles. This latter algorithm resembles (and yet is significantly different from) an annealed particle filter \citep{Gall2007,Deutscher2000}, but uses gradient information from the model densities to lead particles towards peaks in the OID. In this sense, there are also connections with adaptive MCMC methods, such as those of \citep{Girolami2011}.
 
@@ -678,15 +676,41 @@ The latent state is,
  \ls{\rt} & = & \begin{bmatrix} \amp{\rt} & \wid{\rt} & \del{\rt} & \freq{\rt} & \pha{\rt} & \bias{\rt} \end{bmatrix}^T      .
 \end{IEEEeqnarray}
 %
-The transition density 
+The transition density is factorised into independent terms, with $\freq{\rt}$, $\pha{\rt}$ and $\bias{\rt}$ evolving according to a Gaussian random walk, and $\wid{\rt}$ according to a geometric random walk (i.e. with a log-normal density), while $\del{\rt}$ and $\amp{\rt}$ are gamma distributed with no dependence on their past values.
+%
+%\begin{IEEEeqnarray}{rCl}
+% p(\amp{\rt} )                & = & \gammaden{\amp{\rt}-0.5}{10}{0.05} \nonumber \\
+% p(\wid{\rt} | \wid{\rt-1})   & = & \lognormal{\wid{\rt}}{}{} \nonumber \\
+% p(\del{\rt})                 & = &   \nonumber \\
+% p(\freq{\rt} | \freq{\rt-1}) & = &   \nonumber \\
+% p(\pha{\rt} | \pha{\rt-1})   & = &   \nonumber \\
+% p(\bias{\rt} | \bias{\rt-1}) & = &   \nonumber      ,
+%\end{IEEEeqnarray}
+%%
+%where {\meta PARAMETERS}.
+
+The complications introduced in the posterior distribution by the highly multi-modal observation density mean that simple Gaussian importance densities do not work very well. Particle filters using extended or unscented Kalman-type importance densities fail immediately on this model.
+
+In order to use a CPPF with this model, the OID density sequence must be approximated with Gaussians. This is achieved by linearising the observation model around the current state \eqref{eg:linearised_Gaussian_approx} and using the log-density Taylor series truncation method for the prior \eqref{eg:general_Gaussian_approx}. The variance terms in this latter approximation are limited to be no greater than the prior variances.
+
+The following particle filters were tested on the multivariate benchmark model:
+\begin{itemize}
+  \item A bootstrap particle filter (BPF)
+  \item An optimal Gaussian importance particle filter (OGIPF).
+  \item A deterministic composite proposal particle filter with $\lgexpsf=0$ (D-CPPF).
+\end{itemize}
+
+The number of particles used by each algorithm was selected so that the running times were roughly equal. The CPPFs both use the adaptive step size method. Figure~\ref{} shows the motion of the particles from the stochastic CPPF on a typical frame. Figure~\ref{} shows the effective sample sizes of the particle approximations over a typical run. Table~\ref{} shows the average ESSs and RMSEs for each algorithm over 100 simulated data sets, each of 100 time steps.
+
+
+
+\section{Conclusions}
 
 
 
 
 
 \appendix
-
-
 
 \section{Proof of Lemma~\ref{lem:state_SDE}: A Stochastic Differential Equation For State Evolution} \label{app:state_SDE}
 
