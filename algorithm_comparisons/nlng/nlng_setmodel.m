@@ -8,7 +8,7 @@ function model = nlng_setmodel(test)
 %%%%%%%%%%%%%%%%
 
 % General things
-model.K = 20;              % Number of time points
+model.K = 100;              % Number of time points
 dsc = 10;                    % Dimension of the CONTINUOUS states
 model.do = dsc/2;           % Dimension of the observations
 model.ds = dsc + 1;         % Dimension of the state

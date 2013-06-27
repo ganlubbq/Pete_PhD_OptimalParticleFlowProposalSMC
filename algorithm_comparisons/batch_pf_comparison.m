@@ -20,18 +20,13 @@ rand_seed = test_num;
 
 %%% SETTINGS %%%
 
-% TEST NAME
-test_name = 'nlg_alg_comp';
-
 % Which model?
-model_flag = 2;     % 1 = linear Gaussian
+model_flag = 6;     % 1 = linear Gaussian
                     % 2 = nonlinear non-Gaussian benchmark
                     % 3 = heartbeat alignment
-
-% Gaussian or Student-t
-if model_flag == 2
-    test.STdof = Inf;
-end
+                    % 4 = tracking
+                    % 5 = drone navigation
+                    % 6 = parametric sine-wave heartbeat alignment
                     
 % Set display options
 display.text = false;
@@ -39,102 +34,46 @@ display.plot_during = false;
 display.plot_after = false;
 display.plot_particle_paths = false;
 
-% How many tests
-num_tests = 7;
-
-
-                                            % Algorithm Numbers
-                                            % 1 = bootstrap
-                                            % 2 = EKF proposal
-                                            % 3 = UKF proposal
-                                            % 4 = linearised OID proposal
-                                            % 5 = SUPF
-
-% Loop through tests
-for tt = 1:num_tests
-    
-    % Set generic things
-    test.num_filt_pts = 100*ones(1,5);
-    
-    if model_flag == 1
-        % Set test-specific things - LINEAR GAUSSIAN
-        switch tt
-            case 1
-                test.algs_to_run = [1];
-                test.num_filt_pts(1) = 100;
-            case 2
-                test.algs_to_run = [1];
-                test.num_filt_pts(1) = 185;
-            case 3
-                test.algs_to_run = [4];
-                test.num_filt_pts(4) = 100;
-            case 4
-                test.algs_to_run = [5];
-                test.num_filt_pts(5) = 100;
-                test.flag_stochastic = false;
-            case 5
-                test.algs_to_run = [5];
-                test.num_filt_pts(5) = 100;
-                test.flag_stochastic = true;
-                test.Dscale = 0.1;
-            case 6
-                test.algs_to_run = [5];
-                test.num_filt_pts(5) = 100;
-                test.flag_stochastic = true;
-                test.Dscale = 1;
-            otherwise
-                error('No settings for that test');
-        end
-    elseif model_flag == 2
-        % Set test-specific things - NONLINEAR GAUSSIAN
-        switch tt
-            case 1
-                test.algs_to_run = [1];
-                test.num_filt_pts(1) = 100;
-                test.flag_intermediate_resample = false;
-            case 2
-                test.algs_to_run = [1];
-                test.num_filt_pts(1) = 20000;
-                test.flag_intermediate_resample = false;
-            case 3
-                test.algs_to_run = [4];
-                test.num_filt_pts(4) = 100;
-                test.flag_intermediate_resample = false;
-            case 4
-                test.algs_to_run = [5];
-                test.num_filt_pts(5) = 100;
-                test.flag_stochastic = false;
-                test.flag_intermediate_resample = false;
-            case 5
-                test.algs_to_run = [5];
-                test.num_filt_pts(5) = 100;
-                test.flag_stochastic = true;
-                test.flag_intermediate_resample = false;
-                test.Dscale = 0.01;
-            case 6
-                test.algs_to_run = [5];
-                test.num_filt_pts(5) = 100;
-                test.flag_stochastic = true;
-                test.flag_intermediate_resample = false;
-                test.Dscale = 0.1;
-            case 7
-                test.algs_to_run = [5];
-                test.num_filt_pts(5) = 100;
-                test.flag_stochastic = true;
-                test.flag_intermediate_resample = true;
-                test.Dscale = 0.01;
-        end
-    end
-    
-    % Run the script
-    run_pf_comparison;
-    
-    % Get the numbers we want
-    results(tt).rt =   sum([diagnostics{aa}.rt]);
-    results(tt).ess =  mean([diagnostics{aa}(2:end).ess]);
-    results(tt).rmse = mean(rmse{aa}(2:end));
-    
+switch model_flag
+    case 2
+        test_name = 'nlng_alg_comp';
+        test.algs_to_run = [1 4 6];
+        test.num_filt_pts = [18500, NaN, NaN, 70, NaN, 540];
+        test.flag_stochastic = false;
+        
+        test.STdof = Inf;
+        
+    case 5
+        test_name = 'drone_alg_comp';
+        test.algs_to_run = [1 3:6];
+        test.num_filt_pts = [6000 NaN 460 10 100 180];
+        test.flag_stochastic = false; %%% Note - the IR algorithm uses stochastic updates whatever
+        test.flag_intermediate_resample = true;
+        test.Dscale = 0.3;
+        
+        %%% GAUSSIAN OR STUDENT-T %%%
+        test.STdof = Inf;
+        
+    case 6
+        test_name = 'sineha_alg_comp';
+        test.algs_to_run = [1 4 6];
+        test.num_filt_pts = [15000, NaN, NaN, 200, NaN, 800];
+        test.flag_stochastic = false;
+        
+        test.STdof = Inf;
+        
+    otherwise
+        error('Invalid model flag set, you chump.');
+        
 end
+  
+% Run the script
+run_pf_comparison;
+
+% Get the numbers we want
+results.rt =   rt;
+results.ess =  ess;
+results.rmse = rmse;
 
 % Save
 save(['batch_tests/' test_name '/batch_alg_comp_num' num2str(test_num) '.mat'], 'results')

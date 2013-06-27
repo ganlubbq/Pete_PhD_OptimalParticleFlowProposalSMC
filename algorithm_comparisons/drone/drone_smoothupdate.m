@@ -26,8 +26,19 @@ for ii = 1:algo.N
     end
 end
 
+% Sample mixing variable
+init_mix = zeros(1,algo.N);
+for ii = 1:algo.N
+    if ~isinf(model.dfx)
+        init_mix(ii) = chi2rnd(model.dfx);
+    else
+        init_mix(ii) = 1;
+    end
+end
+
 % Initialise pf structure
 pf(1).state = init_state;
+pf(1).mix = init_mix;
 pf(1).weight = init_weight;
 pf(1).origin = 1:algo.N;
 
@@ -45,6 +56,7 @@ for ll = 1:L-1
     
     % Initialise state and weight arrays
     pf(ll+1).state = zeros(model.ds, algo.N);
+    pf(ll+1).mix = zeros(1, algo.N);
     pf(ll+1).weight = zeros(1, algo.N);
     prob = zeros(1, algo.N);
     
@@ -65,6 +77,7 @@ for ll = 1:L-1
         
         % Starting point
         x0 = pf(ll).state(:,pf(ll+1).ancestor(ii));
+        xi0 = pf(ll).mix(1,pf(ll+1).ancestor(ii));
         
         % Observation mean
         obs_mn = drone_h(model, x0);
@@ -90,43 +103,6 @@ for ll = 1:L-1
             P = model.Q;
         end
         
-%         % SMoN scaling of transition density
-%         if ~isinf(model.dfx)
-%             xi = chi2rnd(model.dfx);
-%         else
-%             xi = 1;
-%         end
-%         P = P / xi;
-        
-        %%%%%% TESTING 1ST ORDER TS MATCHING %%%%%%%%
-        
-        dx = x0 - m;
-        dfx = model.dfx;
-        ds = model.ds;
-        xP = (P\dx);
-        t_dist = 1 + xP'*dx/dfx;
-        HRH = H'*(R\H);
-        
-        prior_grad = -((dfx+ds)/dfx)*xP/t_dist;
-        prior_hess = ((dfx+ds)/dfx)*( - inv(P) + (2/dfx)*( xP*xP' )/t_dist )/t_dist;
-        
-        [hess_eigvec, hess_eigval] = eig(prior_hess);
-        hess_eigval(hess_eigval>0) = -1;
-        prior_hess = hess_eigvec*hess_eigval*hess_eigvec';
-        
-%         max_eig = max(eig(prior_hess));
-%         while ~isposdef(eye(ds) - lam*prior_hess\HRH)
-%             prior_hess = prior_hess - 1.1 * max_eig*eye(ds);
-%             fprintf(1,'.');
-%         end
-        
-        P = -inv(prior_hess);
-        m = x0 + P*prior_grad;
-        
-%         assert(isposdef(P));
-        
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        
         % Sample perturbation
         if algo.Dscale > 0
             zD = mvnrnd(zeros(model.ds,1)',eye(model.ds))';
@@ -134,14 +110,65 @@ for ll = 1:L-1
             zD = zeros(model.ds,1);
         end
         
+        % SMoN scaling of transition density
+        if ~isinf(model.dfx)
+            xi = chi2rnd(model.dfx);
+        else
+            xi = 1;
+        end
+        P = P / xi;
+        
+%         %%%%%% TESTING 1ST ORDER TS MATCHING %%%%%%%%
+%         
+%         dx = x0 - m;
+%         dfx = model.dfx;
+%         ds = model.ds;
+%         xP = (P\dx);
+%         t_dist = 1 + xP'*dx/dfx;
+%         HRH = H'*(R\H);
+%         
+%         prior_grad = -((dfx+ds)/dfx)*xP/t_dist;
+%         prior_hess = ((dfx+ds)/dfx)*( - inv(P) + (2/dfx)*( xP*xP' )/t_dist )/t_dist;
+%         
+%         [hess_eigvec, hess_eigval] = eig(prior_hess);
+%         hess_eigval(hess_eigval>0) = -1;
+%         prior_hess = hess_eigvec*hess_eigval*hess_eigvec';
+%         
+% %         max_eig = max(eig(prior_hess));
+% %         while ~isposdef(eye(ds) - lam*prior_hess\HRH)
+% %             prior_hess = prior_hess - 1.1 * max_eig*eye(ds);
+% %             fprintf(1,'.');
+% %         end
+%         
+%         P = -inv(prior_hess);
+%         m = x0 + P*prior_grad;
+%         
+% %         assert(isposdef(P));
+%         
+%         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%         % Augmented flow
+%         
+%         dfx = model.dfx;
+%         ds = model.ds;
+%         Paug = inv( [xi0*inv(P), P\(x0-m); (x0-m)'/P, ((dfx+ds)/2-1)/xi0^2] );
+%         [V,D] = eig(Paug);
+%         D(D<0) = 1;
+%         Paug = V*D*V';
+%         maug = [x0; xi0] + Paug*[-xi0*(P\(x0-m)); ((dfx+ds)/2-1)/xi0-(1+(x0-m)'*(P\(x0-m)))/2];
+%         Haug = [H, zeros(model.do,1)];
+%         x0aug = [x0; xi0];
+%         
+%         % Analytical flow
+%         [ xaug, prob_ratio, drift, diffuse] = linear_flow_move( lam, lam0, x0aug, maug, Paug, y, Haug, R, algo.Dscale, zD );
+%         x = xaug(1:end-1);
+%         xi = xaug(end);
+%         
+%         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+        
         % Analytical flow
         [ x, prob_ratio, drift, diffuse] = linear_flow_move( lam, lam0, x0, m, P, y, H, R, algo.Dscale, zD );
-%         HRH = H'*(R\H);
-%         invSigma = -prior_hess + lam*HRH;
-%         A = -0.5*invSigma\HRH;
-%         b = invSigma\( H'*(R\y) + A'*( prior_grad + lam*H'*(R\y) ) );
-%         x = x0 + (b)*(lam-lam0);
-%         wt_jac = det(eye(ds)+(lam-lam0)*A);
 
         % Error estimate
         H_new = drone_obsjacobian(model, x);
@@ -155,6 +182,7 @@ for ll = 1:L-1
         % Store state
         state = x;
         pf(ll+1).state(:,ii) = x;
+        pf(ll+1).mix(1,ii) = xi;
         
         % Densities
         if ~isempty(prev_state)
@@ -189,6 +217,7 @@ state = pf(L).state;
 weight = pf(L).weight;
 
 state_evo = cat(3,pf.state);
+mix_evo = cat(1,pf.mix);
 weight_evo = cat(1,pf.weight);
 
 % Plot particle paths (first state only)
@@ -207,6 +236,11 @@ if display.plot_particle_paths
         figure(3), clf, hold on
         for ii = 1:algo.N
             plot(lam_rng, weight_evo(:,ii), 'color', [0 rand rand]);
+        end
+        figure(4), clf, hold on
+        xlim([0 1]);
+        for ii = 1:algo.N
+            plot(lam_rng, mix_evo(:,ii), 'color', [0 rand rand]);
         end
         drawnow;
     else

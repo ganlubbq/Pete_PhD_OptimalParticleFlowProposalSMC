@@ -23,7 +23,7 @@ if ~exist('test', 'var') || ~isfield(test,'flag_batch') || (~test.flag_batch)
     rand_seed = 0;
     
     % Which model?
-    model_flag = 6;     % 1 = linear Gaussian
+    model_flag = NaN;     % 1 = linear Gaussian
                         % 2 = nonlinear non-Gaussian benchmark
                         % 3 = heartbeat alignment
                         % 4 = tracking
@@ -50,7 +50,7 @@ if ~exist('test', 'var') || ~isfield(test,'flag_batch') || (~test.flag_batch)
     end
     
     % Select algorithms to run
-    test.algs_to_run = [1 4 6];     % Vector of algorithm indexes to run
+    test.algs_to_run = [6];     % Vector of algorithm indexes to run
                                     % 1 = bootstrap
                                     % 2 = EKF proposal
                                     % 3 = UKF proposal
@@ -61,19 +61,19 @@ if ~exist('test', 'var') || ~isfield(test,'flag_batch') || (~test.flag_batch)
 	% Set number of particles for each algorithm
 %     test.num_filt_pts = 100*ones(1,6);
 %     test.num_filt_pts = [185, 100, 100, 100, 100];          % Time normalised for model 1
-%     test.num_filt_pts = [20000, 15000, 5000, 90, 125, 300];       % Time normalised for model 2 with Gaussian densities
+%     test.num_filt_pts = [18500, NaN, NaN, 70, NaN, 540];       % Time normalised for model 2 with Gaussian densities
 %     test.num_filt_pts = [2500, 1000, 1000, 50, 100, 100];       % Time normalised for model 3
 %     test.num_filt_pts = [20000 12000 3500 10 100];               % Time normalised for model 4
-%     test.num_filt_pts = [3000 100 300 10 100 100];               % Time normalised for model 5
-    test.num_filt_pts = [2500, 1000, 1000, 50, 100, 200];       % Time normalised for model 6
+%     test.num_filt_pts = [6000 NaN 460 10 100 180];               % Time normalised for model 5
+    test.num_filt_pts = [15000, NaN, NaN, 200, NaN, 800];       % Time normalised for model 6
 
     % Model settings
     test.STdof = Inf;
 
     % SUPF settings
-    test.flag_stochastic = false;
-    test.flag_intermediate_resample = false;
-    test.Dscale = 0.1;
+    test.flag_stochastic = true;
+    test.flag_intermediate_resample = true;
+    test.Dscale = 0.3;
 
 end
 
@@ -201,17 +201,25 @@ end
 % This is going to depend on the model, e.g. whether its a mixed state or
 % not, but here's some generic bits
 
-sse = cell(num_to_run,1);
+% sse = cell(num_to_run,1);
 rmse = cell(num_to_run,1);
 nees = cell(num_to_run,1);
 tnees = cell(num_to_run,1);
+ess = cell(num_to_run,1);
+rt = zeros(num_to_run,1);
 
 for aa = 1:num_to_run
-    rmse{aa} = zeros(model.ds,model.K);
+    
+    rt(aa) = diagnostics{aa}.rt;
+    
+%     sse{aa} = zeros(model.ds,model.K);
     rmse{aa} = zeros(1,model.K);
     nees{aa} = zeros(1,model.K);
     tnees{aa} = zeros(1,model.K);
+    ess{aa} = zeros(1,model.K);
     for kk = 1:model.K
+        
+        ess{aa}(kk) = diagnostics{aa}(kk).ess;
         
         switch model_flag
             case{1 3 4 5 6}
@@ -222,7 +230,7 @@ for aa = 1:num_to_run
                 vr = pf{aa}(kk).vr(2:end, 2:end);
         end
         
-        sse{aa}(:,kk) = se;
+%         sse{aa}(:,kk) = se;
         rmse{aa}(kk) = sqrt(sum(se.^2));   %abs(se(1));%
         if det(vr) > 1E-12
             nees{aa}(kk) = (se'/vr)*se;

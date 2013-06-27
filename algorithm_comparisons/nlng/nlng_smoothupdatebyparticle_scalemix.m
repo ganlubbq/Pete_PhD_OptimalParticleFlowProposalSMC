@@ -125,13 +125,27 @@ while lam < 1
             
 %             xi_post = log(chi2pdf(xi, model.dfy));
 
-            xi_mhppsl = chi2rnd(model.dfy);
-            old_prob = (0.5*(model.dfy+(lam1-1)*model.do)-1)*log(xi0)       - xi0/2       + loggausspdf(obs, nlng_h(model, m), model.R/(lam1*xi0)+H_new*P*H_new');
-            new_prob = (0.5*(model.dfy+(lam1-1)*model.do)-1)*log(xi_mhppsl) - xi_mhppsl/2 + loggausspdf(obs, nlng_h(model, m), model.R/(lam1*xi_mhppsl)+H_new*P*H_new');
-            if log(rand)<(new_prob-old_prob)
-                xi = xi_mhppsl;
-            else
-                xi = xi0;
+%             xi_mhppsl = chi2rnd(model.dfy);
+%             old_prob = (0.5*(model.dfy+(lam1-1)*model.do)-1)*log(xi0)       - xi0/2       + loggausspdf(obs, nlng_h(model, m), model.R/(lam1*xi0)+H_new*P*H_new');
+%             new_prob = (0.5*(model.dfy+(lam1-1)*model.do)-1)*log(xi_mhppsl) - xi_mhppsl/2 + loggausspdf(obs, nlng_h(model, m), model.R/(lam1*xi_mhppsl)+H_new*P*H_new');
+%             if log(rand)<((new_prob-old_prob)-(new_ppsl-old_ppsl))
+%                 xi = xi_mhppsl;
+%             else
+%                 xi = xi0;
+%             end
+
+            for mm = 1:1
+                dec = 0.1; dfy = model.dfy;
+                xi_mhppsl = (1-dec)*xi0+gamrnd(0.5*dec*dfy/(1-dec),2*(1-dec));
+                new_prob = log(chi2pdf(xi_mhppsl, model.dfy));
+                old_prob = log(chi2pdf(xi0, model.dfy));
+                new_ppsl = log(gampdf(xi_mhppsl-(1-dec)*xi0, 0.5*dec*dfy/(1-dec), 2*(1-dec)));
+                old_ppsl = log(gampdf(xi0-(1-dec)*xi_mhppsl, 0.5*dec*dfy/(1-dec), 2*(1-dec)));
+                if log(rand)<((new_prob-old_prob)-(new_ppsl-old_ppsl))
+                    xi = xi_mhppsl;
+                else
+                    xi = xi0;
+                end
             end
             xi_post = 0;
             xi_prob_ratio = 1;
@@ -209,7 +223,7 @@ if display.plot_particle_paths
     % Probability estimate
     figure(display.h_ppp(5));
     plot(lam_evo, post_prob_evo-ppsl_prob_evo);
-    
+    %
     % Mixing variable
     figure(display.h_ppp(6));
     plot(lam_evo, mix_evo);

@@ -88,7 +88,7 @@ B = x(6);
 Tminusmean = log(T)-log(prior_mn(2))+0.5*model.T_vol;
 
 % Function itself
-func_prior =  (model.A_shape-1)*log(A)-A/model.A_scale ...
+func_prior =  (model.A_shape-1)*log(A-model.A_shift)-(A-model.A_shift)/model.A_scale ...
              -log(T)-Tminusmean^2/(2*model.T_vol) ...
              +(model.tau_shape-1)*log(tau)-tau/model.tau_scale ...
              -(omega-prior_mn(4))^2/(2*model.omega_vr) ...
@@ -99,7 +99,7 @@ func_lhood = -(dy'/R)*dy/2;
 func = - func_lhood - func_prior;
 
 % Gradient
-grad_prior = [(model.A_shape-1)/A-1/model.A_scale;
+grad_prior = [(model.A_shape-1)/(A-model.A_shift)-1/model.A_scale;
 %     -1/T-Tminusmean/(T*model.T_vol)-(model.tau_shape-1)/(tau-T)+1/model.tau_scale;
 %     (model.tau_shape-1)/(tau-T)-1/model.tau_scale;
     -1/T-Tminusmean/(T*model.T_vol);
@@ -113,7 +113,7 @@ grad = - grad_lhood - grad_prior;
 
 if nargout > 2
     
-    hess_prior = diag([-(model.A_shape-1)/(A^2);
+    hess_prior = diag([-(model.A_shape-1)/((A-model.A_shift)^2);
 %         ((Tminusmean - 1)/model.T_vol+1)/T^2 - (model.tau_shape-1)/(tau-T)^2;
 %         -(model.tau_shape-1)/(tau-T)^2;
         ((Tminusmean - 1)/model.T_vol+1)/T^2;

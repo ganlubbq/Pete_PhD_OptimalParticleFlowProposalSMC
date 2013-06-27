@@ -63,7 +63,13 @@ else
 end
 
 % Loop
+ll_count = 0;
 while lam < 1
+    
+    if ll_count > 50
+        ppsl_prob = 1E10;
+        break;
+    end
     
     % Pseudo-time and step-size
     lam0 = lam;
@@ -110,6 +116,8 @@ while lam < 1
     
     % Accept/reject step
     if (err_crit < err_thresh) || (dl == dl_min)
+        
+        ll_count = ll_count + 1;
         
         % Update time
         lam = lam1;
@@ -212,7 +220,7 @@ B = x(6);
 Tminusmean = log(T)-log(prior_mn(2))+0.5*model.T_vol;
 
 % Prior matching
-grad_prior = [(model.A_shape-1)/A-1/model.A_scale;
+grad_prior = [(model.A_shape-1)/(A-model.A_shift)-1/model.A_scale;
 %     -1/T-Tminusmean/(T*model.T_vol)-(model.tau_shape-1)/(tau-T)+1/model.tau_scale;
 %     (model.tau_shape-1)/(tau-T)-1/model.tau_scale;
     -1/T-Tminusmean/(T*model.T_vol);
@@ -220,7 +228,7 @@ grad_prior = [(model.A_shape-1)/A-1/model.A_scale;
     -(omega-prior_mn(4))/model.omega_vr;
     -(phi-prior_mn(5))/model.phi_vr;
     -(B-prior_mn(6))/model.B_vr];
-hess_prior = diag([-(model.A_shape-1)/(A^2);
+hess_prior = diag([-(model.A_shape-1)/((A-model.A_shift)^2);
     %         ((Tminusmean - 1)/model.T_vol+1)/T^2 - (model.tau_shape-1)/(tau-T)^2;
     %         -(model.tau_shape-1)/(tau-T)^2;
         ((Tminusmean - 1)/model.T_vol+1)/T^2;

@@ -178,6 +178,18 @@ else
     zD = zeros(model.ds,1);
 end
 
+% SMoN scaling.
+if ~isinf(model.dfx)
+    xi = chi2rnd(model.dfx);
+else
+    xi = 1;
+end
+if ~isempty(prev_state)
+    Pxi = P / xi;
+else
+    Pxi = P;
+end
+
 % Loop
 ll_count = 0;
 while lam < lam_stop
@@ -215,12 +227,25 @@ while lam < lam_stop
     % SMoN scaling.
     if ~isinf(model.dfx)
         xi = chi2rnd(model.dfx);
-        xi_ppsl_prob = 0;
+        
+%         dec = 0.1; dfx = model.dfx;
+%         xi_mhppsl = (1-dec)*xi+gamrnd(0.5*dec*dfx/(1-dec),2*(1-dec));
+%         new_prob = log(chi2pdf(xi_mhppsl, dfx));
+%         old_prob = log(chi2pdf(xi, dfx));
+%         new_ppsl = log(gampdf(xi_mhppsl-(1-dec)*xi, 0.5*dec*dfx/(1-dec), 2*(1-dec)));
+%         old_ppsl = log(gampdf(xi-(1-dec)*xi_mhppsl, 0.5*dec*dfx/(1-dec), 2*(1-dec)));
+%         if log(rand)<((new_prob-old_prob)-(new_ppsl-old_ppsl))
+%             xi = xi_mhppsl;
+%         end
+        
     else
         xi = 1;
-        xi_ppsl_prob = 0;
     end
-    Pxi = P / xi;
+    if ~isempty(prev_state)
+        Pxi = P / xi;
+    else
+        Pxi = P;
+    end
     
     % Analytical flow
     [ x, prob_ratio, drift, diffuse] = linear_flow_move( lam1, lam0, x0, m, Pxi, y, H, R, algo.Dscale, zD );

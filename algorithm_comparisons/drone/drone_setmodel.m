@@ -8,7 +8,7 @@ function model = drone_setmodel(test)
 %%%%%%%%%%%%%%%%
 
 % General things
-model.K = 10;                   % Number of time points
+model.K = 100;                   % Number of time points
 model.ds = 6;                   % Dimension of the state
 model.do = 4;                   % Dimension of the observations
 
@@ -22,8 +22,12 @@ sigrr    = 0.1^2;                 % Range rate variance
 % Matrixes
 T = 1;                          % Sampling period
 a = 0.3;                        % Ensures stability
-model.A = [exp(-a*T) 0 0 T 0 0; 0 exp(-a*T) 0 0 T 0; 0 0 1 0 0 T;
-           0 0 0 exp(-a*T) 0 0; 0 0 0 0 exp(-a*T) 0; 0 0 0 0 0 exp(-a*T)];
+model.A = [exp(-a*T) 0 0 T 0 0;
+           0 exp(-a*T) 0 0 T 0;
+           0 0 exp(-a*T) 0 0 T;
+           0 0 0 exp(-a*T) 0 0;
+           0 0 0 0 exp(-a*T) 0;
+           0 0 0 0 0 exp(-a*T)];
 model.Q = sigx * ...
     [T^3/3  0      0      T^2/2  0      0    ;
      0      T^3/3  0      0      T^2/2  0    ;

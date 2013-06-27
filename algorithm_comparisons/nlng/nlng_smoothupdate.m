@@ -117,7 +117,7 @@ for ll = 1:L-1
         % Error estimate
         H_new = nlng_obsjacobian(model, x);
         y_new = obs - nlng_h(model, x) + H_new*x;
-        [drift_new, diffuse_new] = linear_drift( lam, x, m, P, y_new, H_new, R, algo.Dscale, zD );
+        [drift_new, diffuse_new] = linear_drift( lam, x, m, P, y_new, H_new, R, algo.Dscale );
         err_est = 0.5*(lam-lam0)*(drift_new-drift);% + 0.5*(diffuse_new-diffuse)*zD;
         err_crit = norm(err_est, 2);
         

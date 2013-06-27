@@ -96,15 +96,20 @@ while lam < 1
 %     dfy = model.dfy;
 %     do = model.do;
 %     yR = (R\dy);
-%     t_dist = 1 + yR'*yR/dfy;
-%     HRH = H'*(R\H);
+%     tdist = 1 + yR'*yR/dfy;
 %     
-%     lhood_grad = -((dfy+do)/dfy)*H'*yR/t_dist;
-%     lhood_hess = ((dfy+do)/dfy)*( - inv(P) + (2/dfx)*( xP*xP' )/t_dist )/t_dist;
+%     lhood_grad = -((dfy+do)/dfy)*H'*yR/tdist;
 %     
-%     [hess_eigvec, hess_eigval] = eig(prior_hess);
+%     [ T ] = nlng_obssecondderivtensor( model, x0 );
+%     at = zeros(model.ds-1);
+%     for dd = 1:model.do
+%         at = at + yR(dd)*squeeze(T(:,:,dd));
+%     end
+%     lhood_hess = (dfy+do)*( H'*(R\H) - 2*H'*(yR*yR')*H/(dfy*tdist) - at )/(dfy*tdist);
+%     
+%     [hess_eigvec, hess_eigval] = eig(lhood_hess);
 %     hess_eigval(hess_eigval>0) = -1;
-%     prior_hess = hess_eigvec*hess_eigval*hess_eigvec';
+%     lhood_hess = hess_eigvec*hess_eigval*hess_eigvec';
 %     
 %     %         max_eig = max(eig(prior_hess));
 %     %         while ~isposdef(eye(ds) - lam*prior_hess\HRH)
@@ -112,8 +117,8 @@ while lam < 1
 %     %             fprintf(1,'.');
 %     %         end
 %     
-%     P = -pinv(prior_hess);
-%     m = x0 + P*prior_grad;
+%     P = -pinv(lhood_hess);
+%     m = x0 + P*lhood_grad;
 %     
 %     %         assert(isposdef(P));
 %     

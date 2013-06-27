@@ -23,23 +23,23 @@ else
     prior_vr = model.Q;
 end
 
-% Sample a mixing value and scale the covariance
-if ~isinf(model.dfy)
-    xi = chi2rnd(model.dfy);
-else
-    xi = 1;
-end
-R = model.R / xi;
+% % Sample a mixing value and scale the covariance
+% if ~isinf(model.dfy)
+%     xi = chi2rnd(model.dfy);
+% else
+%     xi = 1;
+% end
+% R = model.R / xi;
 
 % Maximise OID
-h_of = @(x) log_oid_with_derivs(model, prior_mn, prior_vr, obs, R, x);
+h_of = @(x) log_oid_with_derivs(model, prior_mn, prior_vr, obs, x);
 options = optimset('GradObj','on','Hessian','on','Display','notify-detailed');
 options = optimset('GradObj','on','Display','notify-detailed');
 start_x = prior_mn+2*rand(model.ds-1,1)-1;
 lin_x = fminunc(h_of,start_x,options);
 
 % Laplace Approximation
-[~, ~, Hess] = log_oid_with_derivs(model, prior_mn, prior_vr, obs, R, lin_x);
+[~, ~, Hess] = log_oid_with_derivs(model, prior_mn, prior_vr, obs, lin_x);
 ppsl_mn = lin_x;
 ppsl_vr = inv(Hess);
 assert(isposdef(ppsl_vr));
@@ -64,24 +64,30 @@ end
 
 end
 
-function [func, grad, Hess] = log_oid_with_derivs(model, m, Q, y, R, x)
+function [func, grad, Hess] = log_oid_with_derivs(model, m, Q, y, x)
 % Negative Log-OID with gradient and Hessian
 
+R = model.R;
+dfy = model.dfy;
+do = model.do;
 h_x = nlng_h(model, x);
 H = nlng_obsjacobian(model, x);
 dy = y - h_x;
 dx = x - m;
+yR = (R\dy);
+tdist = 1 + dy'*yR/dfy;
 
-func = ( (dy'/R)*dy + (dx'/Q)*dx )/2;
-grad = - H'*(R\dy) + Q\dx;
+if isinf(dfy)
+    func = ( yR'*dy + (dx'/Q)*dx )/2;
+    grad = - H'*yR + Q\dx;
+else
+    func = (dx'/Q)*dx/2 + (dfy+do)*log(tdist)/2;
+    grad = Q\dx - (dfy+do)*(H*yR)/(dfy*tdist);
+end
 
 if nargout > 2
     
-    Hess = (H'/R)*H + inv(Q);
-    
-    yR = (R\dy);
-    
-    % at = 0;
+    prior_hess = inv(Q);
     
     ds = model.ds-1;
     nl = model.alpha1 * model.alpha2 * (model.alpha2-1) * (x.^2).^(model.alpha2/2 - 1);
@@ -92,8 +98,18 @@ if nargout > 2
         at(2*ii,2*ii) = yR(ii) * nl(2*ii);
     end
     
-    if isposdef(Hess - at)
-        Hess = Hess - at;
+    if isinf(dfy)
+        lhood_hess = (H'/R)*H;
+    else    
+        lhood_hess = (dfy+do)*( H'*(R\H) - 2*H'*(yR*yR')*H/(dfy*tdist) - at )/(dfy*tdist);
+    end
+    
+    Hess = prior_hess + lhood_hess;
+    
+    if ~isposdef(Hess)
+        min_eig = min(eig(Hess));
+        Hess = Hess - 2*min_eig*eye(ds);
+        warning('Uh oh! The Hessian of the log of the optimal importance density is not positive definite at the maximum.');
     end
     
 end
