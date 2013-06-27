@@ -298,7 +298,7 @@ and then using \eqref{eq:state_update} again. Provided the pseudo-time increment
 
 \subsection{Gaussian Approximations}
 
-The CPPF relies on making a Gaussian approximations of the OID sequence at each point in pseudo-time by selecting $\lgoicovapprox{\pt}{\lsfixed}$ and $\lgoimeanapprox{\pt}{\lsfixed}$. This may be achieved using standard linearisation methods. The quality of the approximation does not affect the validity of the algorithm, since it will be corrected for in the assignment of a particle weight. However, better approximations will lead to higher effective sample sizes and thus more accurate estimates.
+The CPPF relies on making a Gaussian approximations of the OID sequence at each point in pseudo-time by selecting $\lgoicovapprox{\pt}{\lsfixed}$ and $\lgoimeanapprox{\pt}{\lsfixed}$. This may be achieved using standard linearisation methods. The quality of the approximation does not affect the validity of the algorithm, since it will be corrected for in the assignment of a particle weight. However, better approximations will lead to higher effective sample sizes and higher quality estimates.
 
 \subsubsection{Nonlinear Gaussian Models}
 
@@ -314,38 +314,48 @@ For such models, the observation function may be linearised in the usual way, by
 \begin{IEEEeqnarray}{rCl}
  \obsfun(\ls{}) & \approx & \obsfun(\ls{}^*) + \underbrace{\left.\frac{\partial \obsfun}{\partial \ls{}}\right|_{\ls{}^*}}_{\obsmatapprox{\lsfixed}} (\ls{} - \ls{}^*)
 \end{IEEEeqnarray}
-\begin{IEEEeqnarray}{rCl}
- p(\ob{\rt} | \ls{\rt}) & \approx & \normal{\ob{\rt}}{\obsfun(\lsfixed)+\obsmatapprox{\lsfixed}(\ls{\rt} - \lsfixed)}{\obscov} \nonumber      ,
-\end{IEEEeqnarray}
+%\begin{IEEEeqnarray}{rCl}
+% p(\ob{\rt} | \ls{\rt}) & \approx & \normal{\ob{\rt}}{\obsfun(\lsfixed)+\obsmatapprox{\lsfixed}(\ls{\rt} - \lsfixed)}{\obscov} \nonumber      ,
+%\end{IEEEeqnarray}
 %
-where $\lsfixed$ is the point around which the function is linearised. An approximation of the OID sequence is then given by,
+where $\lsfixed$ is the point around which the function is linearised, which will generally be the current state $\ls{\pt}$. An approximation of the OID sequence is then given by,
 %
 \begin{IEEEeqnarray}{rCl}
  \lgoicovapprox{\pt}{\lsfixed}  & = & \left[ \transcov^{-1} + \pt \obsmatapprox{\lsfixed}^T \obscov^{-1} \obsmatapprox{\lsfixed} \right]^{-1} \nonumber \\
- \lgoimeanapprox{\pt}{\lsfixed} & = & \lsfixed + \lgoicov{\pt} \left[ \transcov^{-1} (\transfun(\ls{\rt-1})-\lsfixed) + \pt \obsmatapprox{\lsfixed}^T \obscov^{-1} (\ob{\rt}-\obsfun(\lsfixed)) \right] \label{eg:linearised_Gaussian_approx}     .
+ \lgoimeanapprox{\pt}{\lsfixed} & = & \lsfixed + \lgoicovapprox{\pt}{\lsfixed} \left[ \transcov^{-1} (\transfun(\ls{\rt-1})-\lsfixed) + \pt \obsmatapprox{\lsfixed}^T \obscov^{-1} (\ob{\rt}-\obsfun(\lsfixed)) \right] \label{eg:linearised_Gaussian_approx}     .
 \end{IEEEeqnarray}
 
 \subsubsection{Non-Gaussian Models}
 
-If either model density is not Gaussian, a more generic approximation method may be used. The parameters $\lgoicovapprox{\pt}{\lsfixed}$ and $\lgoimeanapprox{\pt}{\lsfixed}$ are chosen so as to match the gradient and curvature of the log-density of the Gaussian approximation to those of the current true density in the OID sequence, in much the same way as \citet{Doucet2000a} suggested for selecting a single Gaussian importance density.
-
-For the Gaussian approximation,
+If either model density is not Gaussian, a more generic approximation may be used. The Taylor series of the log-density of a Gaussian distribution is a quadratic function, so an arbitrary density may be approximated with a Gaussian by truncating to the first two terms. Applying this to both transition and observation densities we obtain,
 %
 \begin{IEEEeqnarray}{rCl}
- \frac{\partial}{\partial \ls{\pt}} \log\left(\approxoiden{\pt}{\lsfixed}\right) & = & - \lgoicovapprox{\pt}{\lsfixed}^{-1} \left( \ls{\pt}- \lgoimeanapprox{\pt}{\lsfixed}\right) \nonumber \\
- \frac{\partial^2}{\partial \ls{\pt}^2} \log\left(\approxoiden{\pt}{\lsfixed}\right) & = & - \lgoicovapprox{\pt}{\lsfixed}^{-1} \nonumber      .
+ p(\ls{\rt} | \ls{\rt-1}) & \approx & \normal{\ls{\rt}}{ \transmeanapprox{\lsfixed} }{ \transcovapprox{\lsfixed} } \nonumber \\
+ p(\ob{\rt} | \ls{\rt})   & \approx & \normal{ \obapprox{\lsfixed} }{ \ls{\rt} }{ \obscovapprox{\lsfixed} } \nonumber \\
+ \transcovapprox{\lsfixed} & = & \left[\frac{\partial^2 \logtrans}{\partial \ls{}^2}_{\lsfixed}\right]^{-1} \nonumber \\
+ \transmeanapprox{\lsfixed} & = & \lsfixed + \transcovapprox{\lsfixed} \frac{\partial \logtrans}{\partial \ls{}}_{\lsfixed} \nonumber \\
+ \obscovapprox{\lsfixed} & = & \left[\frac{\partial^2 \logobs}{\partial \ls{}^2}_{\lsfixed}\right]^{-1} \nonumber \\
+ \obapprox{\lsfixed} & = & \lsfixed + \obscovapprox{\lsfixed} \frac{\partial \logobs}{\partial \ls{}}_{\lsfixed} \nonumber       ,
 \end{IEEEeqnarray}
 %
-Thus, we use,
+where
 %
 \begin{IEEEeqnarray}{rCl}
- \lgoicovapprox{\pt}{\lsfixed} & = & \left[ \frac{\partial^2}{\partial \ls{\pt}^2} \log\left(\oiden{\rt,\pt}\right) \right]^{-1} \nonumber \\
- \lgoimeanapprox{\pt}{\lsfixed} & = & \lsfixed + \lgoicovapprox{\pt}{\lsfixed} \left[ \frac{\partial}{\partial \ls{\pt}} \log\left(\oiden{\rt,\pt}\right) \right] \label{eg:general_Gaussian_approx}      .
+ L(\ls{}) & = & \log\left(p(\ls{\rt}|\ls{\rt-1})\right) \nonumber \\
+ M(\ls{}) & = & \log\left(p(\ob{\rt}|\ls{\rt})\right) \nonumber      .
 \end{IEEEeqnarray}
 %
-This approximation may only be used when the Hessian of the log-density is negative definite, otherwise the matrix square root may not exist and the state update will not work. Intuitively, a Gaussian, whose log-density always has a negative curvature, cannot be used to approximate a log-density which curves upwards. If this condition is not satisfied then modifications may be used, for example by subtracting a scaled identity matrix from the Hessian to force the eigenvalues to be negative, or by diagonalising the Hessian and setting the offending negative eigenvalues to a negative constant.
+The resulting approximation of the OID sequence is,
+%
+\begin{IEEEeqnarray}{rCl}
+ \lgoicovapprox{\pt}{\lsfixed}  & = & \left[ \transcovapprox{\lsfixed}^{-1} + \pt \obscovapprox{\lsfixed}^{-1} \right]^{-1} \nonumber \\
+ \lgoimeanapprox{\pt}{\lsfixed} & = & \lsfixed + \lgoicovapprox{\pt}{\lsfixed} \left[ \transcovapprox{\lsfixed}^{-1} \transmeanapprox{\lsfixed} + \pt \obscovapprox{\lsfixed}^{-1} \obapprox{\lsfixed} \right] \label{eg:general_Gaussian_approx}     .
+\end{IEEEeqnarray}
 
-{\meta REWRITE/AUGMENT THIS BIT.}
+Similar approximations have been used in, for example, \citep{Doucet2000a,Pitt1999} for selecting a single Gaussian importance density.
+
+This generic approximation will not work if the log-densities do not have a negative curvature (i.e. a negative-definite Hessian) at $\lsfixed$. Furthermore, if the curvature in any direction is close to zero then the approximation can be very poor. {\meta Add a diagram to illustrate.} If such a failure occurs then various heuristics may be used to enforce the curvature condition. For example, one option is to perform an eigen-decomposition of the Hessian matrixes and replace any positive (or small negative) eigenvalues with a negative constant (e.g. the prior variance in that direction).
+
 
 
 \subsection{Weight Updates}
@@ -640,7 +650,7 @@ Two linear transition models have been used, both based on a near-constant veloc
  \transcov & = & 10 \begin{bmatrix} \frac{1}{3} I & \frac{1}{2} I \\ \frac{1}{2} I &\ I \end{bmatrix} \nonumber \\
 \end{IEEEeqnarray}
 
-The accurate measurements of range, range rate and height constrain the region of high posterior probability to lie on a $3$ dimensional subspace, which can take some unusual shapes (see figure~\ref{}{\meta Add ref to a diagram}). This again means that particle filters using simple Gaussian importance densities do not perform well.
+The accurate measurements of range, range rate and height constrain the region of high posterior probability to lie on a $3$ dimensional subspace, which can take some unusual shapes (see figure~\ref{}{\meta Add ref to a diagram}). This again means that particle filters using simple Gaussian importance densities do not perform well. For the simulations presented here, the terrain profile was modelled as a mixture of randomly-generated Gaussian blobs. An example is shown in figure~\ref{}.
 
 The following particle filters were tested on the multivariate benchmark model:
 \begin{itemize}
@@ -668,7 +678,7 @@ As a final example, we consider the problem of detecting heartbeats in a vibrati
  \obsfun(\ls{\rt})_d & = & \amp{\rt} \exp\left\{ -\frac{ (T\,d - \del{\rt})^2 }{ 2\wid{\rt}^2 } \right\} \sin\left( \freq{\rt}(T\,d - \del{\rt}) + \pha{\rt} \right) + \bias{\rt} \nonumber      ,
 \end{IEEEeqnarray}
 %
-where $T$ is the sampling period of the sensor. Each observation consists of $50$ time samples and the observation density is modelled as a Gaussian with a covariance matrix $0.2^2 I$.
+where $T$ is the sampling period of the sensor. Each observation consists of $50$ time samples and the observation density is modelled as a Gaussian with a covariance matrix $0.2^2 I$. An example heartbeat simulated from this model is shown in figure~\ref{}.
 
 The latent state is,
 %
@@ -706,7 +716,11 @@ The number of particles used by each algorithm was selected so that the running 
 
 \section{Conclusions}
 
-
+\section{THINGS TO DO}
+\begin{itemize}
+  \item Add simulation results
+  \item Add number-of-steps
+\end{itemize}
 
 
 

@@ -66,10 +66,16 @@
 % Linear Gaussian approximations
 %\newcommand{\lgoimeanapprox}[2]{\hat{\mu}_{#1}(#2)}     % Mean of the Gaussian approximation to the OID at time #1 and state #2
 %\newcommand{\lgoicovapprox}[2]{\hat{\Sigma}_{#1}(#2)}   % Covariance of the Gaussian approximation to the OID at time #1 and state #2
-\newcommand{\lgoimeanapprox}[2]{\hat{\mu}_{#1|#2}}     % Mean of the Gaussian approximation to the OID at time #1 and state #2
-\newcommand{\lgoicovapprox}[2]{\hat{\Sigma}_{#1|#2}}   % Covariance of the Gaussian approximation to the OID at time #1 and state #2
-\newcommand{\obsmatapprox}[1]{\hat{\obsmat}_{#1}}      % Linear observation matrix formed by differentiation of the observation function
-\newcommand{\lsfixed}{\ls{}^*}                        % Latent state around which we linearise
+\newcommand{\lgoimeanapprox}[2]{\hat{\mu}_{#1|#2}}      % Mean of the Gaussian approximation to the OID at time #1 and state #2
+\newcommand{\lgoicovapprox}[2]{\hat{\Sigma}_{#1|#2}}    % Covariance of the Gaussian approximation to the OID at time #1 and state #2
+\newcommand{\obsmatapprox}[1]{\hat{\obsmat}_{#1}}       % Linear observation matrix formed by differentiation of the observation function
+\newcommand{\transmeanapprox}[1]{\hat{\transmean}_{#1}} % Approximate transition mean
+\newcommand{\transcovapprox}[1]{\hat{\transcov}_{#1}}   % Approximate transition covariance
+\newcommand{\obapprox}[1]{\hat{y}_{#1}}                 % Approximate observation mean
+\newcommand{\obscovapprox}[1]{\hat{\obscov}_{#1}}       % Approximate observation covariance
+\newcommand{\lsfixed}{\ls{}^*}                          % Latent state around which we linearise
+\newcommand{\logtrans}{L}                               % Log of the transition density
+\newcommand{\logobs}{M}                                 % Log of the observation density
 
 % State evolution SDE
 \newcommand{\sdedrift}[1]{\zeta_{#1}}           % Drift
