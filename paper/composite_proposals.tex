@@ -1,4 +1,4 @@
-\documentclass{statsoc}
+\documentclass{article}
 
 %%% Packages %%%
 
@@ -21,7 +21,7 @@
 % References
 \usepackage{natbib}
 
-
+\graphicspath{{figures/}}
 
 %%% Macros %%%
 \input{composite_proposals_macros}
@@ -35,10 +35,12 @@
 
 
 %%% Titles and stuff %%%
-\title[Composite Proposal Particle Filter]{The Composite Proposal Particle Filter: Better Approximations to the Optimal Importance Density}
-\author[Bunch {\it et al.}]{Pete Bunch}
-\address{Cambridge University Engineering Department,Cambridge,UK.}
-\email{pb404@cam.ac.uk}
+%\title[Composite Proposal Particle Filter]{The Composite Proposal Particle Filter: Better Approximations to the Optimal Importance Density}
+%\author[Bunch {\it et al.}]{Pete Bunch}
+%\address{Cambridge University Engineering Department,Cambridge,UK.}
+%\email{pb404@cam.ac.uk}
+\title{The Composite Proposal Particle Filter: Better Approximations to the Optimal Importance Density}
+\author{Pete Bunch}
 
 
 
@@ -46,7 +48,7 @@
 
 \begin{document}
 
-
+\maketitle
 
 \begin{abstract}
 Abstract here.
@@ -54,7 +56,7 @@ Abstract here.
 
 
 
-\keywords{particle filter, sequential Monte Carlo, optimal importance distribution}
+%\keywords{particle filter, sequential Monte Carlo, optimal importance distribution}
 
 
 
@@ -332,10 +334,10 @@ If either model density is not Gaussian, a more generic approximation may be use
 \begin{IEEEeqnarray}{rCl}
  p(\ls{\rt} | \ls{\rt-1}) & \approx & \normal{\ls{\rt}}{ \transmeanapprox{\lsfixed} }{ \transcovapprox{\lsfixed} } \nonumber \\
  p(\ob{\rt} | \ls{\rt})   & \approx & \normal{ \obapprox{\lsfixed} }{ \ls{\rt} }{ \obscovapprox{\lsfixed} } \nonumber \\
- \transcovapprox{\lsfixed} & = & \left[\frac{\partial^2 \logtrans}{\partial \ls{}^2}_{\lsfixed}\right]^{-1} \nonumber \\
- \transmeanapprox{\lsfixed} & = & \lsfixed + \transcovapprox{\lsfixed} \frac{\partial \logtrans}{\partial \ls{}}_{\lsfixed} \nonumber \\
- \obscovapprox{\lsfixed} & = & \left[\frac{\partial^2 \logobs}{\partial \ls{}^2}_{\lsfixed}\right]^{-1} \nonumber \\
- \obapprox{\lsfixed} & = & \lsfixed + \obscovapprox{\lsfixed} \frac{\partial \logobs}{\partial \ls{}}_{\lsfixed} \nonumber       ,
+ \transcovapprox{\lsfixed} & = & \left[\left.\frac{\partial^2 \logtrans}{\partial \ls{}^2}\right|_{\lsfixed}\right]^{-1} \nonumber \\
+ \transmeanapprox{\lsfixed} & = & \lsfixed + \transcovapprox{\lsfixed} \left.\frac{\partial \logtrans}{\partial \ls{}}\right|_{\lsfixed} \nonumber \\
+ \obscovapprox{\lsfixed} & = & \left[\left.\frac{\partial^2 \logobs}{\partial \ls{}^2}\right|_{\lsfixed}\right]^{-1} \nonumber \\
+ \obapprox{\lsfixed} & = & \lsfixed + \obscovapprox{\lsfixed} \left.\frac{\partial \logobs}{\partial \ls{}}\right|_{\lsfixed} \nonumber       ,
 \end{IEEEeqnarray}
 %
 where
@@ -354,7 +356,14 @@ The resulting approximation of the OID sequence is,
 
 Similar approximations have been used in, for example, \citep{Doucet2000a,Pitt1999} for selecting a single Gaussian importance density.
 
-This generic approximation will not work if the log-densities do not have a negative curvature (i.e. a negative-definite Hessian) at $\lsfixed$. Furthermore, if the curvature in any direction is close to zero then the approximation can be very poor. {\meta Add a diagram to illustrate.} If such a failure occurs then various heuristics may be used to enforce the curvature condition. For example, one option is to perform an eigen-decomposition of the Hessian matrixes and replace any positive (or small negative) eigenvalues with a negative constant (e.g. the prior variance in that direction).
+This generic approximation will not work if the log-densities do not have a negative curvature (i.e. a negative-definite Hessian) at $\lsfixed$. Furthermore, if the curvature in any direction is close to zero then the approximation can be very poor. If such a failure occurs then various heuristics may be used to enforce the curvature condition. For example, one option is to perform an eigen-decomposition of the Hessian matrixes and replace any positive (or small negative) eigenvalues with a negative constant (e.g. the prior variance in that direction).
+%
+%\begin{figure}
+%\centering
+%\includegraphics[width=0.45\columnwidth]{gaussian_matching_demo.pdf}
+%\caption{Gaussian approximations to a gamma distribution (solid) using the first two terms of the Taylor series at a point with high curvature (dotted, marked with a circle) and low curvature (dashed, marked with a star). The approximation is poor in the tails.}
+%\label{fig:gaussian_matching_demo}
+%\end{figure}
 
 
 
@@ -597,17 +606,36 @@ The CPPF was tested on a modified form of the model used by \citet{Mihaylova2011
 %
 where $\ls{\rt,d}$ and $\obsfun(\ls{\rt})_d$ are the $d$th components of the state vector and observation function respectively. The covariance matrixes for the transition and observation densities were set at $\transcov = 100 \times I$ and $\obscov = I$. A $10$-dimensional state and a $5$-dimensional observation were used.
 
-This model is particularly challenging because the observations give us information only about the magnitudes of a set of sub-vectors of the state. Information about the corresponding bearing is only available via the transition model. Consequently, the region of high posterior probability corresponds to a ``thin'' section of the space bounding a hyper-sphere. A Gaussian density is a very poor approximation of this region. {\meta Reference to a diagram.} Particle filters using extended or unscented Kalman-type importance densities fail immediately on this model.
+This model is particularly challenging because the observations give us information only about the magnitudes of a set of sub-vectors of the state. Information about the corresponding bearing is only available via the transition model. Consequently, the region of high posterior probability corresponds to a ``thin'' section of the space bounding a hyper-sphere. A Gaussian density is a very poor approximation of this region. (see figure~\ref{fig:nlng_example_frame}.) Particle filters using extended or unscented Kalman-type importance densities fail immediately on this model.
 
 The following particle filters were tested on the multivariate benchmark model:
 \begin{itemize}
   \item A bootstrap particle filter (BPF)
   \item An optimal Gaussian importance particle filter (OGIPF).
   \item A deterministic composite proposal particle filter with $\lgexpsf=0$ (D-CPPF).
-  \item A stochastic composite proposal particle filter with $\lgexpsf=0.1$ (S-CPPF).
 \end{itemize}
 
-The number of particles used by each algorithm was selected so that the running times were roughly equal. The CPPFs both use the adaptive step size method. Figure~\ref{} shows the motion of the particles from the stochastic CPPF on a typical frame, and the awkward shape of the posterior mode. Figure~\ref{} shows the effective sample sizes of the particle approximations over a typical run. Table~\ref{} shows the average ESSs and RMSEs for each algorithm over 100 simulated data sets, each of 100 time steps.
+The number of particles used by each algorithm was selected so that the running times were roughly equal. The D-CPPF uses the adaptive step size method, and takes in the region of $10$ to $20$ steps at each time step. Figure~\ref{fig:nlng_example_frame} shows the motion of the particles from the stochastic CPPF on a typical frame, and the awkward shape of the posterior mode. Table~\ref{tab:nlng_results} shows the average ESSs and RMSEs for each algorithm over 100 simulated data sets, each of 100 time steps.%Figure~\ref{} shows the effective sample sizes of the particle approximations over a typical run.
+%
+\begin{table}
+\centering
+\begin{tabular}{l||c|c|c}
+Algorithm                                & $N_F$ & ESS  & RMSE \\
+\hline
+Bootstrap                                & 18500 &  1.7 & 43.6 \\
+Optimal Gaussian Proposal                &    70 &  1.7 & 42.8 \\
+Deterministic Composite Proposal         &   540 & 81.1 & 32.6 \\ 
+\end{tabular}
+\caption{Algorithm performance results on the multivariate benchmark model.}
+\label{tab:nlng_results}
+\end{table}
+%
+\begin{figure}
+\centering
+\includegraphics[width=0.45\columnwidth]{nlng_example_frame.pdf}
+\caption{An example of the S-CPPF particle motion running on the multivariate benchmark model, showing $2$ of $10$ state dimensions. Prior states are shown with circles and posterior states with crosses.}
+\label{fig:nlng_example_frame}
+\end{figure}
 
 
 
@@ -650,23 +678,63 @@ Two linear transition models have been used, both based on a near-constant veloc
  \transcov & = & 10 \begin{bmatrix} \frac{1}{3} I & \frac{1}{2} I \\ \frac{1}{2} I &\ I \end{bmatrix} \nonumber \\
 \end{IEEEeqnarray}
 
-The accurate measurements of range, range rate and height constrain the region of high posterior probability to lie on a $3$ dimensional subspace, which can take some unusual shapes (see figure~\ref{}{\meta Add ref to a diagram}). This again means that particle filters using simple Gaussian importance densities do not perform well. For the simulations presented here, the terrain profile was modelled as a mixture of randomly-generated Gaussian blobs. An example is shown in figure~\ref{}.
+The accurate measurements of range, range rate and height constrain the region of high posterior probability to lie on a $3$ dimensional subspace, which can take some unusual shapes (see figure~\ref{fig:drone_example_frame}). This again means that particle filters using simple Gaussian importance densities do not perform well. Furthermore, the optimal Gaussian importance density method performs poorly as the maximisation procedure struggles with the narrow mode. For the simulations presented here, the terrain profile was modelled as a mixture of randomly-generated Gaussian blobs. An example is shown in figure~\ref{fig:drone_terrain_map}.
+%
+\begin{figure}
+\centering
+\includegraphics[width=0.45\columnwidth]{drone_terrain_map.pdf}
+\caption{Contour plot of an example simulated terrain map.}
+\label{fig:drone_terrain_map}
+\end{figure}
 
-The following particle filters were tested on the multivariate benchmark model:
+The following particle filters were tested on the terrain tracking model:
 \begin{itemize}
   \item A bootstrap particle filter (BPF).
-  \item A particle filter using an EKF-type importance density (EPF).
   \item A particle filter using a UKF-type importance density (UPF).
   \item An optimal Gaussian importance particle filter (OGIPF).
   \item A deterministic composite proposal particle filter with $\lgexpsf=0$ (D-CPPF).
-  \item A stochastic composite proposal particle filter with $\lgexpsf=0.1$ (S-CPPF).
 \end{itemize}
 
-In addition an annealed particle filter and a CPPF with intermediate resampling were also tested. The number of particles used by each algorithm was selected so that the running times were roughly equal. For the student-t transition density, the CPPFs use the scale mixture of normals method.
+The number of particles used by each algorithm was selected so that the running times were roughly equal. The CPPF used in the region of $5$ to $10$ steps per time frame. For the student-t transition density, the CPPFs use the scale mixture of normals method.
 
-Figure~\ref{} shows the motion of the particles from the stochastic CPPF on a typical frame, and the awkward shape of the posterior mode. Figure~\ref{} shows the effective sample sizes of the particle approximations over a typical run with the Gaussian transition density.
+Figure~\ref{fig:drone_example_frame} shows the motion of the particles from the stochastic CPPF on a typical frame, and the awkward shape of the posterior mode.% Figure~\ref{} shows the effective sample sizes of the particle approximations over a typical run with the Gaussian transition density.
+%
+\begin{figure}
+\centering
+\includegraphics[width=0.45\columnwidth]{drone_example_frame.pdf}
+\caption{An example of the S-CPPF particle motion running on the terrain tracking model, showing one horizontal and the vertical state component. Prior states are shown with circles and posterior states with crosses.}
+\label{fig:drone_example_frame}
+\end{figure}
 
-Table~\ref{} shows the average ESSs and RMSEs for each algorithm over 100 simulated data sets, each of 100 time steps using the Gaussian transition density. The same is shown for the student-t transition density in table~\ref{}.
+Table~\ref{tab:drone_results_gaussian} shows the average ESSs and RMSEs for each algorithm over 100 simulated data sets, each of 100 time steps using the Gaussian transition density. The same is shown for the student-t transition density in table~\ref{tab:drone_results_studentt}.
+%
+\begin{table}
+\centering
+\begin{tabular}{l||c|c|c}
+Algorithm                                & $N_F$ & ESS  & RMSE \\
+\hline
+Bootstrap                                &  6000 &  1.0 & 78.6 \\
+UKF Proposal                             &   460 &  2.4 & 70.2 \\
+Optimal Gaussian Proposal                &    10 &  3.1 & 62.9 \\
+Deterministic Composite Proposal         &   180 & 56.4 & 22.3 \\ 
+\end{tabular}
+\caption{Algorithm performance results on the terrain tracking model with Gaussian innovations.}
+\label{tab:drone_results_gaussian}
+\end{table}
+%
+\begin{table}
+\centering
+\begin{tabular}{l||c|c|c}
+Algorithm                                & $N_F$ & ESS  & RMSE \\
+\hline
+Bootstrap                                &  6000 &      &      \\
+UKF Proposal                             &   460 &      &      \\
+Optimal Gaussian Proposal                &    10 &      &      \\
+Deterministic Composite Proposal         &   180 &      &      \\
+\end{tabular}
+\caption{Algorithm performance results on the terrain tracking model with student-t innovations.}
+\label{tab:drone_results_studentt}
+\end{table}
 
 
 
@@ -678,7 +746,14 @@ As a final example, we consider the problem of detecting heartbeats in a vibrati
  \obsfun(\ls{\rt})_d & = & \amp{\rt} \exp\left\{ -\frac{ (T\,d - \del{\rt})^2 }{ 2\wid{\rt}^2 } \right\} \sin\left( \freq{\rt}(T\,d - \del{\rt}) + \pha{\rt} \right) + \bias{\rt} \nonumber      ,
 \end{IEEEeqnarray}
 %
-where $T$ is the sampling period of the sensor. Each observation consists of $50$ time samples and the observation density is modelled as a Gaussian with a covariance matrix $0.2^2 I$. An example heartbeat simulated from this model is shown in figure~\ref{}.
+where $T$ is the sampling period of the sensor. Each observation consists of $50$ time samples and the observation density is modelled as a Gaussian with a covariance matrix $0.2^2 I$. An example heartbeat simulated from this model is shown in figure~\ref{fig:sineha_example_beat}.
+%
+\begin{figure}
+\centering
+\includegraphics[width=0.45\columnwidth]{sineha_example_beat.pdf}
+\caption{An example heartbeat simulated from the model.}
+\label{fig:sineha_example_beat}
+\end{figure}
 
 The latent state is,
 %
@@ -701,17 +776,36 @@ The transition density is factorised into independent terms, with $\freq{\rt}$, 
 
 The complications introduced in the posterior distribution by the highly multi-modal observation density mean that simple Gaussian importance densities do not work very well. Particle filters using extended or unscented Kalman-type importance densities fail immediately on this model.
 
-In order to use a CPPF with this model, the OID density sequence must be approximated with Gaussians. This is achieved by linearising the observation model around the current state \eqref{eg:linearised_Gaussian_approx} and using the log-density Taylor series truncation method for the prior \eqref{eg:general_Gaussian_approx}. The variance terms in this latter approximation are limited to be no greater than the prior variances.
+In order to use a CPPF with this model, the OID density sequence must be approximated with Gaussians. This is achieved by linearising the observation model around the current state \eqref{eg:linearised_Gaussian_approx} and using the log-density Taylor series truncation method for the prior \eqref{eg:general_Gaussian_approx}. The variance terms in this latter approximation are limited to be no greater than the prior variances. The CPPF used in the region of $5$ to $15$ steps per time frame, with the exception of a few particles which tended to ``get stuck'' and were discarded after 50 steps.
 
-The following particle filters were tested on the multivariate benchmark model:
+The following particle filters were tested on the heartbeat inference model:
 \begin{itemize}
   \item A bootstrap particle filter (BPF)
   \item An optimal Gaussian importance particle filter (OGIPF).
   \item A deterministic composite proposal particle filter with $\lgexpsf=0$ (D-CPPF).
 \end{itemize}
 
-The number of particles used by each algorithm was selected so that the running times were roughly equal. The CPPFs both use the adaptive step size method. Figure~\ref{} shows the motion of the particles from the stochastic CPPF on a typical frame. Figure~\ref{} shows the effective sample sizes of the particle approximations over a typical run. Table~\ref{} shows the average ESSs and RMSEs for each algorithm over 100 simulated data sets, each of 100 time steps.
-
+The number of particles used by each algorithm was selected so that the running times were roughly equal. The CPPFs both use the adaptive step size method. Figure~\ref{fig:sineha_example_frame} shows the motion of the particles from the deterministic CPPF on a typical frame. Table~\ref{tab:sineha_results} shows the average ESSs and RMSEs for each algorithm over 100 simulated data sets, each of 100 time steps.%Figure~\ref{} shows the effective sample sizes of the particle approximations over a typical run.
+%
+\begin{table}
+\centering
+\begin{tabular}{l||c|c|c}
+Algorithm                                & $N_F$ & ESS  & RMSE \\
+\hline
+Bootstrap                                & 15000 &  7.6 &  2.0 \\
+Optimal Gaussian Proposal                &   200 &  8.8 &  2.0 \\
+Deterministic Composite Proposal         &   800 & 72.8 &  1.4 \\ 
+\end{tabular}
+\caption{Algorithm performance results on the heartbeat inference model.}
+\label{tab:sineha_results}
+\end{table}
+%
+\begin{figure}
+\centering
+\includegraphics[width=0.45\columnwidth]{sineha_example_frame.pdf}
+\caption{An example of the S-CPPF particle motion running on the heartbeat inference model, showing amplitude and delay state components. Prior states are shown with circles and posterior states with crosses.}
+\label{fig:sineha_example_frame}
+\end{figure}
 
 
 \section{Conclusions}
@@ -719,7 +813,6 @@ The number of particles used by each algorithm was selected so that the running 
 \section{THINGS TO DO}
 \begin{itemize}
   \item Add simulation results
-  \item Add number-of-steps
 \end{itemize}
 
 
