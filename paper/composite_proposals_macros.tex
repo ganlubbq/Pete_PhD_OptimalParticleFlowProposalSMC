@@ -30,7 +30,10 @@
 \newcommand{\anc}[1]{a_{#1}}                    % Particle ancestor
 
 % Densities
+\newcommand{\transden}{f}                       % Transition density
+\newcommand{\obsden}{g}                         % Observation density
 \newcommand{\impden}{q}                         % Importance density
+\newcommand{\partden}{\eta}                     % Unweighted particle distribution
 \newcommand{\artden}{\rho}                      % Artificial conditional density
 \newcommand{\oiden}[1]{\pi_{#1}}                % Optimal importance density
 \newcommand{\approxoiden}[2]{\hat{\pi}_{#1|#2}} % Approximation of the optimal importance density
@@ -43,7 +46,7 @@
 \newcommand{\ess}[1]{N_{E,#1}}                  % Effective sample size
 
 % Models
-\newcommand{\transfun}{f}                       % Transition function
+\newcommand{\transfun}{\phi}                    % Transition function
 \newcommand{\obsfun}{h}                         % Observation function
 \newcommand{\transcov}{Q}                       % Transition covariance
 \newcommand{\obscov}{R}                         % Observation covariance
@@ -80,9 +83,6 @@
 
 % State evolution SDE
 \newcommand{\sdedrift}[1]{\zeta_{#1}}           % Drift
-\newcommand{\sdediffuse}[1]{\eta_{#1}}          % Diffusion
-\newcommand{\drifterror}[2]{e_{\zeta,#1|#2}}    % Drift error due to finite sampling
-\newcommand{\diffuseerror}[2]{e_{\eta,#1|#2}}   % Diffusion error due to finite sampling
 \newcommand{\lserror}[2]{e_{#1|#2}}             % State error due to finite sampling
 
 % Simulation models - tracking
@@ -99,6 +99,6 @@
 \newcommand{\wid}[1]{W_{#1}}                    % Width
 \newcommand{\del}[1]{\tau_{#1}}                 % Delay
 \newcommand{\freq}[1]{\omega_{#1}}              % Width
-\newcommand{\pha}[1]{\phi_{#1}}                 % Phase
+\newcommand{\pha}[1]{\psi_{#1}}                 % Phase
 \newcommand{\bias}[1]{B_{#1}}                   % Bias
 
