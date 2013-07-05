@@ -240,10 +240,10 @@ There is one class of models for which the OID has an analytic form, those which
  p(\ob{\rt} | \ls{\rt})     & = & \normal{\ob{\rt}}{\obsmat \ls{\rt}}{\obscov}
 \end{IEEEeqnarray}
 %
-For such models, the OID sequence~\eqref{eq:OID_sequence} is,
+We assume that $\transcov$ and $\obscov$ are full rank, although with modifications the requirement on $\transcov$ may be relaxed. For such models, the OID sequence~\eqref{eq:OID_sequence} is,
 %
 \begin{IEEEeqnarray}{rCl}
- \oiden{\pt}(\ls{\pt} | \ls{\rt-1}) & = & \mathcal{N}(\ls{\pt}|\lgoimean{\pt},\lgoicov{\pt}) \nonumber    ,
+ \oiden{\pt}(\ls{\pt} | \ls{\rt-1}) & = & \normal{\ls{\pt}}{\lgoimean{\pt}}{\lgoicov{\pt}} \nonumber    ,
 \end{IEEEeqnarray}
 %
 where
@@ -255,26 +255,28 @@ where
 %
 Since the OID may be sampled and the density evaluated, a composite proposal is redundant. However, the analytic formulas derived from this case may be used with other classes of models if local Gaussian approximations are made.
 
-Consider the transition from $\pt_0$ to $\pt_1$. How should $\ls{\pt_0}$ be updated to get $\ls{\pt_1}$ such that it is distributed correctly? Since $\ls{\pt_0}|\ls{\rt-1}$ and $\ls{\pt_1}|\ls{\rt-1}$ are Gaussian random variables, they may be written,
+A Gaussian random variable may be written as a linear transformation of an underlying standard Gaussian random variable (zero mean and identity covariance). Hence,
 %
 \begin{IEEEeqnarray}{rCl}
- \ls{\pt_0} & = & \lgoimean{\pt_0} + \lgoicov{\pt_0}^{\frac{1}{2}} \stdnorm{\pt_0} \nonumber \\
- \ls{\pt_1} & = & \lgoimean{\pt_1} + \lgoicov{\pt_1}^{\frac{1}{2}} \stdnorm{\pt_1} \nonumber      ,
+ \ls{\pt} & = & \lgoimean{\pt} + \lgoicov{\pt}^{\frac{1}{2}} \stdnorm{\pt} \label{eq:gaussian_decomposition} \\
+ \stdnorm{\pt} & \sim & \normal{\stdnorm{\pt}}{0}{I} \nonumber      .
 \end{IEEEeqnarray}
 %
-where $\stdnorm{\pt}$ is a standard normal random variable (zero mean, identity covariance matrix). One option is now simply to equate $\stdnorm{\pt_0}$ and $\stdnorm{\pt_1}$. However, it will be desirable later that if multiple particles have the same state at $\pt_0$, then they should move to different states at $\pt_1$. This may be achieved by adding a new random variable $\stdnorm{\Delta}$, which allows identical particles to `de-correlate'. Thus, to achieve the correct distribution of $\stdnorm{\pt_1}$, the following transformation is used,
+The correct distribution for $\stdnorm{\pt}$ is maintained if it is allowed to evolve according to an Ornstein-Uhlenbeck process governed by the following stochastic differential equation (SDE),
 %
 \begin{IEEEeqnarray}{rCl}
- \stdnorm{\pt_1} & = & \lgdecayfunc(\pt_1-\pt_0) \stdnorm{\pt_0} + \sqrt{1-\lgdecayfunc(\pt_1-\pt_0)^2} \stdnorm{\Delta} \nonumber      ,
+ d\stdnorm{\pt} & = & -\half \lgexpsf \stdnorm{\pt} d\pt + \lgexpsf^{\half} d\lginfbm{\pt} \label{eq:standard_normal_SDE}     ,
 \end{IEEEeqnarray}
 %
-where $\lgdecayfunc(\pt) \in [0,1]$ is monotonically decreasing, and $\lgdecayfunc(\pt)\rightarrow0$ as $\pt\rightarrow0$. A suitable function is,
+where $\lgexpsf$ is a non-negative scale factor which determines the rate at which $\stdnorm{\pt}$ ``forgets'' its previous states. Simulating a trajectory from this process specifies an associated state trajectory through pseudo-time for $\ls{\pt}$ via \eqref{eq:gaussian_decomposition}. For a practical implementation, the state needs to be updated in finite increments rather than continuously. Thus, solving the SDE by variation of parameters,
 %
 \begin{IEEEeqnarray}{rCl}
- \lgdecayfunc(\pt_1-\pt_0) & = & \exp\left\{-\half \lgexpsf (\pt_1-\pt_0)\right\} \nonumber       ,
+ \stdnorm{\pt_1} & = & \stdnorm{\pt_0} \exp\left\{ -\half \lgexpsf (\pt_1-\pt_0) \right\} + \left[ 1 - \exp\left\{ - \lgexpsf (\pt_1-\pt_0) \right\} \right]^{\half} \stdnorm{\Delta} \label{eq:standard_normal_update}      ,
 \end{IEEEeqnarray}
 %
-where $\lgexpsf>0$. The resulting update formula for the state is,
+where $\stdnorm{\Delta}$ is a new, standard Gaussian random variable, independent of $\stdnorm{\pt_0}$.
+
+The update formula for $\ls{\pt}$ resulting from the evolution of $\stdnorm{\pt}$ is,
 %
 \begin{IEEEeqnarray}{rCl}
  \ls{\pt_1} & = & \lgoimean{\pt_1} + \lgupdmeanmat{\pt_0,\pt_1}(\ls{\pt_0}-\lgoimean{\pt_0}) + \lgupdcov{\pt_0,\pt_1}^{\half} \stdnorm{\Delta} \nonumber \\
@@ -288,92 +290,31 @@ Provided $\lgexpsf\ne0$ this map has an associated incremental importance densit
  \impden(\ls{\pt_1} | \ls{\pt_0}) & = & \normal{\ls{\pt_1}}{\lgoimean{\pt_1} + \lgupdmeanmat{\pt_0,\pt_1}(\ls{\pt_0}-\lgoimean{\pt_0})}{ \lgupdcov{\pt_0,\pt_1}} \label{eq:incremental_importance_density}     .
 \end{IEEEeqnarray}
 
-For partially linear-Gaussian models, advancing the state through pseudo-time using \eqref{eq:state_update} generates a particle which is distributed exactly according to the current density in the OID sequence. For other models, such exact analytic updates do not exist. Instead, state updates may be conducted by forming a local Gaussian approximation to the OID sequence,
+The advantage of using $\lgexpsf>0$ is that particles beginning at the same initial state will follow different trajectories as they advance through pseudo-time. This will prove beneficial later on when designing MCMC proposals for resample-move schemes.
+
+For partially linear-Gaussian models, advancing the state through pseudo-time using \eqref{eq:state_update} generates a particle which is distributed exactly according to the current density in the OID sequence. For other models, such exact analytic updates do not exist. However, in the same manner as an extended Kalman filter, we can use the Gaussian update formulas if a local approximation to the OID sequence is first formed,
 %
 \begin{IEEEeqnarray}{rCl}
- \approxoiden{\pt}{\ls{\pt_0}}(\ls{\pt} | \ls{\rt-1}) & = & \mathcal{N}(\ls{\pt}|\lgoimeanapprox{\pt}{\ls{\pt_0}},\lgoicovapprox{\pt}{\ls{\pt_0}}) \nonumber \\
+ \approxoiden{\pt}{\lsfixed}(\ls{\pt} | \ls{\rt-1}) & = & \normal{\ls{\pt}}{\lgoimeanapprox{\pt}{\lsfixed}}{\lgoicovapprox{\pt}{\lsfixed}} \nonumber      ,
 \end{IEEEeqnarray}
 %
-and then using \eqref{eq:state_update} again. Provided the pseudo-time increments are not too large, this process often leads to a more effective proposal than simpler approximations of the OID using a single Gaussian.
+where $\lgoimeanapprox{\pt}{\lsfixed}$ and $\lgoicovapprox{\pt}{\lsfixed}$ are the mean and covariance of the Gaussian approximation formed at the point $\lsfixed$, which are themselves functions of $\pt$. Methods for selecting these approximations are discussed in section~\ref{}. The resulting update is clearly no longer optimal, in the sense that the particle will not be distributed exactly according to the true density in the OID sequence. However, provided the pseudo-time increments are not too large, this process can result in a more effective proposal than simpler approximations of the OID using a single Gaussian.
 
-
-
-\subsection{Gaussian Approximations}
-
-The CPPF relies on making a Gaussian approximations of the OID sequence at each point in pseudo-time by selecting $\lgoicovapprox{\pt}{\lsfixed}$ and $\lgoimeanapprox{\pt}{\lsfixed}$. This may be achieved using standard linearisation methods. The quality of the approximation does not affect the validity of the algorithm, since it will be corrected for in the assignment of a particle weight. However, better approximations will lead to higher effective sample sizes and higher quality estimates.
-
-\subsubsection{Nonlinear Gaussian Models}
-
-We begin with a class of models which are reasonably benign, and yet common in practice; those which have Gaussian transition and observation densities, but which are not linear,
-%
-\begin{IEEEeqnarray}{rCl}
- p(\ls{\rt} | \ls{\rt-1}) & = & \normal{\ls{\rt}}{\transfun(\ls{\rt-1})}{\transcov} \nonumber \\
- p(\ob{\rt} | \ls{\rt})   & = & \normal{\ob{\rt}}{\obsfun(\ls{\rt})}{\obscov}     .
-\end{IEEEeqnarray}
-
-For such models, the observation function may be linearised in the usual way, by truncating the Taylor series expansion,
-%
-\begin{IEEEeqnarray}{rCl}
- \obsfun(\ls{}) & \approx & \obsfun(\ls{}^*) + \underbrace{\left.\frac{\partial \obsfun}{\partial \ls{}}\right|_{\ls{}^*}}_{\obsmatapprox{\lsfixed}} (\ls{} - \ls{}^*)
-\end{IEEEeqnarray}
-%\begin{IEEEeqnarray}{rCl}
-% p(\ob{\rt} | \ls{\rt}) & \approx & \normal{\ob{\rt}}{\obsfun(\lsfixed)+\obsmatapprox{\lsfixed}(\ls{\rt} - \lsfixed)}{\obscov} \nonumber      ,
-%\end{IEEEeqnarray}
-%
-where $\lsfixed$ is the point around which the function is linearised, which will generally be the current state $\ls{\pt}$. An approximation of the OID sequence is then given by,
-%
-\begin{IEEEeqnarray}{rCl}
- \lgoicovapprox{\pt}{\lsfixed}  & = & \left[ \transcov^{-1} + \pt \obsmatapprox{\lsfixed}^T \obscov^{-1} \obsmatapprox{\lsfixed} \right]^{-1} \nonumber \\
- \lgoimeanapprox{\pt}{\lsfixed} & = & \lsfixed + \lgoicovapprox{\pt}{\lsfixed} \left[ \transcov^{-1} (\transfun(\ls{\rt-1})-\lsfixed) + \pt \obsmatapprox{\lsfixed}^T \obscov^{-1} (\ob{\rt}-\obsfun(\lsfixed)) \right] \label{eg:linearised_Gaussian_approx}     .
-\end{IEEEeqnarray}
-
-\subsubsection{Non-Gaussian Models}
-
-If either model density is not Gaussian, a more generic approximation may be used. The Taylor series of the log-density of a Gaussian distribution is a quadratic function, so an arbitrary density may be approximated with a Gaussian by truncating to the first two terms. Applying this to both transition and observation densities we obtain,
-%
-\begin{IEEEeqnarray}{rCl}
- p(\ls{\rt} | \ls{\rt-1}) & \approx & \normal{\ls{\rt}}{ \transmeanapprox{\lsfixed} }{ \transcovapprox{\lsfixed} } \nonumber \\
- p(\ob{\rt} | \ls{\rt})   & \approx & \normal{ \obapprox{\lsfixed} }{ \ls{\rt} }{ \obscovapprox{\lsfixed} } \nonumber \\
- \transcovapprox{\lsfixed} & = & \left[\left.\frac{\partial^2 \logtrans}{\partial \ls{}^2}\right|_{\lsfixed}\right]^{-1} \nonumber \\
- \transmeanapprox{\lsfixed} & = & \lsfixed + \transcovapprox{\lsfixed} \left.\frac{\partial \logtrans}{\partial \ls{}}\right|_{\lsfixed} \nonumber \\
- \obscovapprox{\lsfixed} & = & \left[\left.\frac{\partial^2 \logobs}{\partial \ls{}^2}\right|_{\lsfixed}\right]^{-1} \nonumber \\
- \obapprox{\lsfixed} & = & \lsfixed + \obscovapprox{\lsfixed} \left.\frac{\partial \logobs}{\partial \ls{}}\right|_{\lsfixed} \nonumber       ,
-\end{IEEEeqnarray}
-%
-where
-%
-\begin{IEEEeqnarray}{rCl}
- L(\ls{}) & = & \log\left(p(\ls{\rt}|\ls{\rt-1})\right) \nonumber \\
- M(\ls{}) & = & \log\left(p(\ob{\rt}|\ls{\rt})\right) \nonumber      .
-\end{IEEEeqnarray}
-%
-The resulting approximation of the OID sequence is,
-%
-\begin{IEEEeqnarray}{rCl}
- \lgoicovapprox{\pt}{\lsfixed}  & = & \left[ \transcovapprox{\lsfixed}^{-1} + \pt \obscovapprox{\lsfixed}^{-1} \right]^{-1} \nonumber \\
- \lgoimeanapprox{\pt}{\lsfixed} & = & \lsfixed + \lgoicovapprox{\pt}{\lsfixed} \left[ \transcovapprox{\lsfixed}^{-1} \transmeanapprox{\lsfixed} + \pt \obscovapprox{\lsfixed}^{-1} \obapprox{\lsfixed} \right] \label{eg:general_Gaussian_approx}     .
-\end{IEEEeqnarray}
-
-Similar approximations have been used in, for example, \citep{Doucet2000a,Pitt1999} for selecting a single Gaussian importance density.
-
-This generic approximation will not work if the log-densities do not have a negative curvature (i.e. a negative-definite Hessian) at $\lsfixed$. Furthermore, if the curvature in any direction is close to zero then the approximation can be very poor. If such a failure occurs then various heuristics may be used to enforce the curvature condition. For example, one option is to perform an eigen-decomposition of the Hessian matrixes and replace any positive (or small negative) eigenvalues with a negative constant (e.g. the prior variance in that direction).
-%
-%\begin{figure}
-%\centering
-%\includegraphics[width=0.45\columnwidth]{gaussian_matching_demo.pdf}
-%\caption{Gaussian approximations to a gamma distribution (solid) using the first two terms of the Taylor series at a point with high curvature (dotted, marked with a circle) and low curvature (dashed, marked with a star). The approximation is poor in the tails.}
-%\label{fig:gaussian_matching_demo}
-%\end{figure}
+Note that the state updates are only ``approximate'' in the sense that the states are not distributed exactly according to the OID. This discrepancy is still compensated for in the weighting step, and the particle filter retains its asymptotic properties.
 
 
 
 \subsection{Weight Updates}
 
+Conceptually, a composite proposal involves moving a particle continuously through pseudo-time. However, since the differential equations associated with the Gaussian model may be integrated analytically, states and weights may be calculated exactly at a finite set of pseudo-times.
+
 Next we consider how to correctly weight particles generated using the composite proposal method. Two cases are considered separately, $\lgexpsf=0$ and $\lgexpsf\ne0$.
+
+
 
 \subsubsection{Stochastic updates}
 
-When $\lgexpsf\ne0$, particles are advanced through pseudo-time using a stochastic mechanism. Suppose a particle $\{\ls{1:\rt-1},\ls{\pt_0}\}$ with weight $\pw{\pt_0}$ distributed as $\augfiltden{\pt_0}$ already exists. This could be updated to $\pt_1$ by sampling $\ls{\pt_1}$ from the incremental importance density \eqref{eq:incremental_importance_density} and then discarding the old state $\ls{\pt_0}$. The distribution of the new particle would then be,
+When $\lgexpsf>0$, particles are advanced through pseudo-time using a stochastic mechanism. Suppose a particle $\{\ls{1:\rt-1},\ls{\pt_0}\}$ with weight $\pw{\pt_0}$ distributed as $\augfiltden{\pt_0}$ already exists. This could be updated to $\pt_1$ by sampling $\ls{\pt_1}$ from the incremental importance density \eqref{eq:incremental_importance_density} and then discarding the old state $\ls{\pt_0}$. The distribution of the new particle would then be,
 %
 \begin{IEEEeqnarray}{rCl}
  \impden(\ls{1:\rt-1}, \ls{\pt_1}) & = & \int \augfiltden{\pt_0}(\ls{1:\rt-1},\ls{\pt_0}) \impden(\ls{\pt_1}|\ls{\pt_0}) d\ls{\pt_0} \nonumber      .
@@ -440,6 +381,72 @@ It may easily be shown that as $\lgexpsf\rightarrow0$, \eqref{eq:CPPF_stochastic
 
 
 
+\subsection{Gaussian Approximations}
+
+The CPPF relies on making a Gaussian approximations of the OID sequence at each point in pseudo-time by selecting $\lgoicovapprox{\pt}{\lsfixed}$ and $\lgoimeanapprox{\pt}{\lsfixed}$. This may be achieved using standard linearisation methods. The quality of the approximation does not affect the validity of the algorithm, since it will be corrected for in the assignment of a particle weight. However, better approximations will lead to higher effective sample sizes and higher quality estimates.
+
+\subsubsection{Nonlinear Gaussian Models}
+
+We begin with a class of models which are reasonably benign, and yet common in practice; those which have Gaussian transition and observation densities, but which are not linear,
+%
+\begin{IEEEeqnarray}{rCl}
+ p(\ls{\rt} | \ls{\rt-1}) & = & \normal{\ls{\rt}}{\transfun(\ls{\rt-1})}{\transcov} \nonumber \\
+ p(\ob{\rt} | \ls{\rt})   & = & \normal{\ob{\rt}}{\obsfun(\ls{\rt})}{\obscov}     .
+\end{IEEEeqnarray}
+
+For such models, the observation function may be linearised in the usual way, by truncating the Taylor series expansion,
+%
+\begin{IEEEeqnarray}{rCl}
+ \obsfun(\ls{}) & \approx & \obsfun(\ls{}^*) + \underbrace{\left.\frac{\partial \obsfun}{\partial \ls{}}\right|_{\ls{}^*}}_{\obsmatapprox{\lsfixed}} (\ls{} - \ls{}^*)
+\end{IEEEeqnarray}
+%\begin{IEEEeqnarray}{rCl}
+% p(\ob{\rt} | \ls{\rt}) & \approx & \normal{\ob{\rt}}{\obsfun(\lsfixed)+\obsmatapprox{\lsfixed}(\ls{\rt} - \lsfixed)}{\obscov} \nonumber      ,
+%\end{IEEEeqnarray}
+%
+where $\lsfixed$ is the point around which the function is linearised (which, for a transition from $\pt_0$ to $\pt_1$, will generally be $\ls{\pt_0}$). An approximation of the OID sequence is then given by,
+%
+\begin{IEEEeqnarray}{rCl}
+ \lgoicovapprox{\pt}{\lsfixed}  & = & \left[ \transcov^{-1} + \pt \obsmatapprox{\lsfixed}^T \obscov^{-1} \obsmatapprox{\lsfixed} \right]^{-1} \nonumber \\
+ \lgoimeanapprox{\pt}{\lsfixed} & = & \lsfixed + \lgoicovapprox{\pt}{\lsfixed} \left[ \transcov^{-1} (\transfun(\ls{\rt-1})-\lsfixed) + \pt \obsmatapprox{\lsfixed}^T \obscov^{-1} (\ob{\rt}-\obsfun(\lsfixed)) \right] \label{eg:linearised_Gaussian_approx}     .
+\end{IEEEeqnarray}
+
+\subsubsection{Non-Gaussian Models}
+
+If either model density is not Gaussian, a more generic approximation may be used. The Taylor series of the log-density of a Gaussian distribution is a quadratic function, so an arbitrary density may be approximated with a Gaussian by truncating to the first two terms. Applying this to both transition and observation densities we obtain,
+%
+\begin{IEEEeqnarray}{rCl}
+ p(\ls{\rt} | \ls{\rt-1}) & \approx & \normal{\ls{\rt}}{ \transmeanapprox{\lsfixed} }{ \transcovapprox{\lsfixed} } \nonumber \\
+ p(\ob{\rt} | \ls{\rt})   & \approx & \normal{ \obapprox{\lsfixed} }{ \ls{\rt} }{ \obscovapprox{\lsfixed} } \nonumber \\
+ \transcovapprox{\lsfixed} & = & \left[\left.\frac{\partial^2 \logtrans}{\partial \ls{}^2}\right|_{\lsfixed}\right]^{-1} \nonumber \\
+ \transmeanapprox{\lsfixed} & = & \lsfixed + \transcovapprox{\lsfixed} \left.\frac{\partial \logtrans}{\partial \ls{}}\right|_{\lsfixed} \nonumber \\
+ \obscovapprox{\lsfixed} & = & \left[\left.\frac{\partial^2 \logobs}{\partial \ls{}^2}\right|_{\lsfixed}\right]^{-1} \nonumber \\
+ \obapprox{\lsfixed} & = & \lsfixed + \obscovapprox{\lsfixed} \left.\frac{\partial \logobs}{\partial \ls{}}\right|_{\lsfixed} \nonumber       ,
+\end{IEEEeqnarray}
+%
+where
+%
+\begin{IEEEeqnarray}{rCl}
+ L(\ls{}) & = & \log\left(p(\ls{\rt}|\ls{\rt-1})\right) \nonumber \\
+ M(\ls{}) & = & \log\left(p(\ob{\rt}|\ls{\rt})\right) \nonumber      .
+\end{IEEEeqnarray}
+%
+The resulting approximation of the OID sequence is,
+%
+\begin{IEEEeqnarray}{rCl}
+ \lgoicovapprox{\pt}{\lsfixed}  & = & \left[ \transcovapprox{\lsfixed}^{-1} + \pt \obscovapprox{\lsfixed}^{-1} \right]^{-1} \nonumber \\
+ \lgoimeanapprox{\pt}{\lsfixed} & = & \lsfixed + \lgoicovapprox{\pt}{\lsfixed} \left[ \transcovapprox{\lsfixed}^{-1} \transmeanapprox{\lsfixed} + \pt \obscovapprox{\lsfixed}^{-1} \obapprox{\lsfixed} \right] \label{eg:general_Gaussian_approx}     .
+\end{IEEEeqnarray}
+
+Similar approximations have been used in, for example, \citep{Doucet2000a,Pitt1999} for selecting a single Gaussian importance density.
+
+This generic approximation will not work if the log-densities do not have a negative curvature (i.e. a negative-definite Hessian) at $\lsfixed$. Furthermore, if the curvature in any direction is close to zero then the approximation can be very poor. If such a failure occurs then various heuristics may be used to enforce the curvature condition. For example, one option is to perform an eigen-decomposition of the Hessian matrixes and replace any positive (or small negative) eigenvalues with a negative constant (e.g. the prior variance in that direction).
+%
+%\begin{figure}
+%\centering
+%\includegraphics[width=0.45\columnwidth]{gaussian_matching_demo.pdf}
+%\caption{Gaussian approximations to a gamma distribution (solid) using the first two terms of the Taylor series at a point with high curvature (dotted, marked with a circle) and low curvature (dashed, marked with a star). The approximation is poor in the tails.}
+%\label{fig:gaussian_matching_demo}
+%\end{figure}
 
 
 
@@ -449,34 +456,31 @@ An important consideration for the CPPF is how the sizes of the pseudo-time step
 
 \subsubsection{Local Error Estimates}
 
-A measure is required which estimates the local ``error'' introduced by using finite rather than infinitesimal step sizes. For this, the following lemma will be useful.
+A measure is required which estimates the local ``error'' introduced by using finite rather than infinitesimal step sizes. For the interval $[\pt_0,\pt_1]$, with the associated incremental standard Gaussian random variable $\stdnorm{\Delta}$, such an estimate can be made conditional on the sampled value of $\stdnorm{\Delta}$, using the following steps. First we make the crude approximation that $\stdnorm{\Delta}$ accumulates steadily over the interval, and that the interval is short. Thus, from \eqref{eq:standard_normal_update},
 %
-\begin{lemma}\label{lem:state_SDE}
-A state evolving according to the best-case algorithm obeys the following stochastic differential equation,
 \begin{IEEEeqnarray}{rCl}
- d\ls{\pt} & = & \sdedrift{\pt|\ls{\pt_0}}(\ls{\pt}) d\pt + \sdediffuse{\pt|\ls{\pt_0}} d\lginfbm{\pt}      ,
+ \frac{ d\stdnorm{\pt} }{ d\pt } & \approx & \left[ 1 - \exp\left\{ - \lgexpsf (\pt_1-\pt_0) \right\} \right]^{\half} \frac{ \stdnorm{\Delta} }{ (\pt_1-\pt_0) } \nonumber \\
+ & = & \lgexpsf^{\half} (\pt_1-\pt_0)^{-\half} \stdnorm{\Delta} \nonumber      .
 \end{IEEEeqnarray}
 %
-where,
-\begin{IEEEeqnarray}{rCl}
- \sdedrift{\pt|\ls{\pt_0}}(\ls{\pt}) & = & \lgoicov{\pt} \obsmat^T \obscov^{-1} \left( (\ob{\rt}-\obsmat\lgoimean{\pt}) - \half \obsmat (\ls{\pt}-\lgoimean{\pt}) \right) - \half \lgexpsf (\ls{\pt}-\lgoimean{\pt}) \nonumber \\
- \sdediffuse{\pt|\ls{\pt_0}}         & = & \lgexpsf^{\half} \lgoicovapprox{\pt}{\ls{\pt_0}}^{\half} \nonumber      ,
-\end{IEEEeqnarray}
+Next, differentiating \eqref{eq:gaussian_decomposition},
 %
-and $\lginfbm{\pt}$ is a standard Brownian motion process. See appendix~\ref{app:state_SDE} for proof.
-\end{lemma}
+\begin{IEEEeqnarray}{rCl}
+ \frac{d\ls{\pt}}{d\pt} & \approx & \sdedrift{\pt|\lsfixed}(\ls{\pt}) \nonumber \\
+ & = & \frac{\partial \lgoimeanapprox{\pt}{\lsfixed}}{\partial \pt} + \half \left( \frac{\partial \lgoicovapprox{\pt}{\lsfixed} }{\partial \pt} \lgoicovapprox{\pt}{\lsfixed}^{-1} \right) (\ls{\pt}-\lgoimeanapprox{\pt}{\lsfixed}) \nonumber \\
+ &   & \qquad + \: \lgexpsf^{\half} (\pt_1-\pt_0)^{-\half} \lgoicovapprox{\pt}{\lsfixed}^{\half} \stdnorm{\Delta} \nonumber      .
+\end{IEEEeqnarray}
 
-The state error due to finite step sizes is then,
+With this approximation, the state error due to finite step sizes may now be written as,
 %
 \begin{IEEEeqnarray}{rCl}
- \lserror{\pt_1}{\pt_0} & = & \int_{\pt_0}^{\pt_1} \left[\sdedrift{l|\ls{\pt_0}}(\ls{l}) - \sdedrift{l|\ls{l}}(\ls{l})\right] dl + \int_{\pt_0}^{\pt_1} \left[\sdediffuse{l|\ls{\pt_0}} - \sdediffuse{l|\ls{l}}\right] d\lginfbm{l} \nonumber      .
+ \lserror{\pt_1}{\pt_0} & = & \int_{\pt_0}^{\pt_1} \left[\sdedrift{l|\ls{\pt_0}}(\ls{l}) - \sdedrift{l|\ls{l}}(\ls{l})\right] dl \nonumber      .
 \end{IEEEeqnarray}
 %
-The drift and diffusion terms are correct at $\pt_0$, so for a crude approximation of this error, replace the integrands with half their final value. Then, using the fact that $\int_{\pt_0}^{\pt_1}d\lginfbm{l}=(\pt_1-\pt_0)^{\half} \stdnorm{\Delta}$, a rough but easily calculated estimate of the local error associated with this finite step is,
+The integrand begins at $0$ for $\pt_0$, and is likely to increase as the state moves further away from the approximation point. Thus, for a crude approximation of this error, replace the integrand with half its final value. The resulting rough but easily calculated estimate of the local error associated with this finite step is,
 %
 \begin{IEEEeqnarray}{rCl}
- \widehat{\lserror{\pt_1}{\pt_0}} & = & \half \left[\sdedrift{\pt_1|\ls{\pt_0}}(\ls{\pt_1}) - \sdedrift{\pt_1|\ls{\pt_1}}(\ls{\pt_1})\right] (\pt_1-\pt_0) \nonumber \\
- &   & \qquad \qquad + \: \half \left[\sdediffuse{\pt_1|\ls{\pt_0}}(\ls{\pt_1}) - \sdediffuse{\pt_1|\ls{\pt_1}}(\ls{\pt_1})\right] \stdnorm{\Delta} (\pt_1-\pt_0)^{\half}     .
+ \widehat{\lserror{\pt_1}{\pt_0}} & = & \half \left[\sdedrift{\pt_1|\ls{\pt_0}}(\ls{\pt_1}) - \sdedrift{\pt_1|\ls{\pt_1}}(\ls{\pt_1})\right] (\pt_1-\pt_0) \nonumber      .
 \end{IEEEeqnarray}
 
 \subsubsection{Step Size Control}
@@ -565,7 +569,7 @@ The effect of sampling the mixing variable $\mix{\pt}$ is that for each step thr
 
 
 
-\subsection{Annealed CPPF}
+\subsection{Resample-Move with the CPPF}
 
 The CPPF samples states from an approximation to the optimal importance density. However, even sampling the OID exactly would be no guarantee of a high effective sample size. The weight corresponding to a particles sampled from the OID is,
 %
@@ -575,15 +579,35 @@ The CPPF samples states from an approximation to the optimal importance density.
 %
 and the variance of a set of such weights can still be high, particularly if the true value of $\ls{\rt}$ or $\ob{\rt}$ is improbable given its modelled distribution. Many of the $t-1$ particles are simply in the wrong places given the information conveyed by the new observation, and will have low weights however good the importance density.
 
-An effective method for addressing this problem is to use bridging densities \citep{Godsill2001b} or annealing \citep{Deutscher2000,Gall2007}. A full set of particles are sampled targeting \eqref{eq:filtering_sequence} for some fixed point in pseudo-time $\pt$. A selection step is then conducted before advancing the particles to the next point in pseudo-time. MCMC steps are added between selection and importance sampling to replenish the particle diversity.
+It the effective sample size is low, a particle population may be rejuvenated using MCMC steps, a scheme introduced by \citet{Gilks2001} and named resample-move. The population of weighted particles is first resampled. Each repeated particle is then perturbed by sampling from a Metropolis-Hastings (MH) kernel. When using a CPPF, proposals for these MH steps may be conducted by returning to the initial particle state $\ls{\pt_0}\pss{j}$, and sampling a new trajectory using the composite proposal method to obtain a new final state $\ls{\pt_1}\pss[*]{j}$ and weight $\pw{\pt_1}\pss[*]{j}$. The associated MH acceptance probability is then,
+%
+\begin{IEEEeqnarray}{rCl}
+ \mhaccept\left(\ls{\pt_0}\pss{j},\ls{\pt_1}\pss[*]{j}\right) & = & 1 \wedge \frac{ \pw{\pt_1}\pss[*]{j} }{ \pw{\pt_1}\pss{j} } \nonumber      .
+\end{IEEEeqnarray}
 
-The effect of using annealing is that unpromising low-weight particles are discarded early on, while those in high probability regions are replicated. The price of this improvement is that dependency is introduced between the particles, and the diversity of the particle histories (i.e. the number of unique histories $\ls{1:\rt-1}$) is reduced.
+Clearly this requires $\lgexpsf>0$, or the new state proposed will be identical. Larger values of $\lgexpsf$ lead to larger moves in the state.
 
-Annealing may be almost trivially integrated with the CPPF, since the particles are already moving through pseudo-time. A fixed grid of times is chosen at which to carry out a selection step. Each composite proposal is then stopped at these time by truncating the final step size, so that a full set of particles is collected, distributed as $\augfiltden{\pt}$. A selection step is then conducted, leaving a set of equally-weighted particles with the same distribution, and the composite proposal continues for each.
 
-Provided $\lgexpsf>0$, the particles will automatically de-correlate between selection times, so no MCMC is necessary. Larger values of $\lgexpsf$ will reduce the dependence between multiple copies of a selected particle, but they will also require smaller step sizes to be used. Hence there exists a trade-off between the quality of the particle approximation and the computational load.
 
-{\meta Diagram, algorithm pseudo-code or something to bulk this up a bit.}
+%\subsection{Annealed CPPF}
+%
+%The CPPF samples states from an approximation to the optimal importance density. However, even sampling the OID exactly would be no guarantee of a high effective sample size. The weight corresponding to a particles sampled from the OID is,
+%%
+%\begin{IEEEeqnarray}{rCl}
+% p(\ob{\rt} | \ls{\rt-1}\pss{j})     ,
+%\end{IEEEeqnarray}
+%%
+%and the variance of a set of such weights can still be high, particularly if the true value of $\ls{\rt}$ or $\ob{\rt}$ is improbable given its modelled distribution. Many of the $t-1$ particles are simply in the wrong places given the information conveyed by the new observation, and will have low weights however good the importance density.
+%
+%An effective method for addressing this problem is to use bridging densities \citep{Godsill2001b} or annealing \citep{Deutscher2000,Gall2007}. A full set of particles are sampled targeting \eqref{eq:filtering_sequence} for some fixed point in pseudo-time $\pt$. A selection step is then conducted before advancing the particles to the next point in pseudo-time. MCMC steps are added between selection and importance sampling to replenish the particle diversity.
+%
+%The effect of using annealing is that unpromising low-weight particles are discarded early on, while those in high probability regions are replicated. The price of this improvement is that dependency is introduced between the particles, and the diversity of the particle histories (i.e. the number of unique histories $\ls{1:\rt-1}$) is reduced.
+%
+%Annealing may be almost trivially integrated with the CPPF, since the particles are already moving through pseudo-time. A fixed grid of times is chosen at which to carry out a selection step. Each composite proposal is then stopped at these time by truncating the final step size, so that a full set of particles is collected, distributed as $\augfiltden{\pt}$. A selection step is then conducted, leaving a set of equally-weighted particles with the same distribution, and the composite proposal continues for each.
+%
+%Provided $\lgexpsf>0$, the particles will automatically de-correlate between selection times, so no MCMC is necessary. Larger values of $\lgexpsf$ will reduce the dependence between multiple copies of a selected particle, but they will also require smaller step sizes to be used. Hence there exists a trade-off between the quality of the particle approximation and the computational load.
+%
+%{\meta Diagram, algorithm pseudo-code or something to bulk this up a bit.}
 
 
 
@@ -624,7 +648,7 @@ Algorithm                                & $N_F$ & ESS  & RMSE \\
 \hline
 Bootstrap                                & 18500 &  1.7 & 43.6 \\
 Optimal Gaussian Proposal                &    70 &  1.7 & 42.8 \\
-Deterministic Composite Proposal         &   540 & 81.1 & 32.6 \\ 
+Deterministic Composite Proposal         &   540 & 81.1 & 32.6 \\
 \end{tabular}
 \caption{Algorithm performance results on the multivariate benchmark model.}
 \label{tab:nlng_results}
@@ -706,6 +730,8 @@ Figure~\ref{fig:drone_example_frame} shows the motion of the particles from the 
 \label{fig:drone_example_frame}
 \end{figure}
 
+A stochastic CPPF using resample-move was also tested, with the number of particles adjusted for a roughly-equal running time. This obtained almost identical average RMSEs to the deterministic CPPF, but higher effective sample sizes. Using $\lgexpsf=0.3$, roughly $25$--$50\%$ of the MH steps were accepted at each time step.
+
 Table~\ref{tab:drone_results_gaussian} shows the average ESSs and RMSEs for each algorithm over 100 simulated data sets, each of 100 time steps using the Gaussian transition density. The same is shown for the student-t transition density in table~\ref{tab:drone_results_studentt}.
 %
 \begin{table}
@@ -716,7 +742,7 @@ Algorithm                                & $N_F$ & ESS  & RMSE \\
 Bootstrap                                &  6000 &  1.0 & 78.6 \\
 UKF Proposal                             &   460 &  2.4 & 70.2 \\
 Optimal Gaussian Proposal                &    10 &  3.1 & 62.9 \\
-Deterministic Composite Proposal         &   180 & 56.4 & 22.3 \\ 
+Deterministic Composite Proposal         &   180 & 56.4 & 22.3 \\
 \end{tabular}
 \caption{Algorithm performance results on the terrain tracking model with Gaussian innovations.}
 \label{tab:drone_results_gaussian}
@@ -727,10 +753,10 @@ Deterministic Composite Proposal         &   180 & 56.4 & 22.3 \\
 \begin{tabular}{l||c|c|c}
 Algorithm                                & $N_F$ & ESS  & RMSE \\
 \hline
-Bootstrap                                &  6000 &      &      \\
-UKF Proposal                             &   460 &      &      \\
-Optimal Gaussian Proposal                &    10 &      &      \\
-Deterministic Composite Proposal         &   180 &      &      \\
+Bootstrap                                &  6000 &  1.0 & 133.7 \\
+UKF Proposal                             &   460 &  3.4 & 110.3 \\
+Optimal Gaussian Proposal                &    10 &  2.9 & 105.1 \\
+Deterministic Composite Proposal         &   180 & 17.2 & 48.0 \\
 \end{tabular}
 \caption{Algorithm performance results on the terrain tracking model with student-t innovations.}
 \label{tab:drone_results_studentt}
@@ -794,7 +820,7 @@ Algorithm                                & $N_F$ & ESS  & RMSE \\
 \hline
 Bootstrap                                & 15000 &  7.6 &  2.0 \\
 Optimal Gaussian Proposal                &   200 &  8.8 &  2.0 \\
-Deterministic Composite Proposal         &   800 & 72.8 &  1.4 \\ 
+Deterministic Composite Proposal         &   800 & 72.8 &  1.4 \\
 \end{tabular}
 \caption{Algorithm performance results on the heartbeat inference model.}
 \label{tab:sineha_results}
@@ -812,70 +838,71 @@ Deterministic Composite Proposal         &   800 & 72.8 &  1.4 \\
 
 \section{THINGS TO DO}
 \begin{itemize}
-  \item Add simulation results
+  \item Add conclusions
+  \item Add abstract
 \end{itemize}
 
 
 
-\appendix
-
-\section{Proof of Lemma~\ref{lem:state_SDE}: A Stochastic Differential Equation For State Evolution} \label{app:state_SDE}
-
-For clarity, write $\lgoimean{\pt}$ instead of $\lgoimeanapprox{\pt}{\ls{\pt_0}}$ and $\lgoicov{\pt}$ instead of $\lgoicovapprox{\pt}{\ls{\pt_0}}$ throughout this proof.
-
-From \eqref{eq:state_update}, the state update for a short interval of pseudo-time is,
+%\appendix
 %
-\begin{IEEEeqnarray}{rCl}
- \ls{\pt+\dpt} & = & \lgoimean{\pt+\dpt} + \lgupdmeanmat{\pt,\pt+\dpt}(\ls{\pt}-\lgoimean{\pt}) + \lgupdcov{\pt,\pt+\dpt}^{\half} \stdnorm{\Delta} \nonumber \\
- \lgupdmeanmat{\pt,\pt+\dpt} & = & \exp\left\{-\half\lgexpsf\dpt\right\} \lgoicov{\pt+\dpt}^{\half}\lgoicov{\pt}^{-\half} \nonumber \\
- \lgupdcov{\pt,\pt+\dpt} & = & \left[1-\exp\left\{-\lgexpsf\dpt\right\}\right]\lgoicov{\pt+\dpt} \nonumber         .
-\end{IEEEeqnarray}
-
-For small intervals,
+%\section{Proof of Lemma~\ref{lem:state_SDE}: A Stochastic Differential Equation For State Evolution} \label{app:state_SDE}
 %
-\begin{IEEEeqnarray}{rCl}
- \exp\left\{-\half\lgexpsf\dpt\right\} & = & 1 - \half\lgexpsf\dpt + \bigo{\dpt^2} \nonumber \\
- \lgoimean{\pt+\dpt}                   & = & \lgoimean{\pt} + \dpt \frac{\partial \lgoimean{\pt}}{\partial \pt} + \bigo{\dpt^2} \nonumber \\
- \lgoicov{\pt+\dpt}                    & = & \lgoicov{\pt}  + \dpt \frac{\partial \lgoicov{\pt} }{\partial \pt} + \bigo{\dpt^2} \nonumber \\
-                                       & = & \left[ I + \dpt \frac{\partial \lgoicov{\pt} }{\partial \pt} \lgoicov{\pt}^{-1} \right] \lgoicov{\pt} + \bigo{\dpt^2} \nonumber \\
- \lgoicov{\pt+\dpt}^{\half}            & = & \left[ I + \half \dpt \frac{\partial \lgoicov{\pt} }{\partial \pt} \lgoicov{\pt}^{-1} \right] \lgoicov{\pt}^{\half} + \bigo{\dpt^2} \nonumber      .
-\end{IEEEeqnarray}
+%For clarity, write $\lgoimean{\pt}$ instead of $\lgoimeanapprox{\pt}{\ls{\pt_0}}$ and $\lgoicov{\pt}$ instead of $\lgoicovapprox{\pt}{\ls{\pt_0}}$ throughout this proof.
 %
-Hence,
+%From \eqref{eq:state_update}, the state update for a short interval of pseudo-time is,
+%%
+%\begin{IEEEeqnarray}{rCl}
+% \ls{\pt+\dpt} & = & \lgoimean{\pt+\dpt} + \lgupdmeanmat{\pt,\pt+\dpt}(\ls{\pt}-\lgoimean{\pt}) + \lgupdcov{\pt,\pt+\dpt}^{\half} \stdnorm{\Delta} \nonumber \\
+% \lgupdmeanmat{\pt,\pt+\dpt} & = & \exp\left\{-\half\lgexpsf\dpt\right\} \lgoicov{\pt+\dpt}^{\half}\lgoicov{\pt}^{-\half} \nonumber \\
+% \lgupdcov{\pt,\pt+\dpt} & = & \left[1-\exp\left\{-\lgexpsf\dpt\right\}\right]\lgoicov{\pt+\dpt} \nonumber         .
+%\end{IEEEeqnarray}
 %
-\begin{IEEEeqnarray}{rCl}
- \ls{\pt+\dpt} - \ls{\pt} & = & \lgoimean{\pt} + \dpt \frac{\partial \lgoimean{\pt}}{\partial \pt} + \left(1 - \half\lgexpsf\dpt + \bigo{\dpt^2}\right) \left( I + \half \dpt \frac{\partial \lgoicov{\pt} }{\partial \pt} \lgoicov{\pt}^{-1} \right)(\ls{\pt}-\lgoimean{\pt}) \nonumber \\
- &   & \qquad \qquad + \: \dpt^{\half} \lgexpsf^{\half} \left( I + \half \dpt \frac{\partial \lgoicov{\pt} }{\partial \pt} \lgoicov{\pt}^{-1} \right) \lgoicov{\pt}^{\half} \stdnorm{\Delta} + \bigo{\dpt^2} - \ls{\pt} \nonumber \\
-  & = & \left[ \frac{\partial \lgoimean{\pt}}{\partial \pt} + \half \left( \frac{\partial \lgoicov{\pt} }{\partial \pt} \lgoicov{\pt}^{-1} - \lgexpsf I \right) (\ls{\pt}-\lgoimean{\pt}) \right] \dpt + \lgexpsf^{\half} \lgoicov{\pt}^{\half} \dpt^{\half} \stdnorm{\Delta} + \bigo{\dpt^2} \nonumber      .
-\end{IEEEeqnarray}
+%For small intervals,
+%%
+%\begin{IEEEeqnarray}{rCl}
+% \exp\left\{-\half\lgexpsf\dpt\right\} & = & 1 - \half\lgexpsf\dpt + \bigo{\dpt^2} \nonumber \\
+% \lgoimean{\pt+\dpt}                   & = & \lgoimean{\pt} + \dpt \frac{\partial \lgoimean{\pt}}{\partial \pt} + \bigo{\dpt^2} \nonumber \\
+% \lgoicov{\pt+\dpt}                    & = & \lgoicov{\pt}  + \dpt \frac{\partial \lgoicov{\pt} }{\partial \pt} + \bigo{\dpt^2} \nonumber \\
+%                                       & = & \left[ I + \dpt \frac{\partial \lgoicov{\pt} }{\partial \pt} \lgoicov{\pt}^{-1} \right] \lgoicov{\pt} + \bigo{\dpt^2} \nonumber \\
+% \lgoicov{\pt+\dpt}^{\half}            & = & \left[ I + \half \dpt \frac{\partial \lgoicov{\pt} }{\partial \pt} \lgoicov{\pt}^{-1} \right] \lgoicov{\pt}^{\half} + \bigo{\dpt^2} \nonumber      .
+%\end{IEEEeqnarray}
+%%
+%Hence,
+%%
+%\begin{IEEEeqnarray}{rCl}
+% \ls{\pt+\dpt} - \ls{\pt} & = & \lgoimean{\pt} + \dpt \frac{\partial \lgoimean{\pt}}{\partial \pt} + \left(1 - \half\lgexpsf\dpt + \bigo{\dpt^2}\right) \left( I + \half \dpt \frac{\partial \lgoicov{\pt} }{\partial \pt} \lgoicov{\pt}^{-1} \right)(\ls{\pt}-\lgoimean{\pt}) \nonumber \\
+% &   & \qquad \qquad + \: \dpt^{\half} \lgexpsf^{\half} \left( I + \half \dpt \frac{\partial \lgoicov{\pt} }{\partial \pt} \lgoicov{\pt}^{-1} \right) \lgoicov{\pt}^{\half} \stdnorm{\Delta} + \bigo{\dpt^2} - \ls{\pt} \nonumber \\
+%  & = & \left[ \frac{\partial \lgoimean{\pt}}{\partial \pt} + \half \left( \frac{\partial \lgoicov{\pt} }{\partial \pt} \lgoicov{\pt}^{-1} - \lgexpsf I \right) (\ls{\pt}-\lgoimean{\pt}) \right] \dpt + \lgexpsf^{\half} \lgoicov{\pt}^{\half} \dpt^{\half} \stdnorm{\Delta} + \bigo{\dpt^2} \nonumber      .
+%\end{IEEEeqnarray}
+%%
+%In the limit $\dpt\rightarrow0$, this becomes a stochastic differential equation,
+%%
+%\begin{IEEEeqnarray}{rCl}
+% d\ls{\pt} & = & \left[ \frac{\partial \lgoimean{\pt}}{\partial \pt} + \half \left( \frac{\partial \lgoicov{\pt} }{\partial \pt} \lgoicov{\pt}^{-1} - \lgexpsf I \right) (\ls{\pt}-\lgoimean{\pt}) \right] d\pt + \lgexpsf^{\half} \lgoicov{\pt}^{\half} d\lginfbm{\pt}      ,
+%\end{IEEEeqnarray}
+%%
+%where $\lginfbm{\pt}$ is a standard Brownian motion process.
 %
-In the limit $\dpt\rightarrow0$, this becomes a stochastic differential equation,
-%
-\begin{IEEEeqnarray}{rCl}
- d\ls{\pt} & = & \left[ \frac{\partial \lgoimean{\pt}}{\partial \pt} + \half \left( \frac{\partial \lgoicov{\pt} }{\partial \pt} \lgoicov{\pt}^{-1} - \lgexpsf I \right) (\ls{\pt}-\lgoimean{\pt}) \right] d\pt + \lgexpsf^{\half} \lgoicov{\pt}^{\half} d\lginfbm{\pt}      ,
-\end{IEEEeqnarray}
-%
-where $\lginfbm{\pt}$ is a standard Brownian motion process.
-
-When the OID is, or is approximated by, a Gaussian with moments,
-%
-\begin{IEEEeqnarray}{rCl}
- \lgoicov{\pt} & = & \left[ \transcov^{-1} + \pt \obsmat^T \obscov^{-1} \obsmat \right]^{-1} \nonumber \\
- \lgoimean{\pt}    & = & \lgoicov{\pt} \left[ \transcov^{-1} \transfun(\ls{\rt-1}) + \pt \obsmat^T \obscov^{-1} \ob{\rt} \right] \nonumber     .
-\end{IEEEeqnarray}
-%
-then
-%
-\begin{IEEEeqnarray}{rCl}
- \frac{\partial \lgoicov{\pt} }{\partial \pt} & = & -\lgoicov{\pt} \obsmat^T \obscov^{-1} \obsmat \lgoicov{\pt} \nonumber \\
- \frac{\partial \lgoimean{\pt}}{\partial \pt} & = & \lgoicov{\pt} \obsmat^T \obscov^{-1}(\ob{\rt}-\obsmat\lgoimean{\pt}) \nonumber       ,
-\end{IEEEeqnarray}
-%
-and the state evolution stochastic differential equation is,
-%
-\begin{IEEEeqnarray}{rCl}
- d\ls{\pt} & = & \left[ \lgoicov{\pt} \obsmat^T \obscov^{-1} \left( (\ob{\rt}-\obsmat\lgoimean{\pt}) - \half \obsmat (\ls{\pt}-\lgoimean{\pt}) \right) - \half \lgexpsf (\ls{\pt}-\lgoimean{\pt}) \right] d\pt + \lgexpsf^{\half} \lgoicov{\pt}^{\half} d\lginfbm{\pt} \nonumber       .
-\end{IEEEeqnarray}
+%When the OID is, or is approximated by, a Gaussian with moments,
+%%
+%\begin{IEEEeqnarray}{rCl}
+% \lgoicov{\pt} & = & \left[ \transcov^{-1} + \pt \obsmat^T \obscov^{-1} \obsmat \right]^{-1} \nonumber \\
+% \lgoimean{\pt}    & = & \lgoicov{\pt} \left[ \transcov^{-1} \transfun(\ls{\rt-1}) + \pt \obsmat^T \obscov^{-1} \ob{\rt} \right] \nonumber     .
+%\end{IEEEeqnarray}
+%%
+%then
+%%
+%\begin{IEEEeqnarray}{rCl}
+% \frac{\partial \lgoicov{\pt} }{\partial \pt} & = & -\lgoicov{\pt} \obsmat^T \obscov^{-1} \obsmat \lgoicov{\pt} \nonumber \\
+% \frac{\partial \lgoimean{\pt}}{\partial \pt} & = & \lgoicov{\pt} \obsmat^T \obscov^{-1}(\ob{\rt}-\obsmat\lgoimean{\pt}) \nonumber       ,
+%\end{IEEEeqnarray}
+%%
+%and the state evolution stochastic differential equation is,
+%%
+%\begin{IEEEeqnarray}{rCl}
+% d\ls{\pt} & = & \left[ \lgoicov{\pt} \obsmat^T \obscov^{-1} \left( (\ob{\rt}-\obsmat\lgoimean{\pt}) - \half \obsmat (\ls{\pt}-\lgoimean{\pt}) \right) - \half \lgexpsf (\ls{\pt}-\lgoimean{\pt}) \right] d\pt + \lgexpsf^{\half} \lgoicov{\pt}^{\half} d\lginfbm{\pt} \nonumber       .
+%\end{IEEEeqnarray}
 
 
 
