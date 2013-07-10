@@ -12,6 +12,8 @@
 \usepackage{bbm}
 \usepackage{algorithmic}
 
+\interdisplaylinepenalty=0
+
 \graphicspath{{figures/}}
 \input{../paper/composite_proposals_macros}
 \hyphenation{}
@@ -26,12 +28,12 @@
 Cambridge University Engineering Dept.\\
 Cambridge, UK,\\
 Email: pb404@cam.ac.uk}
-%\and
-%\IEEEauthorblockN{Simon Godsill}
-%\IEEEauthorblockA{Signal Processing and Communications Lab.\\
-%Cambridge University Engineering Dept.\\
-%Cambridge, UK,\\
-%Email: sjg30@cam.ac.uk}
+\and
+\IEEEauthorblockN{Simon Godsill}
+\IEEEauthorblockA{Signal Processing and Communications Lab.\\
+Cambridge University Engineering Dept.\\
+Cambridge, UK,\\
+Email: sjg30@cam.ac.uk}
 }
 
 \maketitle
@@ -51,11 +53,13 @@ Particle filters are an established class of algorithms for approximating the Ba
 
 The efficacy of a particle filter depends substantially on the choice of importance density. If it is well matched to the filtering density then the resulting particles will have even weights, and the filter works well. On the other hand, if there is a mismatch between the densities, the population is likely to be dominated by a small proportion of particles with high weights, and the filter works poorly.
 
-The optimal choice for the importance density --- in the sense of minimising the weight variance --- is the conditional posterior density of the state. However, this can rarely be sampled from or evaluated exactly. Instead, it is common to use approximations, for example by choosing some appropriately adapted Gaussian density \cite{Doucet2000a}. For many mildly nonlinear models such an approximation has proven most effective, but as the nonlinearity and dimensionality increase, and the modes of the optimal importance density become less and less Gaussian, performance becomes worse.
+The optimal choice for the importance density --- in the sense of minimising the weight variance --- is the conditional posterior density of the state. However, this can rarely be sampled from or evaluated exactly. Instead, it is common to use approximations, for example by choosing some appropriately adapted Gaussian density \cite{Doucet2000a,Merwe2000}. For many mildly nonlinear models such an approximation has proven most effective, but as the nonlinearity and dimensionality increase, and the modes of the optimal importance density become less and less Gaussian, performance becomes worse.
 
 In this paper, we introduce a new mechanism for conducting the importance sampling steps in a particle filter. The effect of each new observation is introduced gradually, and a new state is proposed for each incremental step using a local Gaussian approximation. Since each final particle state is reached via series of intermediate steps, we name this algorithm the composite proposal particle filter (CPPF). By using small steps and adapting the approximations to the current state, a more accurate approximation to the optimal importance density is achieved, and the resulting filter proves more effective than competitors using a single Gaussian as the importance density.
 
-The concept of introducing the likelihood progressively is not original. It has been used for estimation of normalising constants \cite{Gelman1998}, for assumed density filtering \cite{Hanebeck2003a,Hanebeck2012,Hagmar2011}, and in annealed particle filters \cite{Godsill2001b,Neal2001,Gall2007,Deutscher2000}. Annealed particle filters rely on the use of intermediate particle selection steps to rejuvenate the population, introducing dependency between the particles in the process. In contrast, the CPPF simply uses the progressive framework to construct an improved approximation to the optimal importance density. Particle state proposals are still entirely independent.
+The concept of introducing the likelihood progressively has been used before, for assumed density filtering \cite{Hanebeck2003,Hagmar2011}, annealed particle filters \cite{Godsill2001b,Gall2007,Deutscher2000}, and for particle flow filters \cite{Daum2011d}. The new algorithm is distinct from all these.
+
+%The concept of introducing the likelihood progressively is not original. It has been used for estimation of normalising constants \cite{Gelman1998}, for assumed density filtering \cite{Hanebeck2003,Hagmar2011}, and in annealed particle filters \cite{Godsill2001b,Gall2007,Deutscher2000}. Annealed particle filters rely on the use of intermediate particle selection steps to rejuvenate the population, introducing dependency between the particles in the process. In contrast, the CPPF simply uses the progressive framework to construct an improved approximation to the optimal importance density. Particle state proposals are still entirely independent.
 
 
 
@@ -64,35 +68,27 @@ The concept of introducing the likelihood progressively is not original. It has 
 We consider a standard discrete-time HMM in which the transition, observation and prior models have closed-form densities,
 %
 \begin{IEEEeqnarray}{rCl}
- \ls{\rt} & \sim & \transden(\ls{\rt} | \ls{\rt-1}) \label{eq:td} \\
- \ob{\rt} & \sim & \obsden(\ob{\rt} | \ls{\rt})   \label{eq:od} \\
- \ls{1} & \sim & p(\ls{1})                  \label{eq:pd}      ,
+ \ls{\rt} & \sim & \transden(\ls{\rt} | \ls{\rt-1}) \nonumber \\
+ \ob{\rt} & \sim & \obsden(\ob{\rt} | \ls{\rt})   \nonumber \\
+ \ls{1} & \sim & p(\ls{1})                  \nonumber       ,
 \end{IEEEeqnarray}
 %
 where the random variable $\ls{\rt}$ is the hidden state of a system at time $\rt$, and $\ob{\rt}$ is an incomplete, noisy observation. We assume here that the transition, observation and prior densities may be evaluated and that the prior and transition densities may be sampled. A particle filter is used to estimate recursively distributions over the path of the state variables, $\ls{1:\rt}=\{\ls{1}, \dots, \ls{\rt}\}$. Densities are approximated by a sum of weighted probability masses located at a discrete set of states,
 %
 \begin{IEEEeqnarray}{rCl}
- p(\ls{1:\rt} | \ob{1:k}) & = & \sum_i \npw{\rt}\pss{i} \delta_{\ls{1:\rt}\pss{i}}(\ls{1:\rt})     ,
+ p(\ls{1:\rt} | \ob{1:k}) & = & \sum_i \npw{\rt}\pss{i} \delta_{\ls{1:\rt}\pss{i}}(\ls{1:\rt}) \nonumber      ,
 \end{IEEEeqnarray}
 %
-where $\delta_{\ls{1:\rt}\pss{i}}(\ls{1:\rt})$ denotes a unit probability mass at the point $\ls{1:\rt}\pss{i}$.
+where $\delta_{\ls{1:\rt}\pss{i}}(\ls{1:\rt})$ denotes a unit probability mass at the point $\ls{1:\rt}\pss{i}$, and the weights sum to $1$. The particle filter recursion may be separated into two stages --- prediction and update --- which produce approximations to the predictive, $p(\ls{1:\rt} | \ob{1:\rt-1})$, and filtering, $p(\ls{1:\rt} | \ob{1:\rt})$, densities respectively.
 
-The particle filter recursion may be separated into two stages --- prediction and update --- which produce approximations to the predictive, $p(\ls{1:\rt} | \ob{1:\rt-1})$, and filtering, $p(\ls{1:\rt} | \ob{1:\rt})$, densities respectively.
-
-At time $\rt$, the prediction stage begins with selection (resampling) of a parent from amongst the $\rt-1$ particles; an index, $\anc{j}$, is chosen with probability $\npw{t-1}\pss{j}$. (This is the most basic algorithm, in which selection is not optional and no ``auxiliary filtering'' is used.) Next, a new state $\ls{\rt}\pss{j}$ is sampled from an importance density, $\impden(\ls{\rt} | \ls{\rt-1}\pss{\anc{j}}, \ob{\rt})$, and concatenated to the parent path to form the new particle,
-%
-\begin{IEEEeqnarray}{rCl}
- \ls{1:\rt}\pss{j} \leftarrow \left\{ \ls{1:\rt-1}\pss{\anc{j}},  \ls{\rt}\pss{j} \right\}     .
-\end{IEEEeqnarray}
-%
-Finally, an importance weight is assigned to the particle to account for the discrepancy between importance and target distributions,
+At time $\rt$, the prediction stage begins with selection (resampling) of a parent from amongst the $\rt-1$ particles; an index, $\anc{j}$, is chosen with probability $\npw{t-1}\pss{j}$. (This is the most basic algorithm, in which selection is not optional and no ``auxiliary filtering'' is used.) Next, a new state $\ls{\rt}\pss{j}$ is sampled from an importance density, $\impden(\ls{\rt} | \ls{\rt-1}\pss{\anc{j}}, \ob{\rt})$, and concatenated to the parent path to form the new particle, $ \ls{1:\rt}\pss{j} \leftarrow \left\{ \ls{1:\rt-1}\pss{\anc{j}},  \ls{\rt}\pss{j} \right\}$. Finally, an importance weight is assigned to the particle to account for the discrepancy between importance and target distributions,
 %
 \begin{IEEEeqnarray}{rCl}
  \predpw{\rt}\pss{j} & = & \frac{ p(\ls{1:\rt}\pss{j} | \ob{1:\rt-1}) }{ p(\ls{1:\rt-1}\pss{\anc{j}} | \ob{1:\rt-1}) \impden(\ls{\rt}\pss{j} | \ls{\rt-1}\pss{\anc{j}}, \ob{\rt}) } \nonumber \\
- & \propto & \frac{ \transden(\ls{\rt}\pss{j} | \ls{\rt-1}\pss{\anc{j}}) }{ \impden(\ls{\rt}\pss{j} | \ls{\rt-1}\pss{\anc{j}}, \ob{\rt}) }     .
+ & \propto & \frac{ \transden(\ls{\rt}\pss{j} | \ls{\rt-1}\pss{\anc{j}}) }{ \impden(\ls{\rt}\pss{j} | \ls{\rt-1}\pss{\anc{j}}, \ob{\rt}) } \nonumber      .
 \end{IEEEeqnarray}
 
-In the update stage, the same set of particles is used to approximate the filtering distribution. These are distributed according to $\partden(\ls{1:\rt} | \ob{1:\rt})$, where,
+In the update stage, the same set of particles is used to approximate the filtering distribution. These are currently distributed according to $\partden(\ls{1:\rt} | \ob{1:\rt})$, where,
 %
 \begin{IEEEeqnarray}{rCl}
  p(\ls{1:\rt}\pss{j} | \ob{1:\rt-1}) & \propto & \predpw{\rt}\pss{j} \partden(\ls{1:\rt}\pss{j} | \ob{1:\rt}) \nonumber      .
@@ -102,14 +98,10 @@ A new importance weight is required to account for the discrepancy,
 %
 \begin{IEEEeqnarray}{rCl}
  \pw{\rt}\pss{j} & =       & \frac{ p(\ls{1:\rt}\pss{j} | \ob{1:\rt}) }{ \partden(\ls{1:\rt}\pss{j} | \ob{1:\rt}) } \nonumber \\
-                 & \propto & \predpw{\rt}\pss{j} \times \obsden(\ob{\rt} | \ls{\rt}\pss{j} )      .
+                 & \propto & \predpw{\rt}\pss{j} \times \obsden(\ob{\rt} | \ls{\rt}\pss{j} ) \nonumber       .
 \end{IEEEeqnarray}
 %
-Finally, the weights are normalised,
-%
-\begin{IEEEeqnarray}{rCl}
- \npw{\rt} & = & \pw{\rt}\pss{j} \Big/ \sum_i \pw{\rt}\pss{i}      .
-\end{IEEEeqnarray}
+Finally, the weights are normalised, $\npw{\rt} = \pw{\rt}\pss{j} \Big/ \sum_i \pw{\rt}\pss{i}$.
 
 If the transition density is used as the importance density then the resulting algorithm is the ``bootstrap filter'' of \cite{Gordon1993}. The optimal importance density (OID) is the conditional state posterior,
 %
@@ -151,7 +143,7 @@ There is one class of models for which the OID has an analytic form, those which
 %
 \begin{IEEEeqnarray}{rCl}
  \transden(\ls{\rt} | \ls{\rt-1}) & = & \normal{\ls{\rt}}{\transfun(\ls{\rt-1})}{\transcov} \nonumber \\
- \obsden(\ob{\rt} | \ls{\rt})     & = & \normal{\ob{\rt}}{\obsmat \ls{\rt}}{\obscov}
+ \obsden(\ob{\rt} | \ls{\rt})     & = & \normal{\ob{\rt}}{\obsmat \ls{\rt}}{\obscov} \nonumber
 \end{IEEEeqnarray}
 %
 For such models, the OID sequence~\eqref{eq:OID_sequence} is,
@@ -202,17 +194,10 @@ Suppose we have a particle $\{\ls{1:\rt-1},\ls{\pt_0}\}$ with weight $\pw{\pt_0}
  \partden(\ls{1:\rt-1},\ls{\pt_1} | \ls{\rt-1}) & = & \partden(\ls{1:\rt-1},\ls{\pt_0} | \ls{\rt-1}) \times \magdet{\frac{\partial \ls{\pt_{0}}}{\partial \ls{\pt_1}}}  \nonumber  .
 \end{IEEEeqnarray}
 %
-The Jacobian for the state update \eqref{eq:state_update} is,
-%
-\begin{IEEEeqnarray}{rCl}
- \magdet{\frac{\partial \ls{\pt_{1}}}{\partial \ls{\pt_0}}} & = & \sqrt{\frac{\magdet{\lgoicovapprox{\pt_1}{\ls{\pt_0}}}}{\magdet{\lgoicovapprox{\pt_0}{\ls{\pt_0}}}}} \nonumber      .
-\end{IEEEeqnarray}
-%
 Hence, the weight update is,
 %
 \begin{IEEEeqnarray}{rCl}
- \pw{\pt_1} & \propto & \pw{\pt_0} \times \frac{ \obsden(\ob{\rt} | \ls{\pt_1})^{\pt_1} \transden(\ls{\pt_1} | \ls{\rt-1}) }{ \obsden(\ob{\rt} | \ls{\pt_0})^{\pt_0} \transden(\ls{\pt_0} | \ls{\rt-1}) } \nonumber \\
- &  & \qquad \qquad \times \sqrt{\frac{\magdet{\lgoicovapprox{\pt_1}{\ls{\pt_0}}}}{\magdet{\lgoicovapprox{\pt_0}{\ls{\pt_0}}}}} \label{eq:CPPF_deterministic_weight_update}       .
+ \pw{\pt_1} & \propto & \pw{\pt_0} \times \frac{ \obsden(\ob{\rt} | \ls{\pt_1})^{\pt_1} \transden(\ls{\pt_1} | \ls{\rt-1}) }{ \obsden(\ob{\rt} | \ls{\pt_0})^{\pt_0} \transden(\ls{\pt_0} | \ls{\rt-1}) } \times \sqrt{\frac{\magdet{\lgoicovapprox{\pt_1}{\ls{\pt_0}}}}{\magdet{\lgoicovapprox{\pt_0}{\ls{\pt_0}}}}} \IEEEeqnarraynumspace \label{eq:CPPF_deterministic_weight_update}       .
 \end{IEEEeqnarray}
 
 \subsection{Algorithm Summary}
@@ -222,17 +207,15 @@ The CPPF is summarised in figure~\ref{alg:general_CPPF}.
 \begin{figure}
 \begin{algorithmic}[1]
   \FOR{$\rt=1,2,\dots$}
-    \FOR{$i=1,\dots,N_F$}
+    \FOR{$i=1,\dots,\numpart$}
       \IF{$\rt>1$}
-        \STATE Select an ancestor, $a_i=j$, with probability $\naw{\rt-1}\pss{j}$
-        \STATE Calculate predictive particle weight, $\predpw{\rt}\pss{i} = \npw{\rt-1}\pss{a_i} / \naw{\rt-1}\pss{a_i}$.
+        \STATE Select an ancestor, $\anc{i}=j$, with probability $\npw{\rt-1}\pss{j}$
         \STATE Initialise state by sampling from the transition density, $\ls{\rt,0}\pss{i} \sim \transden(\ls{\rt} | \ls{\rt-1}\pss{\anc{i}})$.
       \ELSE
-        \STATE Initialise weights, $\predpw{\rt}\pss{i} = 1$.
         \STATE Initialise state by sampling from the prior density, $\ls{\rt,0}\pss{i} \sim p(\ls{\rt})$.
       \ENDIF
       \STATE Initialise pseudo-time, $\pt=0$.
-      \STATE Initialise weight, $\pw{\rt,0}\pss{i} = \predpw{\rt}\pss{i}$.
+      \STATE Initialise weight, $\pw{\rt,0}\pss{i} = 1$.
       \WHILE{$\pt<1$}
         \STATE Increment pseudo-time, $\pt \leftarrow \pt+\dpt$.
         \STATE Update state $\ls{\rt,\pt}\pss{i}$ using \eqref{eq:state_update}.
@@ -254,7 +237,7 @@ The CPPF is summarised in figure~\ref{alg:general_CPPF}.
 Numerical simulations using simulated data are presented to demonstrate the efficacy of the CPPF. Algorithm performance is assessed through two measures. The accuracy of each filter is measured by a root-mean-square error (RMSE) value, calculated using the weighted average of the particle states as a point estimate. The quality of the particle population is measured using the effective sample size (ESS),
 %
 \begin{IEEEeqnarray}{rCl}
- \ess{\rt} & = & \frac{ 1 }{ \sum_i \npw{\rt}\pss[2]{i} }     ,
+ \ess{\rt} & = & \frac{ 1 }{ \sum_i \npw{\rt}\pss[2]{i} } \nonumber      ,
 \end{IEEEeqnarray}
 %
 which takes a value between $1$ (which is bad) and the number of filtering particles, $\numpart$ (which is good).
@@ -282,10 +265,10 @@ At $\rt$, the latent state for our model is,
 where $\pos{\rt}$ and $\vel{\rt}$ are the $3$-dimensional position and velocity of the aircraft respectively, and the observation is,
 %
 \begin{IEEEeqnarray}{rCl}
- \ob{\rt} & = & \begin{bmatrix} \bng{\rt} & \rng{\rt} & \hei{\rt} & \rngrt{\rt} \end{bmatrix}^T       .
+ \ob{\rt} & = & \begin{bmatrix} \bng{\rt} & \rng{\rt} & \hei{\rt} & \rngrt{\rt} \end{bmatrix}^T \nonumber       .
 \end{IEEEeqnarray}
 %
-The observation function is described by the following equations,
+The observation function is comprised of,
 %
 \begin{IEEEeqnarray}{rCl}
  \bng{\rt}   & = & \arctan\left(\frac{\pos{\rt,1}}{\pos{\rt,2}}\right) \nonumber \\
@@ -299,7 +282,7 @@ where $\terrain( \pos{\rt,1}, \pos{\rt,2} )$ is the terrain height at the corres
 A linear transition model is used, based on the near-constant velocity model with Gaussian innovations,
 %
 \begin{IEEEeqnarray}{rCl}
- \transfun(\ls{\rt} | \ls{\rt-1}) & = & \normal{\ls{\rt}}{\transmat\ls{\rt-1}}{\transcov}     ,
+ \transden(\ls{\rt} | \ls{\rt-1}) & = & \normal{\ls{\rt}}{\transmat\ls{\rt-1}}{\transcov} \nonumber       ,
 \end{IEEEeqnarray}
 %
 \begin{IEEEeqnarray}{rClCrCl}
@@ -319,11 +302,11 @@ For the simulations presented here, the terrain profile was modelled as a mixtur
 
 The accurate measurements of range, range rate and height constrain the region of high posterior probability to lie on a $3$ dimensional subspace, which can take some unusual shapes (see figure~\ref{fig:drone_example_frame}). This means that particle filters using simple Gaussian importance densities do not perform well --- the EPF diverges completely and produces no useful results. Furthermore, the optimal Gaussian importance density method performs poorly as the maximisation procedure struggles with the narrow mode.
 
-Figure~\ref{fig:drone_example_frame} shows the motion of the particles from the CPPF on a typical frame, and the awkward shape of the posterior mode.{\meta REPLACE THIS WITH DETERMINISTIC PARTICLES.}
+Figure~\ref{fig:drone_example_frame} shows the motion of the particles from the CPPF on a typical frame, and the awkward shape of the posterior mode.
 %
 \begin{figure}
 \centering
-\includegraphics[width=0.7\columnwidth]{drone_example_frame.pdf}
+\includegraphics[width=0.7\columnwidth]{drone_example_frame_deter.pdf}
 \caption{An example of the CPPF particle motion running on the terrain tracking model, showing one horizontal and the vertical state component. Prior states are shown with circles and posterior states with crosses.}
 \label{fig:drone_example_frame}
 \end{figure}
@@ -450,8 +433,8 @@ Numerous extensions to the algorithm are being studied, including a generalisati
 %\IEEEtriggercmd{\enlargethispage{-5in}}
 
 \bibliographystyle{IEEEtran}
-%\bibliography{D:/pb404/Dropbox/PhD/OTbib}
-\bibliography{C:/Personal/Peter/Dropbox/PhD/OTbib}
+\bibliography{D:/pb404/Dropbox/PhD/Cleanbib}
+%\bibliography{C:/Personal/Peter/Dropbox/PhD/OTbib}
 
 \end{document}
 
