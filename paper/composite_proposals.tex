@@ -74,7 +74,7 @@ The effect of using a bad importance distribution (i.e. one which is not ``close
 
 A common enhancement to the basic particle filter, which helps to alleviate the problems of degeneracy, is to include Markov chain Monte Carlo (MCMC) steps in order to rejuvenate a degenerate set of particles, a method named ``resample-move'' by \citet{Gilks2001}. When the importance sampling step has resulted in only a few useful particles in high probability areas, MCMC steps allow copies of these to be perturbed, so that they become better spread over the state space while still maintaining the correct distribution. While resample-move can often provide a useful fix for a struggling particle filter, it would be preferable to improve the initial importance sampling step to that such a fix is not required. There is, after all, a limit to what resample-move can practically achieve; if the importance sampling fails to put any particles in the right areas then a very large number of MCMC steps may be needed to get them there. In addition, an MCMC stage introduces new algorithm parameters which need to be tuned for effective operation, e.g. the number of MCMC steps per particle, and the proposal distribution.
 
-Another way in which degeneracy may be mitigated is by introducing the effect of each observation gradually, so that particles may be progressively drawn towards peaks in the likelihood. This can be achieved by using a discrete set of bridging distributions which transition smoothly between the prior and posterior. Each one is targeted in turn using importance sampling and particle diversity is maintained using Metropolis-Hastings moves. Such ``annealing'' schemes have been suggested by, amongst others, \citet{Neal2001} (using MCMC) and \citet{DelMoral2006} (using Sequential Monte Carlo (SMC) samplers) for static inference problems, and by \citet{Godsill2001b,Gall2007,Deutscher2000} for particle filters.
+Another way in which degeneracy may be mitigated is by introducing the effect of each observation gradually, so that particles may be progressively drawn towards peaks in the likelihood. This can be achieved by using a discrete set of bridging distributions which transition smoothly between the prior and posterior. Each one is targeted in turn using importance sampling and particle diversity is maintained using Metropolis-Hastings moves. Such ``annealing'' schemes have been suggested by, amongst others, \citet{Neal2001} (using MCMC) and \citet{DelMoral2006} (using Sequential Monte Carlo (SMC) samplers) for static inference problems, and by \citet{Godsill2001b,Gall2007,Deutscher2000,Oudjane2000} for particle filters.
 
 It is possible to take the idea of bridging distributions to a limit and define a continuous sequence of distributions between the prior and the posterior. This device was used by \citet{Gelman1998} for the related task of simulating normalising constants, and has been used to design sophisticated assumed density filters \citep{Hanebeck2003a,Hanebeck2012,Hagmar2011}. More recently, particle filters have appeared which exploit the same principle, including the ``particle flow'' methods described in series of papers including \citep{Daum2008,Daum2011d}, and the ``optimal transport'' methods of \cite{Reich2011,Reich2012a}.
 
@@ -172,7 +172,7 @@ An essential consideration when designing a particle filter is the choice of imp
 This results in the ``bootstrap filter'' of \cite{Gordon1993}. It only requires that sampling be possible from the transition model, and not that the transition density be calculable. The weight formula simplifies to,
 %
 \begin{IEEEeqnarray}{rCl}
- \pw{\rt}\pss{j} & \propto & \frac{\npw{\rt-1}\pss{j}}{\naw{\rt-1}\pss{j}} \times \obsden(\ob{\rt} | \ls{\rt}\pss{j}) \label{eq:weight_update_bootstrap}      .
+ \pw{\rt}\pss{j} & \propto & \obsden(\ob{\rt} | \ls{\rt}\pss{j}) \label{eq:weight_update_bootstrap}      .
 \end{IEEEeqnarray}
 %
 Furthermore, the weight associated with the prediction stage is a constant; it is the update stage which is problematic.
@@ -205,7 +205,7 @@ The composite proposal method is a procedure for sampling approximately from the
  \augfiltnorm{\pt} & = & \int \obsden(\ob{\rt} | \ls{\rt,\pt})^{\pt} p(\ls{\rt,\pt} | \ob{1:\rt-1}) d\ls{\rt,\pt}      ,
 \end{IEEEeqnarray}
 %
-in which $\ls{\rt,\pt}$ is the state at time $\rt$ and pseudo-time $\pt$. This filtering sequence contains the predictive density when $\pt=0$ and the filtering density when $\pt=1$. A composite proposal is conducted by advancing each particle state $\ls{\rt,\pt}\pss{j}$ and its associated weight $\pw{\rt,\pt}\pss{j}$ through pseudo-time with a series of incremental updates, such that it is correctly distributed according to \eqref{eq:filtering_sequence} throughout.
+in which $\ls{\rt,\pt}$ is the state at time $\rt$ and pseudo-time $\pt$. This filtering sequence contains the predictive density when $\pt=0$ and the filtering density when $\pt=1$. A composite proposal is conducted by advancing each particle state $\ls{\rt,\pt}\pss{j}$ and its associated weight $\pw{\rt,\pt}\pss{j}$ through pseudo-time with a series of updates, such that it is correctly distributed according to \eqref{eq:filtering_sequence} throughout.
 
 State updates are derived by considering a related sequence of optimal importance densities for the particle,
 %
@@ -871,70 +871,72 @@ With non-Gaussian model densities, the performance gains from the composite prop
 
 \section{THINGS TO DO}
 \begin{itemize}
-  \item Add abstract
+  \item Add a section on the continuous limit.
+  \item Add a section discussing relationship to other work and unique properties.
+  \item Discuss optimality.
 \end{itemize}
 
 
 
-%\appendix
+\appendix
+
+\section{Proof of Lemma~\ref{lem:state_SDE}: A Stochastic Differential Equation For State Evolution} \label{app:state_SDE}
+
+For clarity, write $\lgoimean{\pt}$ instead of $\lgoimeanapprox{\pt}{\ls{\pt_0}}$ and $\lgoicov{\pt}$ instead of $\lgoicovapprox{\pt}{\ls{\pt_0}}$ throughout this proof.
+
+From \eqref{eq:state_update}, the state update for a short interval of pseudo-time is,
 %
-%\section{Proof of Lemma~\ref{lem:state_SDE}: A Stochastic Differential Equation For State Evolution} \label{app:state_SDE}
+\begin{IEEEeqnarray}{rCl}
+ \ls{\pt+\dpt} & = & \lgoimean{\pt+\dpt} + \lgupdmeanmat{\pt,\pt+\dpt}(\ls{\pt}-\lgoimean{\pt}) + \lgupdcov{\pt,\pt+\dpt}^{\half} \stdnorm{\Delta} \nonumber \\
+ \lgupdmeanmat{\pt,\pt+\dpt} & = & \exp\left\{-\half\lgexpsf\dpt\right\} \lgoicov{\pt+\dpt}^{\half}\lgoicov{\pt}^{-\half} \nonumber \\
+ \lgupdcov{\pt,\pt+\dpt} & = & \left[1-\exp\left\{-\lgexpsf\dpt\right\}\right]\lgoicov{\pt+\dpt} \nonumber         .
+\end{IEEEeqnarray}
+
+For small intervals,
 %
-%For clarity, write $\lgoimean{\pt}$ instead of $\lgoimeanapprox{\pt}{\ls{\pt_0}}$ and $\lgoicov{\pt}$ instead of $\lgoicovapprox{\pt}{\ls{\pt_0}}$ throughout this proof.
+\begin{IEEEeqnarray}{rCl}
+ \exp\left\{-\half\lgexpsf\dpt\right\} & = & 1 - \half\lgexpsf\dpt + \bigo{\dpt^2} \nonumber \\
+ \lgoimean{\pt+\dpt}                   & = & \lgoimean{\pt} + \dpt \frac{\partial \lgoimean{\pt}}{\partial \pt} + \bigo{\dpt^2} \nonumber \\
+ \lgoicov{\pt+\dpt}                    & = & \lgoicov{\pt}  + \dpt \frac{\partial \lgoicov{\pt} }{\partial \pt} + \bigo{\dpt^2} \nonumber \\
+                                       & = & \left[ I + \dpt \frac{\partial \lgoicov{\pt} }{\partial \pt} \lgoicov{\pt}^{-1} \right] \lgoicov{\pt} + \bigo{\dpt^2} \nonumber \\
+ \lgoicov{\pt+\dpt}^{\half}            & = & \left[ I + \half \dpt \frac{\partial \lgoicov{\pt} }{\partial \pt} \lgoicov{\pt}^{-1} \right] \lgoicov{\pt}^{\half} + \bigo{\dpt^2} \nonumber      .
+\end{IEEEeqnarray}
 %
-%From \eqref{eq:state_update}, the state update for a short interval of pseudo-time is,
-%%
-%\begin{IEEEeqnarray}{rCl}
-% \ls{\pt+\dpt} & = & \lgoimean{\pt+\dpt} + \lgupdmeanmat{\pt,\pt+\dpt}(\ls{\pt}-\lgoimean{\pt}) + \lgupdcov{\pt,\pt+\dpt}^{\half} \stdnorm{\Delta} \nonumber \\
-% \lgupdmeanmat{\pt,\pt+\dpt} & = & \exp\left\{-\half\lgexpsf\dpt\right\} \lgoicov{\pt+\dpt}^{\half}\lgoicov{\pt}^{-\half} \nonumber \\
-% \lgupdcov{\pt,\pt+\dpt} & = & \left[1-\exp\left\{-\lgexpsf\dpt\right\}\right]\lgoicov{\pt+\dpt} \nonumber         .
-%\end{IEEEeqnarray}
+Hence,
 %
-%For small intervals,
-%%
-%\begin{IEEEeqnarray}{rCl}
-% \exp\left\{-\half\lgexpsf\dpt\right\} & = & 1 - \half\lgexpsf\dpt + \bigo{\dpt^2} \nonumber \\
-% \lgoimean{\pt+\dpt}                   & = & \lgoimean{\pt} + \dpt \frac{\partial \lgoimean{\pt}}{\partial \pt} + \bigo{\dpt^2} \nonumber \\
-% \lgoicov{\pt+\dpt}                    & = & \lgoicov{\pt}  + \dpt \frac{\partial \lgoicov{\pt} }{\partial \pt} + \bigo{\dpt^2} \nonumber \\
-%                                       & = & \left[ I + \dpt \frac{\partial \lgoicov{\pt} }{\partial \pt} \lgoicov{\pt}^{-1} \right] \lgoicov{\pt} + \bigo{\dpt^2} \nonumber \\
-% \lgoicov{\pt+\dpt}^{\half}            & = & \left[ I + \half \dpt \frac{\partial \lgoicov{\pt} }{\partial \pt} \lgoicov{\pt}^{-1} \right] \lgoicov{\pt}^{\half} + \bigo{\dpt^2} \nonumber      .
-%\end{IEEEeqnarray}
-%%
-%Hence,
-%%
-%\begin{IEEEeqnarray}{rCl}
-% \ls{\pt+\dpt} - \ls{\pt} & = & \lgoimean{\pt} + \dpt \frac{\partial \lgoimean{\pt}}{\partial \pt} + \left(1 - \half\lgexpsf\dpt + \bigo{\dpt^2}\right) \left( I + \half \dpt \frac{\partial \lgoicov{\pt} }{\partial \pt} \lgoicov{\pt}^{-1} \right)(\ls{\pt}-\lgoimean{\pt}) \nonumber \\
-% &   & \qquad \qquad + \: \dpt^{\half} \lgexpsf^{\half} \left( I + \half \dpt \frac{\partial \lgoicov{\pt} }{\partial \pt} \lgoicov{\pt}^{-1} \right) \lgoicov{\pt}^{\half} \stdnorm{\Delta} + \bigo{\dpt^2} - \ls{\pt} \nonumber \\
-%  & = & \left[ \frac{\partial \lgoimean{\pt}}{\partial \pt} + \half \left( \frac{\partial \lgoicov{\pt} }{\partial \pt} \lgoicov{\pt}^{-1} - \lgexpsf I \right) (\ls{\pt}-\lgoimean{\pt}) \right] \dpt + \lgexpsf^{\half} \lgoicov{\pt}^{\half} \dpt^{\half} \stdnorm{\Delta} + \bigo{\dpt^2} \nonumber      .
-%\end{IEEEeqnarray}
-%%
-%In the limit $\dpt\rightarrow0$, this becomes a stochastic differential equation,
-%%
-%\begin{IEEEeqnarray}{rCl}
-% d\ls{\pt} & = & \left[ \frac{\partial \lgoimean{\pt}}{\partial \pt} + \half \left( \frac{\partial \lgoicov{\pt} }{\partial \pt} \lgoicov{\pt}^{-1} - \lgexpsf I \right) (\ls{\pt}-\lgoimean{\pt}) \right] d\pt + \lgexpsf^{\half} \lgoicov{\pt}^{\half} d\lginfbm{\pt}      ,
-%\end{IEEEeqnarray}
-%%
-%where $\lginfbm{\pt}$ is a standard Brownian motion process.
+\begin{IEEEeqnarray}{rCl}
+ \ls{\pt+\dpt} - \ls{\pt} & = & \lgoimean{\pt} + \dpt \frac{\partial \lgoimean{\pt}}{\partial \pt} + \left(1 - \half\lgexpsf\dpt + \bigo{\dpt^2}\right) \left( I + \half \dpt \frac{\partial \lgoicov{\pt} }{\partial \pt} \lgoicov{\pt}^{-1} \right)(\ls{\pt}-\lgoimean{\pt}) \nonumber \\
+ &   & \qquad \qquad + \: \dpt^{\half} \lgexpsf^{\half} \left( I + \half \dpt \frac{\partial \lgoicov{\pt} }{\partial \pt} \lgoicov{\pt}^{-1} \right) \lgoicov{\pt}^{\half} \stdnorm{\Delta} + \bigo{\dpt^2} - \ls{\pt} \nonumber \\
+  & = & \left[ \frac{\partial \lgoimean{\pt}}{\partial \pt} + \half \left( \frac{\partial \lgoicov{\pt} }{\partial \pt} \lgoicov{\pt}^{-1} - \lgexpsf I \right) (\ls{\pt}-\lgoimean{\pt}) \right] \dpt + \lgexpsf^{\half} \lgoicov{\pt}^{\half} \dpt^{\half} \stdnorm{\Delta} + \bigo{\dpt^2} \nonumber      .
+\end{IEEEeqnarray}
 %
-%When the OID is, or is approximated by, a Gaussian with moments,
-%%
-%\begin{IEEEeqnarray}{rCl}
-% \lgoicov{\pt} & = & \left[ \transcov^{-1} + \pt \obsmat^T \obscov^{-1} \obsmat \right]^{-1} \nonumber \\
-% \lgoimean{\pt}    & = & \lgoicov{\pt} \left[ \transcov^{-1} \transfun(\ls{\rt-1}) + \pt \obsmat^T \obscov^{-1} \ob{\rt} \right] \nonumber     .
-%\end{IEEEeqnarray}
-%%
-%then
-%%
-%\begin{IEEEeqnarray}{rCl}
-% \frac{\partial \lgoicov{\pt} }{\partial \pt} & = & -\lgoicov{\pt} \obsmat^T \obscov^{-1} \obsmat \lgoicov{\pt} \nonumber \\
-% \frac{\partial \lgoimean{\pt}}{\partial \pt} & = & \lgoicov{\pt} \obsmat^T \obscov^{-1}(\ob{\rt}-\obsmat\lgoimean{\pt}) \nonumber       ,
-%\end{IEEEeqnarray}
-%%
-%and the state evolution stochastic differential equation is,
-%%
-%\begin{IEEEeqnarray}{rCl}
-% d\ls{\pt} & = & \left[ \lgoicov{\pt} \obsmat^T \obscov^{-1} \left( (\ob{\rt}-\obsmat\lgoimean{\pt}) - \half \obsmat (\ls{\pt}-\lgoimean{\pt}) \right) - \half \lgexpsf (\ls{\pt}-\lgoimean{\pt}) \right] d\pt + \lgexpsf^{\half} \lgoicov{\pt}^{\half} d\lginfbm{\pt} \nonumber       .
-%\end{IEEEeqnarray}
+In the limit $\dpt\rightarrow0$, this becomes a stochastic differential equation,
+%
+\begin{IEEEeqnarray}{rCl}
+ d\ls{\pt} & = & \left[ \frac{\partial \lgoimean{\pt}}{\partial \pt} + \half \left( \frac{\partial \lgoicov{\pt} }{\partial \pt} \lgoicov{\pt}^{-1} - \lgexpsf I \right) (\ls{\pt}-\lgoimean{\pt}) \right] d\pt + \lgexpsf^{\half} \lgoicov{\pt}^{\half} d\lginfbm{\pt}      ,
+\end{IEEEeqnarray}
+%
+where $\lginfbm{\pt}$ is a standard Brownian motion process.
+
+When the OID is, or is approximated by, a Gaussian with moments,
+%
+\begin{IEEEeqnarray}{rCl}
+ \lgoicov{\pt} & = & \left[ \transcov^{-1} + \pt \obsmat^T \obscov^{-1} \obsmat \right]^{-1} \nonumber \\
+ \lgoimean{\pt}    & = & \lgoicov{\pt} \left[ \transcov^{-1} \transfun(\ls{\rt-1}) + \pt \obsmat^T \obscov^{-1} \ob{\rt} \right] \nonumber     .
+\end{IEEEeqnarray}
+%
+then
+%
+\begin{IEEEeqnarray}{rCl}
+ \frac{\partial \lgoicov{\pt} }{\partial \pt} & = & -\lgoicov{\pt} \obsmat^T \obscov^{-1} \obsmat \lgoicov{\pt} \nonumber \\
+ \frac{\partial \lgoimean{\pt}}{\partial \pt} & = & \lgoicov{\pt} \obsmat^T \obscov^{-1}(\ob{\rt}-\obsmat\lgoimean{\pt}) \nonumber       ,
+\end{IEEEeqnarray}
+%
+and the state evolution stochastic differential equation is,
+%
+\begin{IEEEeqnarray}{rCl}
+ d\ls{\pt} & = & \left[ \lgoicov{\pt} \obsmat^T \obscov^{-1} \left( (\ob{\rt}-\obsmat\lgoimean{\pt}) - \half \obsmat (\ls{\pt}-\lgoimean{\pt}) \right) - \half \lgexpsf (\ls{\pt}-\lgoimean{\pt}) \right] d\pt + \lgexpsf^{\half} \lgoicov{\pt}^{\half} d\lginfbm{\pt} \nonumber       .
+\end{IEEEeqnarray}
 
 
 
