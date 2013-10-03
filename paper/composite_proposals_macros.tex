@@ -83,8 +83,18 @@
 \newcommand{\logobs}{M}                                 % Log of the observation density
 
 % State evolution SDE
+\newcommand{\oudrift}[1]{A_{#1}}                % General O-U process drift term
+\newcommand{\oudiffuse}[1]{B_{#1}}              % General O-U process diffusion term
 \newcommand{\sdedrift}[1]{\zeta_{#1}}           % Drift
 \newcommand{\lserror}[2]{e_{#1|#2}}             % State error due to finite sampling
+
+% Particle flow
+\newcommand{\flowbm}[1]{\epsilon_{#1}}          % Particle flow Brownian motion
+\newcommand{\flowdrift}[1]{\zeta_{#1}}          % Particle flow drift
+\newcommand{\flowdiffuse}[1]{\eta_{#1}}         % Particle flow diffusion
+\newcommand{\flowcov}[1]{D_{#1}}                % Particle flow "Covariance" matrix
+\newcommand{\flowtd}{\alpha}                    % Flow dervation transition density
+\newcommand{\flowod}{\beta}                     % Flow derivation observation density
 
 % Simulation models - tracking
 \newcommand{\pos}[1]{p_{#1}}           % Position
