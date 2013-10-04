@@ -214,7 +214,7 @@ State updates are derived by considering a related sequence of optimal importanc
  \oinorm{\pt}(\ls{\rt-1}\pss{\anc{j}}) & = & \int \obsden(\ob{\rt} | \ls{\rt,\pt})^{\pt} \transden(\ls{\rt,\pt} | \ls{\rt-1}\pss{\anc{j}}) d\ls{\rt,\pt}      .
 \end{IEEEeqnarray}
 %
-This sequence begins with the transition density at $\pt=0$ and finishes with the OID at $\pt=1$. By considering the evolution of this optimal density sequence and making local approximations, particle updates may be chosen which advance the state in an approximately optimal fashion. The process may be initialised by sampling from the transition density and weighting appropriately, in exactly the same manner as the prediction step of a bootstrap filter. (See section~\ref{sec:pf}.)
+This sequence begins with the transition density at $\pt=0$ and finishes with the OID at $\pt=1$. By considering the evolution of this optimal density sequence and making local approximations, particle updates may be chosen which advance the state in an approximately optimal fashion. The process is initialised by sampling from the transition density and weighting appropriately, in exactly the same manner as the prediction step of a bootstrap filter. (See section~\ref{sec:pf}.)
 
 Henceforth, subscript $\rt$ is omitted for clarity on variables which vary with $\pt$. Particle superscripts are also omitted where unambiguous.
 
@@ -292,7 +292,7 @@ where $\lgexpsf$ is a non-negative scale factor which determines the rate at whi
 To update the state from $\pt_0$ to a later pseudo-time $\pt_1$, integrate \eqref{eq:standard_normal_SDE} using standard variation of parameters (see appendix~\ref{app:stationary_ou_process}),
 %
 \begin{IEEEeqnarray}{rCl}
- \stdnorm{\pt_1} & = & \stdnorm{\pt_0} \exp\left\{ -\half \lgexpsf (\pt_1-\pt_0) \right\} + \left[ 1 - \exp\left\{ - \lgexpsf (\pt_1-\pt_0) \right\} \right]^{\half} \stdnorm{\Delta} \label{eq:standard_normal_update}      ,
+ \stdnorm{\pt_1} & = & \exp\left\{ -\half \lgexpsf (\pt_1-\pt_0) \right\} \stdnorm{\pt_0} + \left[ 1 - \exp\left\{ - \lgexpsf (\pt_1-\pt_0) \right\} \right]^{\half} \stdnorm{\Delta} \label{eq:standard_normal_update}      ,
 \end{IEEEeqnarray}
 %
 where $\stdnorm{\Delta}$ is a new, standard Gaussian random variable, independent of $\stdnorm{\pt_0}$.
@@ -307,6 +307,8 @@ Plugging \eqref{eq:standard_normal_update} into \eqref{eq:gaussian_decomposition
 
 When $\lgexpsf=0$, the state evolution is entirely deterministic.
 
+Henceforth, we assume that the approximation for the next update is conducted at the current state, $\lsfixed=\ls{\pt_0}$.
+
 State updates made in this manner are only ``approximate'' in the sense that the particles are not distributed exactly according to the OID. This discrepancy is compensated for in the weight calculation, meaning the particle filter retains its asymptotic properties.
 
 
@@ -316,38 +318,27 @@ State updates made in this manner are only ``approximate'' in the sense that the
 Differentiating \eqref{eq:gaussian_decomposition} and combining with \eqref{eq:standard_normal_SDE}, we also obtain the following SDE for the state evolution, which will prove useful later when considering step-size control and optimality,
 %
 \begin{IEEEeqnarray}{rCl}
- d\ls{\pt} & = & \left[ \frac{\partial \lgoimeanapprox{\pt}{\lsfixed}}{\partial \pt} + \half \left( \frac{\partial \lgoicovapprox{\pt}{\lsfixed} }{\partial \pt} \lgoicovapprox{\pt}{\lsfixed}^{-1} - \lgexpsf I \right) (\ls{\pt}-\lgoimeanapprox{\pt}{\lsfixed}) \right] d\pt + \lgexpsf^{\half} \lgoicovapprox{\pt}{\lsfixed}^{\half} d\lginfbm{\pt}      .
+ d\ls{\pt} & = & \left[ \frac{\partial \lgoimeanapprox{\pt}{\lsfixed}}{\partial \pt} + \half \left( \frac{\partial \lgoicovapprox{\pt}{\lsfixed} }{\partial \pt} \lgoicovapprox{\pt}{\lsfixed}^{-1} - \lgexpsf I \right) (\ls{\pt}-\lgoimeanapprox{\pt}{\lsfixed}) \right] d\pt + \lgexpsf^{\half} \lgoicovapprox{\pt}{\lsfixed}^{\half} d\lginfbm{\pt} \label{eq:state_SDE}      .
 \end{IEEEeqnarray}
 %
 A derivation is included in appendix~\ref{app:state_SDE}.
 
 
 
-{\meta ---------------------------------------------\\}
-
-
-Later, we consider efficient ways to add resample-move steps to the CPPF. For this purpose, it will be beneficial to have $\stdnorm{\pt}$ evolving stochastically, so that multiple particles with the same original state are able to ``de-correlate'' and explore the state space.
-
-
-
-Note that if an alternative factorisation of $\lgoicov{\pt}$ were used in \eqref{eq:gaussian_decomposition} (for example, a Cholesky decomposition), this would be equivalent to introducing an arbitrary rotation into the state update. Since this will increase the expected distance the state travels away from the approximation point, it is undesirable. {\meta Change this, move it or reference optimality section, or something.}
-
-
-\subsection{Optimality and Performance Considerations}
-
-The performance of the CPPF is highly dependent on the size of the pseudo-time steps taken. As step sizes decrease, performance improves. However, even in the limiting case as the step sizes tend to $0$, the algorithm will not generate particles exactly from the OID.
+\subsection{Optimality Considerations}
 
 The Fokker-Planck equation relates the motion of a particle with the evolution of its state distribution. For a particle to be distributed according to $\oiden{\pt}$ for all $\pt$, it must evolve according to the following SDE,
 %
 \begin{IEEEeqnarray}{rCl}
- d\ls{\pt} & = & \flowdrift{\pt}(\ls{\pt}) d\pt + \flowdiffuse{\pt} d\flowbm{\pt}     ,
+ d\ls{\pt} & = & \flowdrift{\pt}(\ls{\pt}) d\pt + \flowdiffuse{\pt} d\flowbm{\pt} \label{eq:generic_state_SDE}     ,
 \end{IEEEeqnarray}
 %
-with
+subject to the constraint,
 %
 \begin{IEEEeqnarray}{rCl}
- \log\left(\flowod(\ls{\pt})\right) - \expect{\oiden{\pt}}\left[ \log\left(\flowod(\ls{\pt})\right) \right] & = & -\nabla\cdot \flowdrift{\pt}(\ls{\pt}) - \flowdrift{\pt}(\ls{\pt}) \cdot \nabla \log\left( \oiden{\pt}(\ls{\pt}) \right) + \frac{ 1 }{ \oiden{\pt}(\ls{\pt}) } \nabla \cdot \left[ \flowcov{\pt} \nabla \oiden{\pt}(\ls{\pt}) \right] \label{app-eq:optimal_flow_PDE}      ,
+ \log\left(\flowod(\ls{\pt})\right) - \expect{\oiden{\pt}}\left[ \log\left(\flowod(\ls{\pt})\right) \right] & = & -\nabla\cdot \flowdrift{\pt}(\ls{\pt}) - \flowdrift{\pt}(\ls{\pt}) \cdot \nabla \log\left( \oiden{\pt}(\ls{\pt}) \right) + \frac{ 1 }{ \oiden{\pt}(\ls{\pt}) } \nabla \cdot \left[ \flowcov{\pt} \nabla \oiden{\pt}(\ls{\pt}) \right] \label{eq:optimal_flow_PDE}      ,
 \end{IEEEeqnarray}
+{\meta Change this to be completely in terms of log-density.}
 %
 where
 %
@@ -358,9 +349,15 @@ where
 %
 See appendix~\ref{app:optimal_flow_governing_eq} for proof.
 
-{\meta Explain how as the step sizes go to $0$ and provided we are using a sensible approximation, all the terms become exact apart from the expectation, which is always approximated. Perhaps move this section before the section about approximations.}
+This condition for the optimal state evolution in differential form sheds some light on the effect of step sizes and the Gaussian approximation used. In order to have the state evolve exactly according to the OID sequence, three quantities are needed, the gradient and Hessian of $\log\left(\oiden{\pt}(\ls{\pt})\right)$ at $\lsfixed$, and the expectation $\expect{\oiden{\pt}}\left[ \log\left(\flowod(\ls{\pt})\right) \right]$. The first two may be calculated analytically (provided both the transition and observation density are twice differentiable), while the latter is generally intractable.
 
+Suppose that a Gaussian approximation could be made which exactly matched the gradient and Hessian of the log-density at a single point. If this single point were the current state, then as the update step size becomes small, the errors arising from these these terms will tend to zero. However, whatever the choice of approximation the error arising from the expectation term will remain, meaning that not even in the infinitesimal limit of the step sizes will a sample exactly from the OID be produced. 
 
+In the case where $\lgexpsf=0$, in which the state evolution becomes deterministic, we of course have $\flowcov{\pt}=0$, and so it is only necessary for the approximation to match the gradient of the log-density and not the Hessian. This is often achievable. Because the covariance of a Gaussian must always be positive definite, matching both the gradient and Hessian can rarely be accomplished (and even when it can, it will sometimes lead to very poor approximations of the expectation term), so in general when $\lgexpsf>0$ the algorithm is unlikely to work as well, even with infinitesimal step sizes. Balanced against this, using a larger value of $\lgexpsf$ allows multiple copies the same particle to better explore the state space, reducing inter-particle dependence. This is a useful property when introducing resample-move schemes, as discussed in section~\ref{}({\meta Add ref}).
+
+If an approximation is used which does match the gradient and Hessian at the current state, or at least is closest at this point, then the choice of dynamics should aim to minimise the distance which the particle travels away from this point during the succeeding update. This justifies our decision to require $\stdnorm{\pt}$ to evolve smoothly without jumps. Furthermore, it also suggests that small values of $\lgexpsf$ are preferable, since the stochastic component of the state update will dominate the particle motion for small steps sizes.
+
+At this point we also remark on another algorithmic choice, the use of the principal matrix square root in \eqref{eq:gaussian_decomposition} rather than a Cholesky decomposition or any other appropriate factorisation. By considering the polar decomposition of such a matrix, it is clear that any choice other than the principal square root would be equivalent to introducing an arbitrary rotation into the state update \eqref{eq:state_update}, and, upon differentiating, an extra term in the state SDE \eqref{eq:state_SDE}. Since this would (on average) increase the distance travelled in a given step, it is undesirable.
 
 
 
@@ -459,7 +456,9 @@ It may easily be shown that as $\lgexpsf\rightarrow0$, \eqref{eq:CPPF_stochastic
 
 \subsection{Gaussian Approximations}\label{sec:gaussian_approximations}
 
-The CPPF relies on making a Gaussian approximations of the OID sequence at each point in pseudo-time by selecting $\lgoicovapprox{\pt}{\lsfixed}$ and $\lgoimeanapprox{\pt}{\lsfixed}$. This may be achieved using standard linearisation methods. The quality of the approximation does not affect the validity of the algorithm, since it will be corrected for in the assignment of a particle weight. However, better approximations will lead to higher effective sample sizes and higher quality estimates.
+The CPPF relies on making a Gaussian approximations of the OID sequence at each point in pseudo-time by selecting $\lgoicovapprox{\pt}{\lsfixed}$ and $\lgoimeanapprox{\pt}{\lsfixed}$. This may be achieved using standard linearisation methods. The quality of the approximation does not affect the validity of the algorithm, since it will be corrected for in the assignment of a particle weight. However, some approximations will lead to higher effective sample sizes and higher quality estimates.
+
+
 
 \subsubsection{Nonlinear Gaussian Models}
 
@@ -486,11 +485,13 @@ where $\lsfixed$ is the point around which the function is linearised (which, fo
  \lgoimeanapprox{\pt}{\lsfixed} & = & \lsfixed + \lgoicovapprox{\pt}{\lsfixed} \left[ \transcov^{-1} (\transfun(\ls{\rt-1})-\lsfixed) + \pt \obsmatapprox{\lsfixed}^T \obscov^{-1} (\ob{\rt}-\obsfun(\lsfixed)) \right] \label{eg:linearised_Gaussian_approx}     .
 \end{IEEEeqnarray}
 
+It is straightforward to see that the gradient of the log-density of the approximation is exactly equal to that of the OID at the point $\lsfixed$. The Hessian is not matched exactly, since a term containing the second derivative of $\obsfun$ is omitted.
+
+
+
 \subsubsection{Non-Gaussian Models}
 
-{\meta Reconsider, and perhaps rewrite this.}
-
-If either model density is not Gaussian, a more generic approximation may be used. The Taylor series of the log-density of a Gaussian distribution is a quadratic function, so an arbitrary density may be approximated with a Gaussian by truncating to the first two terms. Applying this to both transition and observation densities we obtain,
+A Gaussian approximation may be formed by attempting to match the gradient and Hessian of the log-density to those of the true distribution. Applying this to both transition and observation densities we obtain,
 %
 \begin{IEEEeqnarray}{rCl}
  \transden(\ls{\rt} | \ls{\rt-1}) & \approx & \normal{\ls{\rt}}{ \transmeanapprox{\lsfixed} }{ \transcovapprox{\lsfixed} } \nonumber \\
@@ -500,6 +501,7 @@ If either model density is not Gaussian, a more generic approximation may be use
  \obscovapprox{\lsfixed} & = & \left[\left.\frac{\partial^2 \logobs}{\partial \ls{}^2}\right|_{\lsfixed}\right]^{-1} \nonumber \\
  \obapprox{\lsfixed} & = & \lsfixed + \obscovapprox{\lsfixed} \left.\frac{\partial \logobs}{\partial \ls{}}\right|_{\lsfixed} \nonumber       ,
 \end{IEEEeqnarray}
+{\meta Missing negative signs - check!}
 %
 where
 %
@@ -517,7 +519,7 @@ The resulting approximation of the OID sequence is,
 
 Similar approximations have been used in, for example, \citep{Doucet2000a,Pitt1999} for selecting a single Gaussian importance density.
 
-This generic approximation will not work if the log-densities do not have a negative curvature (i.e. a negative-definite Hessian) at $\lsfixed$. Furthermore, if the curvature in any direction is close to zero then the approximation can be very poor. If such a failure occurs then various heuristics may be used to enforce the correct curvature. For example, one option is to perform an eigen-decomposition of the Hessian matrixes and replace any positive (or small negative) eigenvalues with a negative constant (e.g. the prior variance in that direction).
+This basic procedure will not work if the log-densities do not have a negative curvature (i.e. a negative-definite Hessian) at $\lsfixed$, since the resulting covariance matrix of the Gaussian approximation is not positive definite. Furthermore, if the curvature in any direction is close to zero then the approximation can be very poor. If such a failure occurs then various heuristics may be used to enforce the correct curvature. For example, one option is to perform an eigen-decomposition of the Hessian matrixes and replace any positive (or small negative) eigenvalues with a negative constant (e.g. the prior variance in that direction).
 %
 %\begin{figure}
 %\centering
@@ -534,36 +536,24 @@ This generic approximation will not work if the log-densities do not have a nega
 
 \subsection{Adaptive Step Sizes}
 
-An important consideration for the CPPF is how the sizes of the pseudo-time steps are chosen. State updates are calculated using local Gaussian approximations of the OID, so the best-case algorithm would take infinitesimal steps and use the appropriate approximation at each point on a continuous trajectory. (Note that such an algorithm still would not lead to proposals exactly from the OID, because it is still locally approximated.) In practice, the number of steps needs to be kept low, to minimise the computational burden. In some instances, it may be sufficient to use a fixed step size, or a predetermined time grid. However, an adaptive scheme is preferable for greatest efficiency.
+An important consideration for the CPPF is how the sizes of the pseudo-time steps are chosen. State updates are calculated using local Gaussian approximations of the OID, with a best-case generally achieved with infinitesimally small steps between these approximations. In practice, the number of steps needs to be kept low, to minimise the computational burden. In some instances, it may be sufficient to use a fixed step size, or a predetermined time grid. However, an adaptive scheme is preferable for greatest efficiency.
 
 \subsubsection{Local Error Estimates}
 
-A measure is required which estimates the local ``error'' introduced by using finite rather than infinitesimal step sizes. Consider the state update for the interval $[\pt_0,\pt_1]$, associated with which there is an incremental standard Gaussian random variable $\stdnorm{\Delta}$. Conditional on the sampled value of this increment, such an estimate can be made using the following steps. First we make the crude approximation that $\stdnorm{\Delta}$ accumulates steadily over the interval, and that the interval is short. Thus, from \eqref{eq:standard_normal_update},
+A measure is required which estimates the local ``error'' introduced by using finite rather than infinitesimal step sizes. Consider the state update for the interval $[\pt_0,\pt_1]$. An ``ideal'' particle moves according to \eqref{eq:state_SDE} with the approximation refreshed at every continuous point in pseudo-time, while the actual particle uses an approximation from $\ls{\pt_0}$. Integrating the difference between the two SDEs over the pseudo-time interval, the error introduced is,
 %
 \begin{IEEEeqnarray}{rCl}
- \frac{ d\stdnorm{\pt} }{ d\pt } & \approx & \left[ 1 - \exp\left\{ - \lgexpsf (\pt_1-\pt_0) \right\} \right]^{\half} \frac{ \stdnorm{\Delta} }{ (\pt_1-\pt_0) } \nonumber \\
- & \approx & \lgexpsf^{\half} (\pt_1-\pt_0)^{-\half} \stdnorm{\Delta} \nonumber      .
+ \lserror{\pt_1}{\pt_0} & = & \int_{\pt_0}^{\pt_1} \left[ \flowdriftapprox{l}{\pt_0}(\ls{l}) - \flowdriftapprox{l}{l}(\ls{l}) \right] dl + \int_{\pt_0}^{\pt_1} \left[ \flowdiffuseapprox{l}{\pt_0} - \flowdiffuseapprox{l}{l} \right] d\flowbm{l} \nonumber      .
 \end{IEEEeqnarray}
 %
-Next, differentiating \eqref{eq:gaussian_decomposition},
+The integrands are both equal to $0$ at $\pt_0$. Hence, approximating each over the interval by half its final value, we arrive at the following approximation for the state error introduced by the preceding step,
 %
 \begin{IEEEeqnarray}{rCl}
- \frac{d\ls{\pt}}{d\pt} & \approx & \sdedrift{\pt|\lsfixed}(\ls{\pt}) \nonumber \\
- & = & \frac{\partial \lgoimeanapprox{\pt}{\lsfixed}}{\partial \pt} + \half \left( \frac{\partial \lgoicovapprox{\pt}{\lsfixed} }{\partial \pt} \lgoicovapprox{\pt}{\lsfixed}^{-1} \right) (\ls{\pt}-\lgoimeanapprox{\pt}{\lsfixed}) \nonumber \\
- &   & \qquad + \: \lgexpsf^{\half} (\pt_1-\pt_0)^{-\half} \lgoicovapprox{\pt}{\lsfixed}^{\half} \stdnorm{\Delta} \nonumber      .
+ \widehat{\lserror{\pt_1}{\pt_0}} & = & \half \left( \flowdriftapprox{\pt_1}{\pt_0}(\ls{\pt_1}) - \flowdriftapprox{\pt_1}{\pt_1}(\ls{\pt_1}) \right) (\pt_1-\pt_0) + \half \left( \flowdiffuseapprox{\pt_1}{\pt_0} - \flowdiffuseapprox{\pt_1}{\pt_1} \right) \int_{\pt_0}^{\pt_1} d\flowbm{l} \nonumber \\
+ & = & \half (\pt_1-\pt_0) \left[ \left( \flowdriftapprox{\pt_1}{\pt_0}(\ls{\pt_1}) - \flowdriftapprox{\pt_1}{\pt_1}(\ls{\pt_1}) \right) + \left( \flowdiffuseapprox{\pt_1}{\pt_0} - \flowdiffuseapprox{\pt_1}{\pt_1} \right) \stdnorm{\Delta} \right] \nonumber      .
 \end{IEEEeqnarray}
 
-With this approximation, the state error due to finite step sizes may now be written as,
-%
-\begin{IEEEeqnarray}{rCl}
- \lserror{\pt_1}{\pt_0} & = & \int_{\pt_0}^{\pt_1} \left[\sdedrift{l|\ls{\pt_0}}(\ls{l}) - \sdedrift{l|\ls{l}}(\ls{l})\right] dl \nonumber      .
-\end{IEEEeqnarray}
-%
-The integrand begins at $0$ for $\pt_0$, and is likely to increase as the state moves further away from the approximation point. Thus, for a crude approximation of this error, replace the integrand with half its final value. The resulting rough but easily calculated estimate of the local error associated with this finite step is,
-%
-\begin{IEEEeqnarray}{rCl}
- \widehat{\lserror{\pt_1}{\pt_0}} & = & \half \left[\sdedrift{\pt_1|\ls{\pt_0}}(\ls{\pt_1}) - \sdedrift{\pt_1|\ls{\pt_1}}(\ls{\pt_1})\right] (\pt_1-\pt_0) \nonumber      .
-\end{IEEEeqnarray}
+
 
 \subsubsection{Step Size Control}
 
@@ -616,6 +606,17 @@ The distinguishing novel components of the CPPF are the incremental state and we
 \end{algorithm}
 
 %The CPPF bears a resemblance to annealed particle filter algorithms \citep{Godsill2001b,Deutscher2000,Gall2007}, in its use of a stretch of pseudo-time between the predictive and filtering densities, yet it is quite distinct. The CPPF allows each particle to be handled independently, using different pseudo-time step sizes for each, and allows potentially deterministic state trajectories. In contrast, an annealed particle filter moves all the particles simultaneously through pseudo-time via a consistent set of bridging densities, interspersed with resampling and MCMC steps.
+
+
+
+\section{Comparisons with Related Work}
+
+{\meta
+\begin{itemize}
+  \item Annealing algorithms, bridging distributions and progressive corrections - always stochastic, don't preserve particle independence, generally blind.
+  \item Particle flow algorithms - these don't preserve asymptotic particle filter properties.
+\end{itemize}
+}
 
 
 
@@ -940,6 +941,7 @@ Deterministic Composite Proposal         &   800 & 72.8 &  1.4 \\
 \end{figure}
 
 
+
 \section{Conclusions}
 
 We have detailed a new mechanism for conducting the update state in a particle filter, the composite proposal method. This works by introducing the effect of the observation progressively and adjusting the particle state incrementally so as to achieve a better distribution.
@@ -949,6 +951,8 @@ The simulations presented in the previous section demonstrate that the composite
 The models for which the composite proposal particle filter appears most effective are those with Gaussian transition and observation densities but highly nonlinear transition and observation functions. For this class, the performance improvement relative to the simpler algorithms with an equal processing time is very great. Moreover, the requisite Gaussian approximation is ``obvious'', simply a linearisation of the observation function, meaning that the algorithm requires almost no tuning (the tolerance for the adaptive step-size selection process is the only critical parameter).
 
 With non-Gaussian model densities, the performance gains from the composite proposal particle filter are more modest, both when using the scale mixture of normals method and Gaussian approximations formed by linearisation of the log of the optimal importance density. In addition, when more drastic approximations are required, a greater degree of algorithm tuning is required, such as limiting the variance of the approximation to prevent instability.
+
+In general, there is no guarantee that the CPPF will outperform any other particle filter, not even a bootstrap filter. Indeed pathological examples may be constructed on which it will be inferior to the competition. However, the same may be said of all existing particle filters. The choice of the right algorithm will often require a comparison on the particular application being studied.
 
 
 
