@@ -263,7 +263,7 @@ We write the Gaussian approximation as,
  \approxoiden{\pt}{\lsfixed}(\ls{\pt} | \ls{\rt-1}) & = & \normal{\ls{\pt}}{\lgoimeanapprox{\pt}{\lsfixed}}{\lgoicovapprox{\pt}{\lsfixed}} \label{eq:gaussian_oid_approximation}      ,
 \end{IEEEeqnarray}
 %
-where $\lgoimeanapprox{\pt}{\lsfixed}$ and $\lgoicovapprox{\pt}{\lsfixed}$ are the mean and covariance formed at the point $\lsfixed$, which are themselves functions of $\pt$. Methods for making such an approximation are discussed in section~\ref{}.
+where $\lgoimeanapprox{\pt}{\lsfixed}$ and $\lgoicovapprox{\pt}{\lsfixed}$ are the mean and covariance formed at the point $\lsfixed$, which are themselves functions of $\pt$. Methods for making such an approximation are discussed in section~\ref{}, and employ linearisation or matching techniques at the specified point.
 
 
 
@@ -271,7 +271,9 @@ where $\lgoimeanapprox{\pt}{\lsfixed}$ and $\lgoicovapprox{\pt}{\lsfixed}$ are t
 
 With a partially linear-Gaussian model, the choice of dynamics for $\stdnorm{\pt}$ is immaterial --- the final state will always be exactly distributed according to the OID. For other models, based on Gaussian approximations of the OID sequence, the choice will have a significant effect, since the transformation from $\stdnorm{\pt}$ to $\ls{\pt}$ uses an approximation formed at a particular point.
 
-We first require $\stdnorm{\pt}$ to be continuous. This seems a sensible precaution since jumps in $\stdnorm{\pt}$ will cause jumps in $\ls{\pt}$ away from the approximation point. Then in order to maintain the correct marginal distribution, $\stdnorm{\pt}$ must evolve according to a stationary Ornstein-Uhlenbeck process governed by,
+{\meta Devolve all the discussion to the appendix, just leaving the final choice. Find that differential equation paper to see if there are any other options. I think there will be, but they will have $\eta$ depending on $x$ and will thus not be integrable.}
+
+We first require $\stdnorm{\pt}$ to be continuous, a sensible precaution since jumps in $\stdnorm{\pt}$ will cause jumps in $\ls{\pt}$ away from the approximation point. Then in order to maintain the correct marginal distribution, $\stdnorm{\pt}$ must evolve according to a stationary Ornstein-Uhlenbeck process governed by,
 %
 \begin{IEEEeqnarray}{rCl}
  d\stdnorm{\pt} & = & \oudrift{\pt} \stdnorm{\pt} d\pt + \oudiffuse{\pt} d\lginfbm{\pt} \nonumber      ,
@@ -297,19 +299,18 @@ To update the state from $\pt_0$ to a later pseudo-time $\pt_1$, integrate \eqre
 %
 where $\stdnorm{\Delta}$ is a new, standard Gaussian random variable, independent of $\stdnorm{\pt_0}$.
 
-Plugging \eqref{eq:standard_normal_update} into \eqref{eq:gaussian_decomposition} and using a Gaussian approximation for the OID sequence, the update formula for $\ls{\pt}$ resulting from the evolution of $\stdnorm{\pt}$ is,
+Hence, the state may be updated from $\pt_0$ to $\pt_1$ using \eqref{eq:gaussian_decomposition} along with a Gaussian approximation of the OID sequence formed at $\ls{\pt_0}$,
 %
 \begin{IEEEeqnarray}{rCl}
  \ls{\pt_1} & = & \lgoimeanapprox{\pt_1}{\lsfixed} + \lgupdmeanmat{\pt_0,\pt_1}(\ls{\pt_0}-\lgoimeanapprox{\pt_0}{\lsfixed}) + \lgupdcov{\pt_0,\pt_1}^{\half} \stdnorm{\Delta} \nonumber \\
  \lgupdmeanmat{\pt_0,\pt_1} & = & \exp\left\{-\half\lgexpsf(\pt_1-\pt_0)\right\} \lgoicovapprox{\pt_1}{\lsfixed}^{\half}\lgoicovapprox{\pt_0}{\lsfixed}^{-\half} \nonumber \\
  \lgupdcov{\pt_0,\pt_1} & = & \left[1-\exp\left\{-\lgexpsf(\pt_1-\pt_0)\right\}\right]\lgoicovapprox{\pt_1}{\lsfixed} \label{eq:state_update}      .
 \end{IEEEeqnarray}
+{\meta Change the $\lsfixed$s.}
 
-When $\lgexpsf=0$, the state evolution is entirely deterministic.
+This update formula allows us to advance the state incrementally through pseudo-time, with each update corresponding approximately to the evolution of the OID sequence. Note that state updates made in this manner are only ``approximate'' in the sense that the particles are not distributed exactly according to the OID. This discrepancy is compensated for in the weight calculation, meaning the particle filter retains its asymptotic properties.
 
-Henceforth, we assume that the approximation for the next update is conducted at the current state, $\lsfixed=\ls{\pt_0}$.
-
-State updates made in this manner are only ``approximate'' in the sense that the particles are not distributed exactly according to the OID. This discrepancy is compensated for in the weight calculation, meaning the particle filter retains its asymptotic properties.
+In general, particles progress stochastically over pseudo-time. However, when $\lgexpsf=0$, the state evolution is entirely deterministic. {\meta Discuss this choice.}
 
 
 
@@ -1079,8 +1080,8 @@ The result is a partial differential equation (PDE), for which any solution, $\f
 
 
 
-\bibliographystyle{chicago}
-\bibliography{D:/pb404/Dropbox/PhD/OTbib}
-%\bibliography{/home/pete/Dropbox/PhD/OTbib}
+\bibliographystyle{plain}
+%\bibliography{D:/pb404/Dropbox/PhD/OTbib}
+\bibliography{/home/pete/Dropbox/PhD/OTbib}
 
 \end{document} 
