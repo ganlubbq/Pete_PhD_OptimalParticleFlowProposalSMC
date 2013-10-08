@@ -588,9 +588,15 @@ When using a CPPF with $\lgexpsf>0$, proposals for MH steps may be conducted by 
 %
 To reach this tractable formula, the distribution targeted by the MH kernel is actually that over all the intermediate states visited during the composite update, as well as the final state. The posterior is extended using the same artificial conditional densities introduced for the weight calculations.
 
-The advantage of conducting MH moves in this way is that they automatically adapt to the local shape of the posterior distribution. The only algorithm parameter which needs to be set is $\lgexpsf$. Larger values of $\lgexpsf$ lead to larger moves in the state, which will have lower acceptance rates but lead to less particle inter-dependence.
-
-{\meta Add an example of this working.}
+The advantage of conducting MH moves in this way is that they automatically adapt to the local shape of the posterior distribution. The only algorithm parameter which needs to be set is $\lgexpsf$. Larger values of $\lgexpsf$ lead to larger moves in the state, which will have lower acceptance rates but lead to less particle inter-dependence. An example is shown in figure~\ref{}.
+%
+\begin{figure}
+\centering
+\subfloat[]{\includegraphics[width=0.45\columnwidth]{drone_example_rm.pdf}}
+\subfloat[]{\includegraphics[width=0.45\columnwidth]{drone_example_rm_zoom.pdf}}
+\caption{Four particle trajectories simulated from the same starting point using $\lgexpsf=0.3$, as used in the resample-move proposal stage. The second panel shows a close-up of the final states. This example uses the terrain tracking model from section~\ref{sec:numsim:tracking}, showing one horizontal and the vertical state component. Prior states are shown with circles and posterior states with crosses.}
+\label{fig:drone_example_frame_deterministic}
+\end{figure}
 
 
 
@@ -688,13 +694,26 @@ The effect of sampling the mixing variable $\mix{\pt}$ is that for each step thr
 
 \section{Numerical Simulations}
 
-Numerical simulations have been conducted to demonstrate the efficacy of the CPPF. The purpose of the composite proposal method is to provide a more efficient particle filter for challenging nonlinear models. Simple Gaussian approximations work poorly, because the posterior filtering distributions of such models can assume complex and irregular shapes. Unfortunately, this makes the assessment of particle filter performance a serious challenge. Statistics such as root-mean-square error (RMSE) and normalised estimation error squared (NEES), based on only the first two moments of the distribution, may be misleading. {\meta Diagram.}
+Numerical simulations using simulated data are presented to demonstrate the efficacy of the CPPF. The purpose of the composite proposal method is to provide a more efficient particle filter for challenging nonlinear models. In such cases, simple Gaussian approximations often work poorly, because the posterior filtering distributions of such models can assume complex and irregular shapes. Unfortunately, this effect also makes the assessment of particle filter performance a serious challenge. Statistics such as root-mean-square error (RMSE) and normalised estimation error squared (NEES), based on only the first two moments of the distribution, may be misleading. See figure~\ref{fig:rmse_fail}.
+%
+\begin{figure}
+\centering
+\includegraphics[width=0.7\columnwidth]{rmse_fail.pdf}
+\caption{An illustration of how RMSE can be a misleading performance measure. A large number of samples (crosses) are drawn from the same distribution as the true value (square). The resulting sample mean (circle) is a very poor estimate of the true value, and the RMSE is large.}
+\label{fig:rmse_fail}
+\end{figure}
 
-Our primary indicator of performance will be the average effective sample size. RMSE values are also included, primarily to identify cases when algorithms ``lose track'' entirely. They should be treated with caution.
+Our primary indicator of performance will be the average effective sample size. RMSE values are also included, but as noted, they should be treated with caution.
 
-Effective sample sizes are measured before resampling, and may only be compared fairly between algorithms which propose particle states independently. In other words, it would not be appropriate to compare the CPPF to an annealed particle filter. The main competition for the CPPF will be a particle filter using the importance density suggested by \citet{Doucet2000a}, a Gaussian formed by truncating the Taylor series of the log-density of the OID around a local maximum. We refer to this algorithm as the optimal Gaussian importance particle filter (OGIPF). Kalman-type importance distributions using linearisation or the unscented transform are also included for comparison where practical.
+The main competition for the CPPF will be a particle filter using the importance density suggested by \citet{Doucet2000a}, a Gaussian formed by truncating the Taylor series of the log-density of the OID around a local maximum. We refer to this algorithm as the optimal Gaussian importance particle filter (OGIPF). Kalman-type importance distributions using linearisation or the unscented transform are also included for comparison where practical. The maximisation step required in the OGIPF is conducted using gradient methods.
+
+All comparisons are conducted by adjusting the number of filter particles such that the running times for the various algorithms are roughly equal.
+
+Effective sample sizes are measured before resampling, and may only be compared fairly between algorithms which propose particle states independently. In other words, it would not be appropriate to compare the CPPF to an annealed particle filter.
 
 \subsection{A Illustrative Problem}
+
+\subsubsection{The Model}
 
 The CPPF was tested on a modified form of the model used by \citet{Mihaylova2011}, which is a multivariate extension of the nonlinear benchmark model \citep{}. {\meta Cite something.} The model densities are Gaussian with transition and observation functions,
 %
@@ -707,14 +726,16 @@ where $\ls{\rt,d}$ and $\obsfun(\ls{\rt})_d$ are the $d$th components of the sta
 
 This model is particularly challenging because the observations give us information only about the magnitudes of a set of sub-vectors of the state. Information about the corresponding bearing is only available via the transition model. Consequently, the region of high posterior probability corresponds to a ``thin'' section of the space bounding a hyper-sphere. A Gaussian density is a very poor approximation of this region. (see figure~\ref{fig:nlng_example_frame}.) Particle filters using extended or unscented Kalman-type importance densities fail immediately on this model.
 
+\subsubsection{Algorithms and Results}
+
 The following particle filters were tested on the multivariate benchmark model:
 \begin{itemize}
   \item A bootstrap particle filter
   \item An optimal Gaussian importance particle filter
-  \item A deterministic composite proposal particle filter with $\lgexpsf=0$
+  \item A deterministic composite proposal particle filter (i.e. with $\lgexpsf=0)$
 \end{itemize}
 
-The number of particles used by each algorithm was selected so that the running times were roughly equal. The deterministic CPPF uses the adaptive step size method, and uses in the region of $10$ to $20$ state updates at each time step. Figure~\ref{fig:nlng_example_frame} shows the motion of the particles from the stochastic CPPF on a typical frame, and the awkward shape of the posterior mode. Table~\ref{tab:nlng_results} shows the average ESSs and RMSEs for each algorithm over 100 simulated data sets, each of 100 time steps.%Figure~\ref{} shows the effective sample sizes of the particle approximations over a typical run.
+The deterministic CPPF uses the adaptive step size method, and uses in the region of $10$ to $20$ state updates at each time step. Figure~\ref{fig:nlng_example_frame} shows the motion of the particles from the CPPF on a typical frame, and the awkward shape of the posterior mode. Table~\ref{tab:nlng_results} shows the average ESSs and RMSEs for each algorithm over 100 simulated data sets, each of 100 time steps.
 %
 \begin{table}
 \centering
@@ -731,16 +752,18 @@ Deterministic Composite Proposal         &   540 & 81.1 & 32.6 \\
 %
 \begin{figure}
 \centering
-\includegraphics[width=0.45\columnwidth]{nlng_example_frame.pdf}
-\caption{An example of the stochastic CPPF particle motion running on the multivariate benchmark model, showing $2$ of $10$ state dimensions. Prior states are shown with circles and posterior states with crosses.}
+\includegraphics[width=0.7\columnwidth]{nlng_example_frame_deter.pdf}
+\caption{An example of the CPPF particle motion running on the multivariate benchmark model, showing $2$ of $10$ state dimensions. Prior states are shown with circles and posterior states with crosses.}
 \label{fig:nlng_example_frame}
 \end{figure}
 
 
 
-\subsection{A Difficult Tracking Problem}
+\subsection{A Difficult Tracking Problem} \label{sec:numsim:tracking}
 
-Now to a more applied problem. We consider tracking a small aircraft over a mapped landscape. Time of flight and doppler measurements from a radio transmitter on the aircraft provide accurate measurements of range $\rng{\rt}$, and range rate $\rng{\rt}$, but only a low resolution measurement of bearing $\bng{\rt}$. In addition, accurate measurements are made of the height above the ground $\hei{\rt}$. The profile of the terrain (i.e. the height of the ground above a datum at each point) has been mapped.
+\subsubsection{The Model}
+
+Next we consider tracking a small aircraft over a mapped landscape. Time of flight and doppler measurements from a radio transmitter on the aircraft provide accurate measurements of range $\rng{\rt}$, and range rate $\rngrt{\rt}$, but only a low resolution measurement of bearing $\bng{\rt}$. In addition, accurate measurements are made of the height above the ground $\hei{\rt}$. The profile of the terrain (i.e. the height of the ground above a datum at each point) has been mapped.
 
 At $\rt$, the latent state for our model is,
 %
@@ -777,35 +800,45 @@ Two linear transition models have been used, both based on a near-constant veloc
  \transcov & = & 10 \begin{bmatrix} \frac{1}{3} I & \frac{1}{2} I \\ \frac{1}{2} I &\ I \end{bmatrix} \nonumber \\
 \end{IEEEeqnarray}
 
-The accurate measurements of range, range rate and height constrain the region of high posterior probability to lie on a $3$ dimensional subspace, which can take some unusual shapes (see figure~\ref{fig:drone_example_frame}). This again means that particle filters using extended or unscented Kalman-type importance densities do not perform well. Furthermore, the optimal Gaussian importance density method performs particularly poorly as the maximisation procedure struggles with the narrow mode. For the simulations presented here, the terrain profile was modelled as a mixture of randomly-generated Gaussian blobs. An example is shown in figure~\ref{fig:drone_terrain_map}.
+The accurate measurements of range, range rate and height constrain the region of high posterior probability to lie on a $3$ dimensional subspace, which can take some very irregular shapes (see figure~\ref{fig:drone_example_frame}). This again means that particle filters using extended or unscented Kalman-type importance densities do not perform well. Furthermore, the optimal Gaussian importance density method performs particularly poorly as the maximisation procedure struggles with the narrow mode. For the simulations presented here, the terrain profile was modelled as a mixture of randomly-generated Gaussian blobs. An example is shown in figure~\ref{fig:drone_terrain_map}.
 %
 \begin{figure}
 \centering
-\includegraphics[width=0.45\columnwidth]{drone_terrain_map.pdf}
+\includegraphics[width=0.7\columnwidth]{drone_terrain_map.pdf}
 \caption{Contour plot of an example simulated terrain map.}
 \label{fig:drone_terrain_map}
 \end{figure}
+
+\subsubsection{Algorithms and Results}
 
 The following particle filters were tested on the terrain tracking model:
 \begin{itemize}
   \item A bootstrap particle filter
   \item A particle filter using an unscented Kalman-type importance density
   \item An optimal Gaussian importance particle filter
-  \item A deterministic composite proposal particle filter with $\lgexpsf=0$
+  \item A deterministic composite proposal particle filter (i.e. with $\lgexpsf=0)$
 \end{itemize}
 
-The number of particles used by each algorithm was selected so that the running times were roughly equal. The CPPF used in the region of $5$ to $10$ state updates per time step. For the student-t transition density, the CPPF uses the scale mixture of normals method.
+The CPPF uses the adaptive step size method, and uses in the region of $5$ to $10$ state updates at each time step. For the student-t transition density, the CPPF uses the scale mixture of normals method.
 
-Figure~\ref{fig:drone_example_frame} shows the motion of the particles from the stochastic CPPF on a typical frame, and the awkward shape of the posterior mode.% Figure~\ref{} shows the effective sample sizes of the particle approximations over a typical run with the Gaussian transition density.
+Figure~\ref{fig:drone_example_frame} shows the motion of the particles from the deterministic CPPF on a typical frame, and the awkward shape of the posterior mode.
 %
 \begin{figure}
 \centering
-\includegraphics[width=0.45\columnwidth]{drone_example_frame.pdf}
-\caption{An example of the stochastic CPPF particle motion running on the terrain tracking model, showing one horizontal and the vertical state component. Prior states are shown with circles and posterior states with crosses.}
-\label{fig:drone_example_frame}
+\includegraphics[width=0.7\columnwidth]{drone_example_frame_deter.pdf}
+\caption{An example of the deterministic CPPF particle motion running on the terrain tracking model, showing one horizontal and the vertical state component. Prior states are shown with circles and posterior states with crosses.}
+\label{fig:drone_example_frame_deterministic}
 \end{figure}
 
-A stochastic CPPF using resample-move was also tested, with the number of particles adjusted for a roughly-equal running time. This obtained almost identical average RMSEs to the deterministic CPPF, but higher effective sample sizes (but of course, with increased dependence between particles). Using $\lgexpsf=0.3$, roughly $25$--$50\%$ of the MH steps were accepted at each time step.
+A stochastic CPPF using resample-move was also tested. This obtained almost identical average RMSEs to the deterministic CPPF, higher effective sample sizes (but of course, with increased dependence between particles). Using $\lgexpsf=0.3$, roughly $25$--$50\%$ of the MH steps were accepted at each time step. Figure~\ref{fig:drone_example_frame} shows the motion of the particles from the stochastic CPPF on a typical frame.
+%
+\begin{figure}
+\centering
+\subfloat[]{\includegraphics[width=0.45\columnwidth]{drone_example_frame.pdf}}
+\subfloat[]{\includegraphics[width=0.45\columnwidth]{drone_example_frame_zoom.pdf}}
+\caption{An example of the stochastic CPPF ($\lgexpsf=0.3$) particle motion running on the terrain tracking model, showing one horizontal and the vertical state component. Prior states are shown with circles and posterior states with crosses. The second panel is a close-up showing the stochastic motion particles.}
+\label{fig:drone_example_frame_stochastic}
+\end{figure}
 
 Table~\ref{tab:drone_results_gaussian} shows the average ESSs and RMSEs for each algorithm over 100 simulated data sets, each of 100 time steps using the Gaussian transition density. The same is shown for the student-t transition density in table~\ref{tab:drone_results_studentt}.
 %
@@ -843,6 +876,8 @@ It was found that as $\dof$ is decreased, the performance of the composite propo
 
 \subsection{A Heartbeat Inference Problem}
 
+\subsubsection{The Model}
+
 As a final example, we consider the problem of detecting heartbeats in a vibration signal. Measurements from an accelerometer are first partitioned into segments believed to contain a heartbeat, and a particle filter is then used to infer its properties. The $t$th heartbeat is modelled parametrically as the product of a Gaussian envelope with amplitude $\amp{\rt}$ and width $\wid{\rt}$, and a sine wave carrier with frequency $\freq{\rt}$ and relative phase $\pha{\rt}$. The time shift of the centre of the heartbeat within the measurement is $\del{\rt}$, and the sensor exhibits a D.C. bias $\bias{\rt}$ which varies slowly over time. The resulting observation function is highly nonlinear, with the $d$th component given by,
 %
 \begin{IEEEeqnarray}{rCl}
@@ -877,18 +912,20 @@ The transition density is factorised into independent terms, with $\freq{\rt}$, 
 %%
 %where {\meta PARAMETERS}.
 
-The complications introduced in the posterior distribution by the highly multi-modal observation density mean that simple Gaussian importance densities do not work very well. Particle filters using extended or unscented Kalman-type importance densities fail immediately on this model.
+The likelihood is highly multi-modal, and hence so to is the filtering distribution. As a result, particle filters using extended or unscented Kalman-type importance densities fail immediately on this model.
+
+\subsubsection{Algorithms and Results}
 
 The following particle filters were tested on the heartbeat inference model:
 \begin{itemize}
   \item A bootstrap particle filter
   \item An optimal Gaussian importance particle filter
-  \item A deterministic composite proposal particle filter with $\lgexpsf=0$
+  \item A deterministic composite proposal particle filter (i.e. with $\lgexpsf=0$)
 \end{itemize}
 
-The number of particles used by each algorithm was selected so that the running times were roughly equal. In order to use a CPPF with this model, the OID density sequence must be approximated with Gaussians. This is achieved by linearising the observation model around the current state \eqref{eg:linearised_Gaussian_approx} and using the log-density Taylor series truncation method for the prior \eqref{eg:general_Gaussian_approx}. The variance terms in this latter approximation are limited to be no greater than the prior variances. The CPPF uses the adaptive step size method and made in the region of $5$ to $15$ state updates per time step, with the exception of a few particles which tended to ``get stuck'' and were discarded after 50 steps.
+In order to use a CPPF with this model, the OID density sequence must be approximated with Gaussians. This is achieved by linearising the observation model around the current state \eqref{eg:linearised_Gaussian_approx} and using the log-density Taylor series truncation method for the prior \eqref{eg:general_Gaussian_approx}. The variance terms in this latter approximation are limited to be no greater than the prior variances. The CPPF uses the adaptive step size method and made in the region of $5$ to $15$ state updates per time step, with the exception of a few particles which tended to ``get stuck'' and were discarded after 50 steps.
 
-Figure~\ref{fig:sineha_example_frame} shows the motion of the particles from the deterministic CPPF on a typical frame. Table~\ref{tab:sineha_results} shows the average ESSs and RMSEs for each algorithm over 100 simulated data sets, each of 100 time steps.%Figure~\ref{} shows the effective sample sizes of the particle approximations over a typical run.
+Figure~\ref{fig:sineha_example_frame} shows the motion of the particles from the deterministic CPPF on a typical frame. Table~\ref{tab:sineha_results} shows the average ESSs and RMSEs for each algorithm over 100 simulated data sets, each of 100 time steps.
 %
 \begin{table}
 \centering
@@ -905,8 +942,8 @@ Deterministic Composite Proposal         &   800 & 72.8 &  1.4 \\
 %
 \begin{figure}
 \centering
-\includegraphics[width=0.45\columnwidth]{sineha_example_frame.pdf}
-\caption{An example of the S-CPPF particle motion running on the heartbeat inference model, showing amplitude and delay state components. Prior states are shown with circles and posterior states with crosses.}
+\includegraphics[width=0.7\columnwidth]{sineha_example_frame.pdf}
+\caption{An example of the CPPF particle motion running on the heartbeat inference model, showing amplitude and delay state components. Prior states are shown with circles and posterior states with crosses.}
 \label{fig:sineha_example_frame}
 \end{figure}
 
