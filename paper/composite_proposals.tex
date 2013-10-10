@@ -287,7 +287,7 @@ We write the Gaussian approximation as,
  \approxoiden{\pt}{\lsfixed}(\ls{\pt} | \ls{\rt-1}) & = & \normal{\ls{\pt}}{\lgoimeanapprox{\pt}{\lsfixed}}{\lgoicovapprox{\pt}{\lsfixed}} \label{eq:gaussian_oid_approximation}      ,
 \end{IEEEeqnarray}
 %
-where $\lgoimeanapprox{\pt}{\lsfixed}$ and $\lgoicovapprox{\pt}{\lsfixed}$ are the mean and covariance formed at the point $\lsfixed$, which are themselves functions of $\pt$. Some suitable methods for making such an approximation are discussed in section~\ref{}, and employ linearisation or matching techniques at the specified point.
+where $\lgoimeanapprox{\pt}{\lsfixed}$ and $\lgoicovapprox{\pt}{\lsfixed}$ are the mean and covariance formed at the point $\lsfixed$, which are themselves functions of $\pt$. Some suitable methods for making such an approximation are discussed in section~\ref{sec:gaussian_approximations}, and employ linearisation or matching techniques at the specified point.
 
 
 
@@ -433,15 +433,15 @@ An interesting question for the progressive proposal method is to what extent th
 Then in order for it to be distributed according to $\oiden{\pt}$ for all $\pt$, it must satisfy the following condition, which was derived in \cite{Daum2008,Reich2011},
 %
 \begin{IEEEeqnarray}{rCl}
- \logobs(\ls{}) - \expect{\oiden{\pt}}\left[ \logobs(\ls{}) \right] & = & -\trace\left[ \frac{\partial \flowdrift{\pt}}{\partial \ls{\pt}} \right] - \flowdrift{\pt}(\ls{\pt})^T \frac{\partial \logoiden{\pt}}{\partial \ls{\pt}} \nonumber \\
+ \logobs(\ls{\pt}) - \expect{\oiden{\pt}}\left[ \logobs(\ls{}) \right] & = & -\trace\left[ \frac{\partial \flowdrift{\pt}}{\partial \ls{\pt}} \right] - \flowdrift{\pt}(\ls{\pt})^T \frac{\partial \logoiden{\pt}}{\partial \ls{\pt}} \nonumber \\
  & & \qquad + \: \trace\left[ \flowcov{\pt} \left(\frac{\partial^2 \logoiden{\pt}}{\partial \ls{\pt}^2} \right) \right] + \frac{\partial \logoiden{\pt}}{\partial \ls{\pt}}^T \flowcov{\pt} \frac{\partial \logoiden{\pt}}{\partial \ls{\pt}} \label{eq:optimal_flow_PDE}      ,
 \end{IEEEeqnarray}
 %
 where
 %
 \begin{IEEEeqnarray}{rCl}
- \logobs(\ls{}) & = & \log\left(\obsden(\ob{\rt}|\ls{\rt})\right) \nonumber \\
- \logoiden{\pt}(\ls{\pt}) & = & \log\left( \oiden{\pt}(\ls{\pt}) \right) \nonumber       .
+ \logobs(\ls{}) & = & \log\left(\obsden(\ob{\rt}|\ls{})\right) \nonumber \\
+ \logoiden{\pt}(\ls{}) & = & \log\left( \oiden{\pt}(\ls{}) \right) \nonumber       .
 \end{IEEEeqnarray}
 %
 See appendix~\ref{app:optimal_flow_governing_eq} for proof.
@@ -588,14 +588,14 @@ When using a PPPF with $\lgexpsf>0$, proposals for MH steps may be conducted by 
 %
 To reach this tractable formula, the distribution targeted by the MH kernel is actually that over all the intermediate states visited during the progressive update, as well as the final state. The posterior is extended using the same artificial conditional densities introduced for the weight calculations.
 
-The advantage of conducting MH moves in this way is that they automatically adapt to the local shape of the posterior distribution. The only algorithm parameter which needs to be set is $\lgexpsf$. Larger values of $\lgexpsf$ lead to larger moves in the state, which will have lower acceptance rates but lead to less particle inter-dependence. An example is shown in figure~\ref{}.
+The advantage of conducting MH moves in this way is that they automatically adapt to the local shape of the posterior distribution. The only algorithm parameter which needs to be set is $\lgexpsf$. Larger values of $\lgexpsf$ lead to larger moves in the state, which will have lower acceptance rates but lead to less particle inter-dependence. An example is shown in figure~\ref{fig:drone_rm_example}.
 %
 \begin{figure}
 \centering
 \subfloat[]{\includegraphics[width=0.45\columnwidth]{drone_example_rm.pdf}}
 \subfloat[]{\includegraphics[width=0.45\columnwidth]{drone_example_rm_zoom.pdf}}
 \caption{Four particle trajectories simulated from the same starting point using $\lgexpsf=0.3$, as used in the resample-move proposal stage. The second panel shows a close-up of the final states. This example uses the terrain tracking model from section~\ref{sec:numsim:tracking}, showing one horizontal and the vertical state component. Prior states are shown with circles and posterior states with crosses.}
-\label{fig:drone_example_frame_deterministic}
+\label{fig:drone_rm_example}
 \end{figure}
 
 
@@ -632,9 +632,9 @@ The distinguishing novel components of the PPPF are the incremental state and we
 
 The progressive proposal method shares a number of features with existing algorithms. Here we highlight some of the similarities and differences.
 
-The concept of introducing intermediate distributions between the predictive and filtering densities has been employed in numerous ways, under the names ``annealing'' \citep{Neal2001,Deutscher2000,Gall2007}, ``tempering'' \citep{DelMoral2006}, ``bridging distributions'' \citep{Godsill2001b} and ``progressive corrections'' \citep{Oudjane2000}. However, these all use only a discrete set of intermediate times, rather than considering the continuous evolution of the states. Furthermore they all rely on importance sampling, Metropolis-Hastings and kernel sampling, all stochastic mechanisms, to advance between these pseudo-times. None of them include a deterministic component for updating the state. Furthermore, the idea of moving particles independently and hence using adaptive step sizes for each is new.
+The concept of introducing intermediate distributions between the predictive and filtering densities has been employed in numerous ways, under the names ``annealing'' \citep{Neal2001,Deutscher2000,Gall2007}, ``tempering'' \citep{DelMoral2006}, ``bridging distributions'' \citep{Godsill2001b} and ``progressive corrections'' \citep{Oudjane2000}. However, these all use only a discrete set of intermediate times, rather than considering the continuous evolution of the states. Furthermore they rely on importance sampling, Metropolis-Hastings and kernel sampling, all stochastic mechanisms, to advance between these pseudo-times. None of them include a deterministic component for updating the state. Furthermore, the idea of moving particles independently and hence using adaptive step sizes for each is new.
 
-Another family of algorithms, the ``particle flow'' and ``optimal transport'' particle filters of \citep{Daum2008,Daum2011d,Reich2011,Reich2012a}, do allow continuous evolution of the particles over pseudo-time. However, these algorithms use the sequence from the predictive to filtering density to guide the particle motion, rather than that from the transition density to the OID. If this could be achieved analytically then the particles would be always equally weighted and independent. However, in general it becomes necessary to make approximations, either functional or numerical, of the predictive density. The result is that the particle filter convergence properties are lost, and assessment of performance becomes problematic. In the PPPF, by using importance sampling, the approximations are accounted for in the particle weights.
+Another family of algorithms, the ``particle flow'' and ``optimal transport'' particle filters of \citep{Daum2008,Daum2011d,Reich2011,Reich2012a}, do allow continuous evolution of the particles over pseudo-time. However, these algorithms use the sequence from the predictive to filtering density to guide the particle motion, rather than that from the transition density to the OID. If this could be achieved analytically then the particles would be always equally weighted, independent and perfectly distributed according to the posterior. However, in general it becomes necessary to make approximations, either functional or numerical, of the predictive density, the effects of which can be unpredictable and difficult to quantify. Furthermore, the convergence properties of an ordinary particle filter are lost. In contrast, the particles of the PPPF are moved approximately according to the OID sequence, and their resulting distribution is defined to be the importance distribution for an importance sampling step. Hence the approximations are accounted for in the particle weights.
 
 
 
@@ -800,7 +800,7 @@ Two linear transition models have been used, both based on a near-constant veloc
  \transcov & = & 10 \begin{bmatrix} \frac{1}{3} I & \frac{1}{2} I \\ \frac{1}{2} I &\ I \end{bmatrix} \nonumber \\
 \end{IEEEeqnarray}
 
-The accurate measurements of range, range rate and height constrain the region of high posterior probability to lie on a $3$ dimensional subspace, which can take some very irregular shapes (see figure~\ref{fig:drone_example_frame}). This again means that particle filters using extended or unscented Kalman-type importance densities do not perform well. Furthermore, the optimal Gaussian importance density method performs particularly poorly as the maximisation procedure struggles with the narrow mode. For the simulations presented here, the terrain profile was modelled as a mixture of randomly-generated Gaussian blobs. An example is shown in figure~\ref{fig:drone_terrain_map}.
+The accurate measurements of range, range rate and height constrain the region of high posterior probability to lie on a $3$ dimensional subspace, which can take some very irregular shapes (see figure~\ref{fig:drone_example_frame_deterministic}). This again means that particle filters using extended or unscented Kalman-type importance densities do not perform well. Furthermore, the optimal Gaussian importance density method performs particularly poorly as the maximisation procedure struggles with the narrow mode. For the simulations presented here, the terrain profile was modelled as a mixture of randomly-generated Gaussian blobs. An example is shown in figure~\ref{fig:drone_terrain_map}.
 %
 \begin{figure}
 \centering
@@ -821,7 +821,7 @@ The following particle filters were tested on the terrain tracking model:
 
 The PPPF uses the adaptive step size method, and uses in the region of $5$ to $10$ state updates at each time step. For the student-t transition density, the PPPF uses the scale mixture of normals method.
 
-Figure~\ref{fig:drone_example_frame} shows the motion of the particles from the deterministic PPPF on a typical frame, and the awkward shape of the posterior mode.
+Figure~\ref{fig:drone_example_frame_deterministic} shows the motion of the particles from the deterministic PPPF on a typical frame, and the awkward shape of the posterior mode.
 %
 \begin{figure}
 \centering
@@ -830,7 +830,7 @@ Figure~\ref{fig:drone_example_frame} shows the motion of the particles from the 
 \label{fig:drone_example_frame_deterministic}
 \end{figure}
 
-A stochastic PPPF using resample-move was also tested. This obtained almost identical average RMSEs to the deterministic PPPF, higher effective sample sizes (but of course, with increased dependence between particles). Using $\lgexpsf=0.3$, roughly $25$--$50\%$ of the MH steps were accepted at each time step. Figure~\ref{fig:drone_example_frame} shows the motion of the particles from the stochastic PPPF on a typical frame.
+A stochastic PPPF using resample-move was also tested. This obtained almost identical average RMSEs to the deterministic PPPF, higher effective sample sizes (but of course, with increased dependence between particles). Using $\lgexpsf=0.3$, roughly $25$--$50\%$ of the MH steps were accepted at each time step. Figure~\ref{fig:drone_example_frame_stochastic} shows the motion of the particles from the stochastic PPPF on a typical frame.
 %
 \begin{figure}
 \centering
@@ -959,7 +959,7 @@ The models for which the progressive proposal particle filter appears most effec
 
 With non-Gaussian model densities, the performance gains from the progressive proposal particle filter are more modest, both when using the scale mixture of normals method and Gaussian approximations formed by linearisation of the log of the optimal importance density. In addition, when more drastic approximations are required, a greater degree of algorithm tuning is required, such as limiting the variance of the approximation to prevent instability.
 
-In general, there is no guarantee that the PPPF will outperform any other particle filter, not even a bootstrap filter. Indeed pathological examples may be constructed on which it will be inferior to the competition. However, the same may be said of all existing particle filters. The choice of the right algorithm will often require a comparison on the particular application being studied.
+In general, there is no guarantee that the PPPF will outperform any other particle filter, not even a bootstrap filter. Indeed pathological examples may be constructed on which it will be inferior to the competition. However, the same may be said of all existing approximations to the optimal importance density. The choice of the right algorithm will often require a comparison on the particular application being studied.
 
 
 
@@ -1061,14 +1061,14 @@ and the state evolution stochastic differential equation becomes,
  d\ls{\pt} & = & \left[ \lgoicov{\pt} \obsmat^T \obscov^{-1} \left( (\ob{\rt}-\obsmat\lgoimean{\pt}) - \half \obsmat (\ls{\pt}-\lgoimean{\pt}) \right) - \half \lgexpsf (\ls{\pt}-\lgoimean{\pt}) \right] d\pt + \lgexpsf^{\half} \lgoicov{\pt}^{\half} d\lginfbm{\pt} \nonumber       .
 \end{IEEEeqnarray}
 
-\section{Governing Equation Optimal Particle Transport} \label{app:optimal_flow_governing_eq}
+\section{Governing Equation for Optimal Particle Transport} \label{app:optimal_flow_governing_eq}
 
 This exposition is based closely on that of \cite{Daum2008}, but we consider moving each particle according to its OID sequence rather than the filtering distribution. We omit the time subscripts, particle superscripts and the dependence on $\ls{\rt-1}$ for clarity. In addition, write the following shorthands,
 %
 \begin{IEEEeqnarray}{rCl}
- \logtrans(\ls{}) & = & \log\left(\transden(\ls{\rt}|\ls{\rt-1})\right) \nonumber \\
- \logobs(\ls{}) & = & \log\left(\obsden(\ob{\rt}|\ls{\rt})\right) \nonumber \\
- \logoiden{\pt}(\ls{\pt}) & = & \log\left( \oiden{\pt}(\ls{\pt}) \right) \nonumber       .
+ \logtrans(\ls{}) & = & \log\left(\transden(\ls{}|\ls{\rt-1})\right) \nonumber \\
+ \logobs(\ls{}) & = & \log\left(\obsden(\ob{\rt}|\ls{})\right) \nonumber \\
+ \logoiden{\pt}(\ls{}) & = & \log\left( \oiden{\pt}(\ls{}) \right) \nonumber       .
 \end{IEEEeqnarray}
 
 An equation for the optimal flow may be derived by considering the sequence of densities, $\oiden{\pt}(\ls{\pt})$. Taking the log and differentiating with respect to $\pt$ and $\ls{\pt}$,
