@@ -12,12 +12,17 @@
 \newcommand{\studentt}[4]{\mathcal{ST}\left(#1|#2,#3,#4\right)} % Student-t density
 \newcommand{\bigo}[1]{\mathcal{O}\left({#1}\right)}             % Big O
 \newcommand{\mhaccept}{\alpha}                                  % Metropolis-Hastings acceptance probability
+\newcommand{\pd}[3]{\left.\frac{\partial #1}{\partial #2}\right|_{#3}}
+\newcommand{\pdv}[2]{\frac{\partial #1}{\partial #2}}
+\newcommand{\ppdv}[2]{\frac{\partial^2 #1}{\partial #2^2}}
+\newcommand{\mpdv}[3]{\frac{\partial^2 #1}{\partial #2 \partial #3}}
 
 % Basics
 \newcommand{\rt}{t}                             % Real time
 \newcommand{\pt}{\lambda}                       % Pseudo-time
 \newcommand{\dpt}{\delta\lambda}                % A little bit of pseudo-time
 \newcommand{\ls}[1]{x_{#1}}                     % Latent state
+\newcommand{\dls}{\delta x}                     % A little bit of latent state
 \newcommand{\ob}[1]{y_{#1}}                     % Observation
 \newcommand{\mix}[1]{\xi_{#1}}                  % Mixing auxiliary variable
 \newcommand{\els}[1]{u_{#1}}                    % Extra latent state
@@ -39,6 +44,7 @@
 \newcommand{\oiden}[1]{\pi_{#1}}                % Optimal importance density
 \newcommand{\logoiden}[1]{\Xi_{#1}}             % Log of the optimal importance density
 \newcommand{\approxoiden}[2]{\hat{\pi}_{#1|#2}} % Approximation of the optimal importance density
+%\newcommand{\approxoiden}[2][]{\ifstrempty{#1}{\hat{\pi}_{#2}}{\hat{\pi}_{#1|#2}}} % Approximation of the optimal importance density
 \newcommand{\augfiltden}[1]{\tilde{\pi}_{#1}}   % Augmented filtering density
 \newcommand{\oinorm}[1]{K_{#1}}                 % Normalising constant for the optimal importance density
 \newcommand{\augfiltnorm}[1]{\tilde{K}_{#1}}    % Normalising constant for the augmented filtering density
@@ -61,6 +67,12 @@
 \newcommand{\lgoimean}[1]{\mu_{#1}}             % Linear Gaussian optimal importance density mean
 \newcommand{\lgoicov}[1]{\Sigma_{#1}}           % Linear Gaussian optimal importance density covariance
 \newcommand{\stdnorm}[1]{z_{#1}}                % Standard normal R.V.
+\newcommand{\obmn}[1]{\nu_{#1}}
+\newcommand{\obvr}[1]{S_{#1}}
+\newcommand{\obcvr}[1]{C_{#1}}
+\newcommand{\obmnapprox}[1]{\hat{\nu}_{#1}}
+\newcommand{\obvrapprox}[1]{\hat{S}_{#1}}
+\newcommand{\obcvrapprox}[1]{\hat{C}_{#1}}
 
 % Gaussian Transformation
 \newcommand{\lgdecayfunc}{a}                    % Linear Gaussian decay function for OID transformation
@@ -74,6 +86,10 @@
 %\newcommand{\lgoicovapprox}[2]{\hat{\Sigma}_{#1}(#2)}   % Covariance of the Gaussian approximation to the OID at time #1 and state #2
 \newcommand{\lgoimeanapprox}[2]{\hat{\mu}_{#1|#2}}      % Mean of the Gaussian approximation to the OID at time #1 and state #2
 \newcommand{\lgoicovapprox}[2]{\hat{\Sigma}_{#1|#2}}    % Covariance of the Gaussian approximation to the OID at time #1 and state #2
+\newcommand{\ctlgoimeanapprox}[1]{\hat{\mu}_{#1}}
+\newcommand{\ctlgoicovapprox}[1]{\hat{\Sigma}_{#1}}
+%\newcommand{\lgoimeanapprox}[2][]{\ifstrempty{#1}{\hat{\mu}_{#2}}{\hat{\mu}_{#1|#2}}}
+%\newcommand{\lgoicovapprox}[2][]{\ifstrempty{#1}{\hat{\Sigma}_{#2}}{\hat{\Sigma}_{#1|#2}}}
 \newcommand{\obsmatapprox}[1]{\hat{\obsmat}_{#1}}       % Linear observation matrix formed by differentiation of the observation function
 \newcommand{\transmeanapprox}[1]{\hat{\transmean}_{#1}} % Approximate transition mean
 \newcommand{\transcovapprox}[1]{\hat{\transcov}_{#1}}   % Approximate transition covariance
