@@ -6,6 +6,7 @@
 \newcommand{\variance}[1]{\mathbb{V}_{#1}}                      % Variance
 \DeclareMathOperator{\trace}{Tr}                                % Trace
 \newcommand{\magdet}[1]{\left| #1 \right|}         % Magnitude of the determinant
+\newcommand{\determ}[1]{\left| #1 \right|}         % Magnitude of the determinant
 \newcommand{\indic}[1]{\mathbbm{1}_{#1}}                        % Indicator function
 \newcommand{\normal}[3]{\mathcal{N}\left(#1\left|#2,#3\right.\right)}       % Normal density
 \newcommand{\gammaden}[3]{\mathcal{\Gamma}\left(#1|#2,#3\right)}% Gamma density
@@ -13,9 +14,12 @@
 \newcommand{\bigo}[1]{\mathcal{O}\left({#1}\right)}             % Big O
 \newcommand{\mhaccept}{\alpha}                                  % Metropolis-Hastings acceptance probability
 \newcommand{\pd}[3]{\left.\frac{\partial #1}{\partial #2}\right|_{#3}}
+\newcommand{\npd}[4]{\left.\frac{\partial^{#1} #2}{\partial #3^{#1}}\right|_{#4}}
 \newcommand{\pdv}[2]{\frac{\partial #1}{\partial #2}}
 \newcommand{\ppdv}[2]{\frac{\partial^2 #1}{\partial #2^2}}
 \newcommand{\mpdv}[3]{\frac{\partial^2 #1}{\partial #2 \partial #3}}
+\newcommand{\npdv}[3]{\frac{\partial^{#1} #2}{\partial #3^{#1}}}
+\newcommand{\nmpdv}[5]{\frac{\partial^{#1} #3}{\partial^{#2} #4 \partial #5}}
 
 % Basics
 \newcommand{\rt}{t}                             % Real time
@@ -43,8 +47,9 @@
 \newcommand{\artden}{\rho}                      % Artificial conditional density
 \newcommand{\oiden}[1]{\pi_{#1}}                % Optimal importance density
 \newcommand{\logoiden}[1]{\Xi_{#1}}             % Log of the optimal importance density
+\newcommand{\logoidenapprox}[1]{\hat{\Xi}_{#1}} % Approximation of the log of the optimal importance density
 \newcommand{\approxoiden}[2]{\hat{\pi}_{#1|#2}} % Approximation of the optimal importance density
-%\newcommand{\approxoiden}[2][]{\ifstrempty{#1}{\hat{\pi}_{#2}}{\hat{\pi}_{#1|#2}}} % Approximation of the optimal importance density
+\newcommand{\ctapproxoiden}[1]{\hat{\pi}_{#1}}
 \newcommand{\augfiltden}[1]{\tilde{\pi}_{#1}}   % Augmented filtering density
 \newcommand{\oinorm}[1]{K_{#1}}                 % Normalising constant for the optimal importance density
 \newcommand{\augfiltnorm}[1]{\tilde{K}_{#1}}    % Normalising constant for the augmented filtering density
