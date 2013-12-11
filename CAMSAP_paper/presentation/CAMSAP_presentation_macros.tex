@@ -1,0 +1,53 @@
+% General things
+\newcommand{\half}{\frac{1}{2}}
+\newcommand{\pdv}[2]{\frac{\partial #1}{\partial #2}}
+\newcommand{\determ}[1]{\left| #1 \right|}
+
+% Density families
+\newcommand{\normalden}[3]{\mathcal{N}\left(#1\left|#2,#3\right.\right)}       % Normal density
+
+% Basics
+\newcommand{\ti}{n}                             % Time index
+\newcommand{\pt}{\lambda}                       % Pseudo-time
+\newcommand{\ls}[1]{x_{#1}}                     % Latent state
+\newcommand{\ob}[1]{y_{#1}}                     % Observation
+\newcommand{\stdnorm}[1]{z_{#1}}                % Standard normal R.V.
+
+% Densities
+\newcommand{\den}{p}                            % Secondary Bayesian density
+\newcommand{\transden}{f}                       % Transition density
+\newcommand{\obsden}{g}                         % Observation density
+\newcommand{\impden}{q}                         % Importance density
+\newcommand{\partden}{\eta}                     % Unweighted particle distribution
+\newcommand{\artden}{\rho}                      % Artificial conditional density
+\newcommand{\oiden}[1]{\pi_{#1}}                % Optimal importance density
+\newcommand{\augfiltden}[1]{\tilde{\pi}_{#1}}   % Augmented filtering density
+
+
+% Particle shizzle
+\newcommand{\pss}[2][]{^{(#2)#1}}               % Particle superscript
+\newcommand{\pw}[1]{w_{#1}}                     % Particle weight
+
+% Models
+\newcommand{\transfun}{\phi}                    % Transition function
+\newcommand{\obsfun}{\psi}                      % Observation function
+\newcommand{\transcov}{Q}                       % Transition covariance
+\newcommand{\obscov}{R}                         % Observation covariance
+\newcommand{\obsmat}{H}                         % Linear observation matrix 
+\newcommand{\obsmatapprox}[1]{\hat{\obsmat}_{#1}} % Linear observation matrix formed by differentiation of the observation function
+
+% Gaussian moments
+\newcommand{\lsmn}[1]{m_{#1}}                   % Mean
+\newcommand{\lsvr}[1]{P_{#1}}                   % Variance
+\newcommand{\obmn}[1]{\mu_{#1}}
+\newcommand{\obvr}[1]{\Sigma_{#1}}
+\newcommand{\obcvr}[1]{C_{#1}}
+
+% Simulation models - tracking
+\newcommand{\pos}[1]{p_{#1}}                    % Position
+\newcommand{\vel}[1]{v_{#1}}                    % Velocity
+\newcommand{\bng}[1]{\theta_{#1}}               % Bearing
+\newcommand{\rng}[1]{r_{#1}}                    % Range
+\newcommand{\hei}[1]{h_{#1}}                    % Height
+\newcommand{\rngrt}[1]{s_{#1}}                  % Range rate
+\newcommand{\terrain}{T}                        % Terrain height
