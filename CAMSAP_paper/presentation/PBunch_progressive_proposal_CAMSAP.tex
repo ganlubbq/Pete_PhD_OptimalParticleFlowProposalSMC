@@ -5,6 +5,8 @@
 \usepackage{IEEEtrantools}
 \usepackage{subfig}
 \usepackage{color}
+\usepackage{bibentry}
+\nobibliography*
 
 \input{CAMSAP_presentation_macros}
 \graphicspath{{../../paper/figures/}{CAMSAP_plots/}}
@@ -21,7 +23,13 @@
  \titlepage
 \end{frame}
 \begin{frame}{The Plan}
- 
+ \begin{itemize}
+  \item A quick review of particle filtering and importance densities.
+  \item The problem with the usual choices of importance density.
+  \item The new progressive proposal method.
+  \item How it relates to existing algorithms.
+  \item Some simulation results.
+ \end{itemize}
 \end{frame}
 
 
@@ -80,13 +88,15 @@ Approximate by linearisation or sigma-point approximation.
 \begin{frame}{Progressive Principle}
 Introduce the observation gradually using a stretch of ``pseudo-time'', $\pt \in [0,1]$. \\
 \vspace{1em}
+\pause
 Smooth sequence of target distributions:
  \begin{IEEEeqnarray*}{rCl}
- \augfiltden{\ti,\pt}(\ls{1:\ti-1}, \ls{\ti,\pt}) & = & \obsden(\ob{\ti} | \ls{\ti,\pt})^{\pt} \transden(\ls{\ti,\pt} | \ls{\ti-1}) p(\ls{1:\ti-1}|\ob{1:\ti-1})
+ \augfiltden{\ti,\pt}(\ls{1:\ti-1}, \ls{\ti,\pt}) & \propto & \obsden(\ob{\ti} | \ls{\ti,\pt})^{\pt} \transden(\ls{\ti,\pt} | \ls{\ti-1}) p(\ls{1:\ti-1}|\ob{1:\ti-1})
 \end{IEEEeqnarray*}
+\pause
 Smooth sequence of optimal importance densities:
 \begin{IEEEeqnarray*}{rCl}
- \oiden{\ti,\pt}(\ls{\ti,\pt} | \ls{\ti-1}\pss{j}) & = & \obsden(\ob{\ti} | \ls{\ti,\pt})^{\pt} \transden(\ls{\ti,\pt} | \ls{\ti-1}\pss{j})
+ \oiden{\ti,\pt}(\ls{\ti,\pt} | \ls{\ti-1}\pss{j}) & \propto & \obsden(\ob{\ti} | \ls{\ti,\pt})^{\pt} \transden(\ls{\ti,\pt} | \ls{\ti-1}\pss{j})
 \end{IEEEeqnarray*}
 \end{frame}
 \begin{frame}{Partially Linear Gaussian Models}
@@ -95,6 +105,7 @@ Smooth sequence of optimal importance densities:
  \obsden(\ob{\ti}|\ls{\ti})     & = & \normalden{\ob{\ti}}{\obsmat \ls{\ti}}{\obscov}
 \end{IEEEeqnarray*}
 \vspace{1em}
+\pause
 Optimal importance density is analytically tractable.
 \begin{IEEEeqnarray*}{rCl}
  \oiden{\pt}(\ls{\pt} | \ls{\ti-1}) & = & \normalden{\ls{\pt}}{\lsmn{\pt}}{\lsvr{\pt}}    ,
@@ -110,10 +121,12 @@ Any Gaussian random variable may be expressed as,
  \ls{} & = & \lsmn{} + \lsvr{}^{\half} \stdnorm{} \\
  \stdnorm{} & \sim & \normalden{\stdnorm{}}{0}{I}      .
 \end{IEEEeqnarray*}
+\pause
 Progress particle from $\pt_0$ to $\pt_1$ with a linear transformation.
 \begin{IEEEeqnarray*}{rCl}
  \ls{\pt_1} & = & \lsmn{\pt_1} + \lsvr{\pt_1}^{\half}\lsvr{\pt_0}^{-\half}(\ls{\pt_0}-\lsmn{\pt_0})       .
 \end{IEEEeqnarray*}
+If $\ls{\pt_0} \sim \oiden{\pt_0}(\ls{\pt_0}|\ls{\ti-1})$, then $\ls{\pt_1} \sim \oiden{\pt_1}(\ls{\pt_1}|\ls{\ti-1})$
 \end{frame}
 \begin{frame}{Partially Linear Gaussian Models}
 \begin{figure}
@@ -123,22 +136,30 @@ Progress particle from $\pt_0$ to $\pt_1$ with a linear transformation.
 \end{frame}
 
 \begin{frame}{Nonlinear Gaussian Models}
+\begin{IEEEeqnarray*}{rCl}
+ \transden(\ls{\ti} | \ls{\ti-1}) & = & \normalden{\ls{\ti}}{\transfun(\ls{\ti-1})}{\transcov} \\
+ \obsden(\ob{\ti} | \ls{\ti})     & = & \normalden{\ob{\ti}}{\obsfun(\ls{\ti})}{\obscov}
+\end{IEEEeqnarray*}
+\pause
 Approximate the optimal importance density with a Gaussian at each point in pseudo-time.
 \begin{IEEEeqnarray*}{rCl}
  \oiden{\pt}(\ls{\pt} | \ls{\ti-1}) & \approx & \normalden{\ls{\pt}}{\lsmn{\pt}}{\lsvr{\pt}}
 \end{IEEEeqnarray*}
 \vspace{1em}
+\pause
 To update from $\pt_0$ to $\pt_1$,
 \begin{IEEEeqnarray*}{rCl}
- \oiden{\pt_1}(\ls{}) & \propto & \oiden{\pt_0}(\ls{}) \obsden(\ob{\ti}|\ls{})^{\pt_1-\pt_0} \\
- & = & \normalden{\ls{}}{\lsmn{\pt_0}{\pt_0}}{\lsvr{\pt_0}} \normalden{\ob{\ti}}{\obsfun(\ls{})}{\obscov}^{\pt_1-\pt_0}      .
+ \oiden{\pt_1}(\ls{}|\ls{\ti-1}) & \propto & \oiden{\pt_0}(\ls{}|\ls{\ti-1}) \obsden(\ob{\ti}|\ls{})^{\pt_1-\pt_0} \\
+ & \propto & \normalden{\ls{}}{\lsmn{\pt_0}}{\lsvr{\pt_0}} \normalden{\ob{\ti}}{\obsfun(\ls{})}{\obscov}^{\pt_1-\pt_0} \\
+ & \propto & \normalden{\ls{}}{\lsmn{\pt_0}}{\lsvr{\pt_0}} \normalden{\ob{\ti}}{\obsfun(\ls{})}{\frac{\obscov}{\pt_1-\pt_0}}      .
 \end{IEEEeqnarray*}
 \end{frame}
 \begin{frame}{Nonlinear Gaussian Models}
 Approximate with linearisation.
 \begin{IEEEeqnarray*}{rCl}
- \obsmatapprox{\ls{\pt_0}} & = & \pdv{\obsfun}{\ls{}}{\ls{\pt_0}}
+ \obsmatapprox{\ls{\pt_0}} & = & \pd{\obsfun}{\ls{}}{\ls{\pt_0}}
 \end{IEEEeqnarray*}
+\pause
 \vspace{1em}
 \begin{IEEEeqnarray*}{rCl}
  \obmn{\pt_0}  & = & \obsfun(\ls{\pt_0}) + \obsmatapprox{\ls{\pt_0}} ( \lsmn{\pt_0} - \ls{\pt_0} ) \nonumber \\
@@ -153,35 +174,42 @@ Approximate with linearisation.
 \begin{itemize}
  \item Existing particle at pseudo time $\pt_0$,
  \begin{IEEEeqnarray*}{rCl}
-  \left\{ \ls{1:\ti-1}\pss{i}, \ls{\pt_0}\pss{i}, \pw{\pt_0}\pss{i} \right\} \sim \partden(\ls{1:\ti-1}, \ls{\pt_0})     .
+  \left\{ \ls{1:\ti-1}\pss{i}, \ls{\pt_0}\pss{i} \right\} \sim \partden_{\pt_0}(\ls{1:\ti-1}, \ls{\pt_0})     .
  \end{IEEEeqnarray*}
  \item ... is replaced by new particle  at $\pt_1$,
  \begin{IEEEeqnarray*}{rCl}
-  \left\{ \ls{1:\ti-1}\pss{i}, \ls{\pt_1}\pss{i}, \pw{\pt_1}\pss{i} \right\} \sim \partden(\ls{1:\ti-1}, \ls{\pt_1})     .
+  \left\{ \ls{1:\ti-1}\pss{i}, \ls{\pt_1}\pss{i} \right\} \sim \partden_{\pt_1}(\ls{1:\ti-1}, \ls{\pt_1})     .
  \end{IEEEeqnarray*}
+\pause
  \item Standard change of variables formula,
  \begin{IEEEeqnarray*}{rCl}
-  \partden(\ls{1:\ti-1},\ls{\pt_1}) & = & \partden(\ls{1:\ti-1},\ls{\pt_0}) \times \determ{ \pdv{\ls{\pt_0}}{\ls{\pt_1}} } \nonumber      .
+  \partden_{\pt_1}(\ls{1:\ti-1},\ls{\pt_1}) & = & \partden_{\pt_0}(\ls{1:\ti-1},\ls{\pt_0}) \times \determ{ \pdv{\ls{\pt_0}}{\ls{\pt_1}} } \nonumber      .
  \end{IEEEeqnarray*}
 \end{itemize}
-%\end{frame}
-%\begin{frame}{Weight Evolution}
+\end{frame}
+\begin{frame}{Weight Evolution}
 Hence weight update,
 \begin{IEEEeqnarray*}{rCl}
- \pw{\pt_1} & = & \pw{\pt_0} \times \frac{ \obsden(\ob{\ti} | \ls{\pt_1})^{\pt_1} \transden(\ls{\pt_1} | \ls{\ti-1}) }{ \obsden(\ob{\ti} | \ls{\pt_0})^{\pt_0} \transden(\ls{\pt_0} | \ls{\ti-1}) } \times \sqrt{\frac{\determ{\lsvr{\pt_1}}}{\determ{\lsvr{\pt_0}}}}      .
+ \pw{\pt_1} & = & \frac{ \augfiltden{\pt_1}(\ls{1:\ti-1},\ls{\pt_1}) }{ \partden_{\pt_1}(\ls{1:\ti-1},\ls{\pt_1}) } \nonumber \\
+ & = & \frac{ \augfiltden{\pt_0}(\ls{1:\ti-1},\ls{\pt_0}) }{ \partden_{\pt_0}(\ls{1:\ti-1},\ls{\pt_0}) } \times \frac{ \augfiltden{\pt_1}(\ls{1:\ti-1},\ls{\pt_1})}{ \augfiltden{\pt_0}(\ls{1:\ti-1},\ls{\pt_0}) } \times \determ{ \pdv{\ls{\pt_1}}{\ls{\pt_0}} } \nonumber \\
+ & \propto & \pw{\pt_0} \times \frac{ \obsden(\ob{\ti} | \ls{\pt_1})^{\pt_1} \transden(\ls{\pt_1} | \ls{\ti-1}) }{ \obsden(\ob{\ti} | \ls{\pt_0})^{\pt_0} \transden(\ls{\pt_0} | \ls{\ti-1}) } \times \sqrt{\frac{\determ{\lsvr{\pt_1}}}{\determ{\lsvr{\pt_0}}}}      .
 \end{IEEEeqnarray*}
-%\begin{IEEEeqnarray*}{rCl}
-% \pw{\pt_1} & = & \frac{ \augfiltden{\pt_1}(\ls{1:\ti-1},\ls{\pt_1}) }{ \partden(\ls{1:\ti-1},\ls{\pt_1}) } \nonumber \\
-% & = & \frac{ \augfiltden{\pt_0}(\ls{1:\ti-1},\ls{\pt_0}) }{ \partden_{\pt_0}(\ls{1:\ti-1},\ls{\pt_0}) } \times \frac{ \augfiltden{\pt_1}(\ls{1:\ti-1},\ls{\pt_1})}{ \augfiltden{\pt_0}(\ls{1:\ti-1},\ls{\pt_0}) } \times \determ{ \pdv{\ls{\pt_1}}{\ls{\pt_0}} } \nonumber \\
-% & \propto & \pw{\pt_0} \times \frac{ \obsden(\ob{\ti} | \ls{\pt_1})^{\pt_1} \transden(\ls{\pt_1} | \ls{\ti-1}) }{ \obsden(\ob{\ti} | \ls{\pt_0})^{\pt_0} \transden(\ls{\pt_0} | \ls{\ti-1}) } \times \sqrt{\frac{\determ{\lsvr{\pt_1}}}{\determ{\lsvr{\pt_0}}}}      .
-%\end{IEEEeqnarray*}
 \end{frame}
 
 \begin{frame}{Relationship to Other Methods}
 Gradual introduction of likelihood underlies numerous existing particle methods,
+{\tiny
 \begin{itemize}
- \item LIST BRIDGING DISTRIBUTION, ANNEALING, TEMPERING, PROGRESSIVE CORRECTION PAPERS.
+ \item \bibentry{Godsill2001b}
+ \item \bibentry{Gall2007}
+ \item \bibentry{Deutscher2000}
+ \item \bibentry{Oudjane2000}
+ \item \bibentry{Daum2008}
+ \item \bibentry{Reich2011}
 \end{itemize}
+}
+\end{frame}
+\begin{frame}{Relationship to Other Methods}
 Distinguishing features of the new progressive proposal method:
 \begin{itemize}
  \item Particles moved deterministically.
@@ -196,6 +224,7 @@ Distinguishing features of the new progressive proposal method:
  \ls{\ti} & = & \begin{bmatrix} \pos{\ti}^T & \vel{\ti}^T \end{bmatrix}^T
 \end{IEEEeqnarray*}
 Near-constant velocity model.
+\pause
 \begin{IEEEeqnarray*}{rCl}
  \ob{\ti} & = & \begin{bmatrix} \bng{\ti} & \rng{\ti} & \hei{\ti} & \rngrt{\ti} \end{bmatrix}^T       .
 \end{IEEEeqnarray*}
@@ -247,5 +276,7 @@ Progressive Proposal                     &   180 & 56.4 & 22.3 \\
 
 \end{frame}
 
+\bibliographystyle{alpha}
+\nobibliography{D:/pb404/Dropbox/PhD/OTbib}
 
 \end{document}
