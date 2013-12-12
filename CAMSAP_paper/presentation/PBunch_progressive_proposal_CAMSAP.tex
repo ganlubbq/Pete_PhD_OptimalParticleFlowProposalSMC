@@ -89,10 +89,12 @@ Approximate by linearisation or sigma-point approximation.
 Introduce the observation gradually using a stretch of ``pseudo-time'', $\pt \in [0,1]$. \\
 \vspace{1em}
 \pause
-Smooth sequence of target distributions:
+Smooth sequence of target densities:
  \begin{IEEEeqnarray*}{rCl}
  \augfiltden{\ti,\pt}(\ls{1:\ti-1}, \ls{\ti,\pt}) & \propto & \obsden(\ob{\ti} | \ls{\ti,\pt})^{\pt} \transden(\ls{\ti,\pt} | \ls{\ti-1}) p(\ls{1:\ti-1}|\ob{1:\ti-1})
 \end{IEEEeqnarray*}
+Advance each particle $\ls{\ti,\pt}\pss{i}$ and its weight $\pw{\ti,\pt}\pss{i}$ through pseudo-time independently.\\
+\vspace{1em}
 \pause
 Smooth sequence of optimal importance densities:
 \begin{IEEEeqnarray*}{rCl}
@@ -129,6 +131,7 @@ Progress particle from $\pt_0$ to $\pt_1$ with a linear transformation.
 If $\ls{\pt_0} \sim \oiden{\pt_0}(\ls{\pt_0}|\ls{\ti-1})$, then $\ls{\pt_1} \sim \oiden{\pt_1}(\ls{\pt_1}|\ls{\ti-1})$
 \end{frame}
 \begin{frame}{Partially Linear Gaussian Models}
+Evolution of $\oiden{\pt}(\ls{\pt}|\ls{\ti-1})$ with $\pt$.
 \begin{figure}
 \centering
 \includegraphics[width=0.5\columnwidth]{plg_oid_evolution.pdf}
@@ -226,13 +229,12 @@ Distinguishing features of the new progressive proposal method:
 Near-constant velocity model.
 \pause
 \begin{IEEEeqnarray*}{rCl}
- \ob{\ti} & = & \begin{bmatrix} \bng{\ti} & \rng{\ti} & \hei{\ti} & \rngrt{\ti} \end{bmatrix}^T       .
+ \ob{\ti} & = & \begin{bmatrix} \bng{\ti} & \rng{\ti} & \hei{\ti} \end{bmatrix}^T       .
 \end{IEEEeqnarray*}
 \begin{IEEEeqnarray*}{rCl}
  \bng{\ti}   & = & \arctan\left(\frac{\pos{\ti,1}}{\pos{\ti,2}}\right)\\
  \rng{\ti}   & = & \sqrt{ \pos{\ti,1}^2 + \pos{\ti,3}^2 + \pos{\ti,3}^2 } \\
- \hei{\ti}   & = & \pos{\ti,3} - \terrain( \pos{\ti,1}, \pos{\ti,2} ) \\
- \rngrt{\ti} & = & \frac{ \pos{\ti}\cdot\vel{\ti} }{ \rng{\ti} }       ,
+ \hei{\ti}   & = & \pos{\ti,3} - \terrain( \pos{\ti,1}, \pos{\ti,2} )        ,
 \end{IEEEeqnarray*}
 \end{frame}
 \begin{frame}{Simulations - Terrain Map}
@@ -251,6 +253,7 @@ Near-constant velocity model.
 \end{figure}
 \end{frame}
 \begin{frame}{Simulations - Results}
+$N_F$ chosen for equal compute times.
 \begin{table}
 \centering
 \begin{tabular}{l||c|c|c}
@@ -279,4 +282,4 @@ Progressive Proposal                     &   180 & 56.4 & 22.3 \\
 \bibliographystyle{alpha}
 \nobibliography{D:/pb404/Dropbox/PhD/OTbib}
 
-\end{document}
+\end{document} 
