@@ -1,0 +1,303 @@
+%%% Theorem environments %%%
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{model}[theorem]{Model}
+
+\newenvironment{proof}[1][Proof]{\begin{trivlist}
+\item[\hskip \labelsep {\bfseries #1}]}{\end{trivlist}}
+\newenvironment{definition}[1][Definition]{\begin{trivlist}
+\item[\hskip \labelsep {\bfseries #1}]}{\end{trivlist}}
+\newenvironment{example}[1][Example]{\begin{trivlist}
+\item[\hskip \labelsep {\bfseries #1}]}{\end{trivlist}}
+\newenvironment{remark}[1][Remark]{\begin{trivlist}
+\item[\hskip \labelsep {\bfseries #1}]}{\end{trivlist}}
+
+\newcommand{\qed}{\nobreak \ifvmode \relax \else
+      \ifdim\lastskip<1.5em \hskip-\lastskip
+      \hskip1.5em plus0em minus0.5em \fi \nobreak
+      \vrule height0.75em width0.5em depth0.25em\fi}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\newcommand{\real}{\mathbb{R}}
+
+\newcommand{\lhood}{l}
+\newcommand{\nconst}[1]{K_{#1}}
+
+\newcommand{\lsspace}{\mathcal{X}}
+\newcommand{\lsdim}{{d_{\ls{}}}}
+\newcommand{\priorden}{p}
+\newcommand{\postden}{\pi}
+\newcommand{\seqden}[1]{\pi_{#1}}
+\newcommand{\seqdenapprox}[1]{\hat{\pi}_{#1}}
+\newcommand{\impden}{q}
+
+\newcommand{\sn}[1]{z_{#1}}
+\newcommand{\snchange}{z_{\Delta}}
+
+\newcommand{\lsmnapprox}[1]{\hat{m}_{#1}}
+\newcommand{\lsvrapprox}[1]{\hat{P}_{#1}}
+
+
+% Particle flow
+\newcommand{\flowbm}[1]{\epsilon_{#1}}          % Particle flow Brownian motion
+\newcommand{\flowdrift}[1]{\zeta_{#1}}          % Particle flow drift
+\newcommand{\flowdiffuse}[1]{\eta_{#1}}         % Particle flow diffusion
+\newcommand{\flowcov}[1]{D_{#1}}                % Particle flow "Covariance" matrix
+\newcommand{\flowdiffsf}{\gamma}                % Particle flow diffusion scale factor
+
+\newcommand{\lgmomapprox}[1]{\hat{\lgmom}_{#1}}       % Linear observation matrix formed by differentiation of the observation function
+\newcommand{\obapprox}[1]{\hat{y}_{#1}}
+
+\newcommand{\flowdriftapprox}[1]{\hat{\zeta}_{#1}}      % Approximate (actual) particle flow drift
+\newcommand{\flowdiffuseapprox}[1]{\hat{\eta}_{#1}}     % Approximate (actual) particle flow diffu
+
+
+
+
+
+
+%%% Basic maths stuff %%%
+\newcommand{\zmatrix}{\mathsf{0}}
+\newcommand{\idmatrix}{\mathsf{I}}
+\newcommand{\half}{\frac{1}{2}}
+
+%%% Functions and operators %%%
+\newcommand{\minv}{^{-1}}
+\newcommand{\determ}[1]{\left|#1\right|}
+\newcommand{\magn}[1]{\left|#1\right|}
+\newcommand{\pd}[3]{\left.\frac{\partial #1}{\partial #2}\right|_{#3}}
+\newcommand{\npd}[4]{\left.\frac{\partial^{#1} #2}{\partial #3}\right|_{#4}}
+\newcommand{\expect}[1]{\mathbb{E}_{#1}}
+\newcommand{\variance}[1]{\mathbb{V}_{#1}}
+\newcommand{\bigo}[1]{\mathcal{O}\left(#1\right)}
+\newcommand{\prob}{P}
+\newcommand{\indic}[1]{\mathbbm{1}_{#1}}
+\DeclareMathOperator{\sinc}{sinc}
+\DeclareMathOperator{\trace}{Tr}
+\newcommand{\degr}{^{\circ}}
+\newcommand{\rightasconverge}{\stackrel{a.s.}{\rightarrow}}
+\newcommand{\leftasconverge}{\stackrel{a.s.}{\leftarrow}}
+
+%%% Probability spaces %%%
+\newcommand{\reals}{\mathbb{R}}
+
+%%% Time, indexes, etc. %%%
+\newcommand{\ti}{n}
+\newcommand{\dct}[1]{t_{#1}}
+\newcommand{\timax}{N}
+
+%%% States, observations, etc. %%%
+\newcommand{\ls}[1]{x_{#1}}
+\newcommand{\ob}[1]{y_{#1}}
+\newcommand{\rls}[1]{u_{#1}}
+\newcommand{\mls}[1]{z_{#1}}
+
+%%% Distributions %%%
+\newcommand{\normalden}[3]{\mathcal{N}\left(#1\left|\vphantom{#1}#2,#3\right.\right)}
+\newcommand{\uniformden}[2]{\mathcal{U}\left(\left[#1,#2\right]\right)}
+\newcommand{\dirac}[1]{\delta_{#1}}
+\newcommand{\gammaden}[3]{\mathcal{G}\left(#1\left|#2,#3\right.\right)}
+\newcommand{\studenttden}[4]{\mathcal{ST}\left(#1|#2,#3,#4\right)}
+
+
+%%% Particle things %%%
+\newcommand{\pss}[1]{^{(#1)}}
+
+%%% Densities %%%
+\newcommand{\den}{p}
+\newcommand{\pden}{\hat{p}}
+%\newcommand{\priorden}{\varpi}
+\newcommand{\transden}{f}
+\newcommand{\obsden}{g}
+\newcommand{\loglhood}{\mathcal{L}}
+
+%%% Particle filter things %%%
+%\newcommand{\impden}[1]{q_{#1}}
+\newcommand{\partden}[1]{\eta_{#1}}
+\newcommand{\pw}[1]{w_{#1}}
+\newcommand{\npw}[1]{\bar{w}_{#1}}
+\newcommand{\predpw}[1]{\hat{w}_{#1}}
+\newcommand{\naw}[1]{\bar{v}_{#1}}
+\newcommand{\respw}[1]{\tilde{w}_{#1}}
+\newcommand{\anc}[2]{a_{#1}^{(#2)}}
+\newcommand{\replic}[2]{R_{#1}^{(#2)}}
+\newcommand{\ess}[1]{\mathbf{N}_{\text{EFF},#1}}
+\newcommand{\lsrm}[1]{\tilde{x}_{#1}}
+
+%%% MCMC things %%%
+\newcommand{\mhkernel}{K}
+\newcommand{\mhaccept}{\alpha}
+\newcommand{\nummhsteps}{M}
+
+%%% Monte Carlo things %%%
+\newcommand{\numpart}{\mathbf{N}}
+\newcommand{\testfunc}{\zeta}
+\newcommand{\unnormden}{\gamma}
+
+%%% State space models %%%
+\newcommand{\transfun}{\phi}
+\newcommand{\obsfun}{\psi}
+\newcommand{\transinnov}[1]{u_{#1}}
+\newcommand{\obsinnov}[1]{v_{#1}}
+
+%%% Linear Gaussian model %%%
+\newcommand{\lgmtm}{F}
+\newcommand{\lgmtnm}{G}
+\newcommand{\lgmtv}{Q}
+\newcommand{\lgmom}{H}
+\newcommand{\lgmov}{R}
+
+
+%%% MACROS FOR MATHEMATICAL NOTATION IN COMPOSITE PROPOSAL PAPER %%%
+
+% Functions and operators
+\newcommand{\magdet}[1]{\left| #1 \right|}         % Magnitude of the determinant
+\newcommand{\normal}[3]{\mathcal{N}\left(#1\left|#2,#3\right.\right)}       % Normal density
+\newcommand{\studentt}[4]{\mathcal{ST}\left(#1|#2,#3,#4\right)} % Student-t density
+% \newcommand{\npd}[4]{\left.\frac{\partial^{#1} #2}{\partial #3^{#1}}\right|_{#4}}
+\newcommand{\pdv}[2]{\frac{\partial #1}{\partial #2}}
+\newcommand{\ppdv}[2]{\frac{\partial^2 #1}{\partial #2^2}}
+\newcommand{\mpdv}[3]{\frac{\partial^2 #1}{\partial #2 \partial #3}}
+\newcommand{\npdv}[3]{\frac{\partial^{#1} #2}{\partial #3^{#1}}}
+\newcommand{\nmpdv}[5]{\frac{\partial^{#1} #3}{\partial^{#2} #4 \partial #5}}
+
+% Basics
+% \newcommand{\rt}{t}                             % Real time
+\newcommand{\pt}{\lambda}                       % Pseudo-time
+\newcommand{\dpt}{\delta\lambda}                % A little bit of pseudo-time
+% \newcommand{\ls}[1]{x_{#1}}                     % Latent state
+\newcommand{\dls}{\delta x}                     % A little bit of latent state
+% \newcommand{\ob}[1]{y_{#1}}                     % Observation
+\newcommand{\mix}[1]{\xi_{#1}}                  % Mixing auxiliary variable
+\newcommand{\els}[1]{u_{#1}}                    % Extra latent state
+
+% % Particle shizzle
+% \newcommand{\pss}[2][]{^{(#2)#1}}               % Particle superscript
+% \newcommand{\pw}[1]{w_{#1}}                     % Particle weight
+% \newcommand{\predpw}[1]{\hat{w}_{#1}}           % Predictive particle weight
+% \newcommand{\npw}[1]{\bar{w}_{#1}}              % Normalised particle weight
+% \newcommand{\naw}[1]{\bar{v}_{#1}}              % Normalised auxiliary weight
+% \newcommand{\anc}[1]{a_{#1}}                    % Particle ancestor
+
+% Densities
+% \newcommand{\transden}{f}                       % Transition density
+% \newcommand{\obsden}{g}                         % Observation density
+% \newcommand{\impden}{q}                         % Importance density
+% \newcommand{\partden}{\eta}                     % Unweighted particle distribution
+% \newcommand{\artden}{\rho}                      % Artificial conditional density
+\newcommand{\oiden}[1]{\pi_{#1}}                % Optimal importance density
+% % \newcommand{\logoiden}[1]{\Xi_{#1}}             % Log of the optimal importance density
+% \newcommand{\logoidenapprox}[1]{\hat{\Xi}_{#1}} % Approximation of the log of the optimal importance density
+\newcommand{\approxoiden}[2]{\hat{\pi}_{#1|#2}} % Approximation of the optimal importance density
+\newcommand{\ctapproxoiden}[1]{\hat{\pi}_{#1}}
+\newcommand{\augfiltden}[1]{\tilde{\pi}_{#1}}   % Augmented filtering density
+\newcommand{\oinorm}[1]{K_{#1}}                 % Normalising constant for the optimal importance density
+\newcommand{\augfiltnorm}[1]{\tilde{K}_{#1}}    % Normalising constant for the augmented filtering density
+
+% Numbers
+% \newcommand{\numpart}{N_F}                      % Number of filter particles
+% \newcommand{\ess}[1]{N_{E,#1}}                  % Effective sample size
+
+% Models
+% \newcommand{\transfun}{\phi}                    % Transition function
+% \newcommand{\obsfun}{h}                         % Observation function
+% \newcommand{\transcov}{Q}                       % Transition covariance
+% \newcommand{\obscov}{R}                         % Observation covariance
+% \newcommand{\transmat}{F}                       % Linear transition matrix
+% \newcommand{\obsmat}{H}                         % Linear observation matrix
+% \newcommand{\transmean}{m}                      % Mean of the transition density (i.e. f(x_{t-1}))
+\newcommand{\dof}{\nu}                          % Degrees of freedom of something student-t-ish
+
+% Linear Gaussian things
+% \newcommand{\lgoimean}[1]{\mu_{#1}}             % Linear Gaussian optimal importance density mean
+% \newcommand{\lgoicov}[1]{\Sigma_{#1}}           % Linear Gaussian optimal importance density covariance
+% \newcommand{\stdnorm}[1]{z_{#1}}                % Standard normal R.V.
+% \newcommand{\obmn}[1]{\nu_{#1}}
+% \newcommand{\obvr}[1]{S_{#1}}
+% \newcommand{\obcvr}[1]{C_{#1}}
+\newcommand{\obmnapprox}[1]{\hat{\mu}_{#1}}
+\newcommand{\obvrapprox}[1]{\hat{\Sigma}_{#1}}
+\newcommand{\obcvrapprox}[1]{\hat{C}_{#1}}
+
+% Gaussian Transformation
+\newcommand{\lgdecayfunc}{a}                    % Linear Gaussian decay function for OID transformation
+\newcommand{\lgexpsf}{\gamma}                   % Linear Gaussian exponential scale factor for OID transformation
+\newcommand{\lgupdmeanmat}[1]{\Gamma_{#1}}      % Mean mapping matrix for the OID transformation
+\newcommand{\lgupdcov}[1]{\Omega_{#1}}          % Covariance matrix for the OID transformation
+\newcommand{\lginfbm}[1]{\epsilon_{#1}}         % Brownian motion for the infinitesimal form of the OID transformation
+
+% Linear Gaussian approximations
+%\newcommand{\lgoimeanapprox}[2]{\hat{\mu}_{#1}(#2)}     % Mean of the Gaussian approximation to the OID at time #1 and state #2
+%\newcommand{\lgoicovapprox}[2]{\hat{\Sigma}_{#1}(#2)}   % Covariance of the Gaussian approximation to the OID at time #1 and state #2
+\newcommand{\lgoimnapprox}[2]{\hat{m}_{#1|#2}}      % Mean of the Gaussian approximation to the OID at time #1 and state #2
+\newcommand{\lgoivrapprox}[2]{\hat{P}_{#1|#2}}    % Covariance of the Gaussian approximation to the OID at time #1 and state #2
+\newcommand{\ctlgoimnapprox}[1]{\hat{m}_{#1}}
+\newcommand{\ctlgoivrapprox}[1]{\hat{P}_{#1}}
+%\newcommand{\lgoimeanapprox}[2][]{\ifstrempty{#1}{\hat{\mu}_{#2}}{\hat{\mu}_{#1|#2}}}
+%\newcommand{\lgoicovapprox}[2][]{\ifstrempty{#1}{\hat{\Sigma}_{#2}}{\hat{\Sigma}_{#1|#2}}}
+
+\newcommand{\transmeanapprox}[1]{\hat{\transfun}_{#1}} % Approximate transition mean
+\newcommand{\lgmtvapprox}[1]{\hat{\lgmtv}_{#1}}   % Approximate transition covariance
+\newcommand{\lgmovapprox}[1]{\hat{\lgmov}_{#1}}       % Approximate observation covariance
+\newcommand{\lsfixed}{\ls{}^*}                          % Latent state around which we linearise
+\newcommand{\logtrans}{M}                               % Log of the transition density
+\newcommand{\logobs}{L}                                 % Log of the observation density
+
+% State evolution SDE
+\newcommand{\oudrift}[1]{A_{#1}}                % General O-U process drift term
+\newcommand{\oudiffuse}[1]{B_{#1}}              % General O-U process diffusion term
+\newcommand{\lserror}[2]{e_{#1|#2}}             % State error due to finite sampling
+
+
+
+\newcommand{\flowtd}{\alpha}                    % Flow dervation transition density
+\newcommand{\flowod}{\mathcal{L}}               % Flow derivation observation density
+%\newcommand{\flowdriftapprox}[2]{\hat{\zeta}_{#1|#2}}      % Approximate (actual) particle flow drift
+%\newcommand{\flowdiffuseapprox}[2]{\hat{\eta}_{#1|#2}}     % Approximate (actual) particle flow diffusion
+
+% Simulation models - tracking
+\newcommand{\pos}[1]{p_{#1}}           % Position
+\newcommand{\vel}[1]{v_{#1}}           % Velocity
+\newcommand{\bng}[1]{b_{#1}}               % Bearing
+\newcommand{\ele}[1]{\eta_{#1}}                 % Elevation
+\newcommand{\rng}[1]{r_{#1}}                    % Range
+\newcommand{\hei}[1]{h_{#1}}                    % Height
+\newcommand{\rngrt}[1]{s_{#1}}                  % Range rate
+\newcommand{\terrain}{T}                        % Terrain height
+
+% Simulation models - heartbeats
+\newcommand{\amp}[1]{A_{#1}}                    % Amplitude
+\newcommand{\wid}[1]{W_{#1}}                    % Width
+\newcommand{\del}[1]{\tau_{#1}}                 % Delay
+\newcommand{\freq}[1]{\omega_{#1}}              % Width
+\newcommand{\pha}[1]{\psi_{#1}}                 % Phase
+\newcommand{\bias}[1]{B_{#1}}                   % Bias
+
+
+
+
+
+%%% Importance Densities %%%
+\newcommand{\lgoimn}[1]{m_{#1}}
+\newcommand{\lgoivr}[1]{P_{#1}}
+\newcommand{\logoiden}[1]{\Xi_{#1}}
+\newcommand{\logoidenapprox}[1]{\hat{\Xi}_{#1}}
+
+
+
+\newcommand{\stdnorm}[1]{z_{#1}}
+\newcommand{\artden}[1]{\rho_{#1}}
+\newcommand{\fixed}{^*}
+
+
+%%% Gaussian filter parameters %%%
+\newcommand{\lsmn}[1]{m_{#1}}
+\newcommand{\lsvr}[1]{P_{#1}}
+\newcommand{\lspredmn}[1]{\hat{m}_{#1}}
+\newcommand{\lspredvr}[1]{\hat{P}_{#1}}
+\newcommand{\obmn}[1]{\mu_{#1}}
+\newcommand{\obvr}[1]{\Sigma_{#1}}
+\newcommand{\obcvr}[1]{C_{#1}}
