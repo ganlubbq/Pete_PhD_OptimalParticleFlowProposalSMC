@@ -33,9 +33,15 @@
 \newcommand{\seqden}[1]{\pi_{#1}}
 \newcommand{\seqdenapprox}[1]{\hat{\pi}_{#1}}
 \newcommand{\impden}{q}
+\newcommand{\incimpden}[1]{q_{#1}}
+
+\newcommand{\logprior}{M}
+\newcommand{\loglhood}{L}
+\newcommand{\logseqden}[1]{\Xi_{#1}}
+\newcommand{\logseqdenapprox}[1]{\hat{\Xi}_{#1}}
 
 \newcommand{\sn}[1]{z_{#1}}
-\newcommand{\snchange}{z_{\Delta}}
+\newcommand{\snchange}[1]{\xi_{#1}}
 
 \newcommand{\lsmnapprox}[1]{\hat{m}_{#1}}
 \newcommand{\lsvrapprox}[1]{\hat{P}_{#1}}
@@ -46,7 +52,7 @@
 \newcommand{\flowdrift}[1]{\zeta_{#1}}          % Particle flow drift
 \newcommand{\flowdiffuse}[1]{\eta_{#1}}         % Particle flow diffusion
 \newcommand{\flowcov}[1]{D_{#1}}                % Particle flow "Covariance" matrix
-\newcommand{\flowdiffsf}{\gamma}                % Particle flow diffusion scale factor
+\newcommand{\dsf}{\gamma}                % Particle flow diffusion scale factor
 
 \newcommand{\lgmomapprox}[1]{\hat{\lgmom}_{#1}}       % Linear observation matrix formed by differentiation of the observation function
 \newcommand{\obapprox}[1]{\hat{y}_{#1}}
@@ -112,7 +118,7 @@
 %\newcommand{\priorden}{\varpi}
 \newcommand{\transden}{f}
 \newcommand{\obsden}{g}
-\newcommand{\loglhood}{\mathcal{L}}
+%\newcommand{\loglhood}{\mathcal{L}}
 
 %%% Particle filter things %%%
 %\newcommand{\impden}[1]{q_{#1}}
