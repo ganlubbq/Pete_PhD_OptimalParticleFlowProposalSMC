@@ -674,7 +674,7 @@ A particular problem is that the procedure will not work if the log-densities do
 
 \section{Adaptive Step Sizes}
 
-An important consideration for the PPPF is how the sizes of the pseudo-time steps are chosen. State updates are calculated using local Gaussian approximations of the OID, with a best-case achieved with infinitesimally small steps between these approximations. In practice, the number of steps needs to be kept fairly low, to minimise the computational burden. In some instances, it may be sufficient to use a fixed step size, or a predetermined time grid. However, an adaptive scheme is preferable for greatest efficiency.
+An important consideration for the PPPF is how the sizes of the pseudo-time steps are chosen for each particle. State updates are calculated using local Gaussian approximations of the OID, with a best-case achieved with infinitesimally small steps between these approximations. In practice, the number of steps needs to be kept fairly low, to minimise the computational burden. In some instances, it may be sufficient to use a fixed step size, or a predetermined time grid. However, an adaptive scheme in which step sizes are chosen separately for each particle is preferable for greatest efficiency.
 
 \subsection{Local Error Estimates}
 
@@ -1334,7 +1334,7 @@ as required.
 
 
 \bibliographystyle{chicago}
-\bibliography{D:/pb404/Dropbox/PhD/OTbib}
-%\bibliography{/home/pete/Dropbox/PhD/OTbib}
+% \bibliography{D:/pb404/Dropbox/PhD/OTbib}
+\bibliography{/home/pete/Dropbox/PhD/OTbib}
 
 \end{document} 
