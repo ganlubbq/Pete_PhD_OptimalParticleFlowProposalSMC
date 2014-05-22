@@ -29,6 +29,15 @@
 % References
 \usepackage{natbib}
 
+% Drawing
+\usepackage{tikz}
+\usepackage{pgfplots}
+ \usetikzlibrary{plotmarks}
+ \pgfplotsset{compat=newest}
+ \pgfplotsset{plot coordinates/math parser=false}
+ \usepgfplotslibrary{external}
+ \tikzexternalize[prefix=tikz/]
+
 \graphicspath{{figures/}}
 
 %%% Macros %%%
@@ -42,11 +51,9 @@
 
 
 %%% Titles and stuff %%%
-%\title[Progressive Proposal Particle Filter]{The Progressive Proposal Particle Filter: Better Approximations to the Optimal Importance Density}
-%\author[Bunch {\it et al.}]{Pete Bunch}
 %\address{Cambridge University Engineering Department,Cambridge,UK.}
 %\email{pb404@cam.ac.uk}
-\title{Approximations of the Optimal Importance Density using Gaussian Particle Flow}
+\title{Approximations of the Optimal Importance Density using Gaussian Particle Flow Importance Sampling}
 \author{Pete Bunch and Simon Godsill}
 \date{}
 
@@ -70,33 +77,31 @@ The crucial step in designing a particle filter for a particular application is 
 
 \section{Introduction}
 
-A particle filter is an algorithm used for sequential inference of a filtering distribution associated with a hidden Markov state-space model. The particle filter advances a set of samples through time, drawn approximately from the filtering distribution. This is achieved by sampling at each time step from an importance distribution and then weighting the particles to account for the discrepancy between filtering and importance distributions. Particle filters have attractive asymptotic properties: as the number of particles is increased, expectations over the filter approximation are guaranteed to converge to their true values. For a comprehensive introduction, see for example \citep{Cappe2007,Doucet2009}.
+The particle filter is an algorithm used for sequential inference of a filtering distribution associated with a state-space model. A set of samples is advanced through time, drawn approximately from the filtering distribution. This is achieved by sampling at each time step from an importance distribution and then weighting the particles to account for the discrepancy between filtering and importance distributions. For a comprehensive introduction, see for example \citep{Cappe2007,Doucet2009}.
 
-One of the principal difficulties when designing a particle filter is the selection of the importance distribution. The simplest choice is often to sample from the transition model, resulting in the ``bootstrap filter'' of \citep{Gordon1993}. In many cases, such bootstrap proposals result in poor filter performance due to a mismatch in the areas of high probability between the transition and observation distributions.
+The principal challenge when designing a particle filter is the selection of the importance density. The simplest choice is often to sample from the transition model, resulting in the ``bootstrap filter'' of \citep{Gordon1993}. In many cases, such bootstrap proposals result in poor filter performance due to a mismatch in the areas of high probability between the prior and posterior densities.
 
-Amongst others, \citet{Doucet2000a} demonstrated that the ideal choice of importance distribution for each particle is the conditional posterior given both the previous state and the new observation, dubbed the ``optimal importance distribution'' (OID). In all but a few cases, this cannot be calculated analytically. When the space of the state variables is continuous, a popular solution is to use linearisation or the unscented transform to select a Gaussian importance density which approximates the OID for each particle \citep{Doucet2000a,Merwe2000}. However, such schemes can fail when the model is highly nonlinear or non-Gaussian, as the approximation is poor.
+Amongst others, \citet{Doucet2000a} demonstrated that the ideal choice of importance density for each particle is the conditional posterior given both the previous state and the new observation, dubbed the ``optimal importance density'' (OID). In all but a few cases, this cannot be calculated analytically. A popular solution is to use linearisation or the unscented transform to select a Gaussian importance density which approximates the OID for each particle \citep{Doucet2000a,Merwe2000}. However, such schemes can fail when the model is highly nonlinear or non-Gaussian, as the approximation is poor.
 
-The effect of using a bad importance distribution (i.e. one which is not ``close'' to the OID) is that the variance of the importance weights is high, resulting in a degeneracy of the filter. In the worst cases, there may be no particles at all proposed in regions of high posterior probability, causing the filter to fail entirely. This problem is especially pronounced when the dimensionality of the state space is high --- there is simply more space for the particles to cover.
+The effect of using a bad importance density (i.e. one which is not ``close'' to the OID) is that the variance of the importance weights is high, resulting in a degeneracy of the filter. In the worst cases, there may be no particles at all proposed in regions of high posterior probability, causing the filter to fail entirely. This problem is especially pronounced when the dimensionality of the state space is high --- there is simply more space for the particles to cover.
 
-A common enhancement to the basic particle filter, which helps to alleviate the problems of degeneracy, is to include Markov chain Monte Carlo (MCMC) steps in order to rejuvenate a degenerate set of particles, a method named ``resample-move'' by \citet{Gilks2001}. When the importance sampling step has resulted in only a few useful particles in high probability areas, MCMC steps allow copies of these to be perturbed, so that they become better spread over the state space while still maintaining the correct distribution. While resample-move can often provide a useful fix for a struggling particle filter, it would be preferable to improve the initial importance sampling step to that such a fix is not required. There is, after all, a limit to what resample-move can practically achieve; if the importance sampling fails to put any particles in the right areas then a very large number of MCMC steps may be needed to get them there. In addition, an MCMC stage introduces new algorithm parameters which need to be tuned for effective operation, e.g. the number of MCMC steps per particle, and the proposal distribution.
+A common enhancement to the basic particle filter, which helps to alleviate the problems of degeneracy, is to include Markov chain Monte Carlo (MCMC) steps in order to rejuvenate a degenerate set of particles, a method named ``resample-move'' by \citet{Gilks2001}. When the importance sampling step has resulted in only a few useful particles in high probability areas, MCMC steps allow copies of these to be perturbed, so that they become better spread over the state space while still maintaining the correct distribution. While resample-move can often provide a useful fix for a struggling particle filter, it would be preferable to improve the initial importance sampling step so that such a fix is not required. There is, after all, a limit to what resample-move can practically achieve; if the importance sampling fails to put any particles in the right areas then a very large number of MCMC steps may be needed to get them there. In addition, an MCMC stage introduces new algorithm parameters which need to be tuned for effective operation, e.g. the number of MCMC steps per particle, and the proposal distribution.
 
 Another way in which degeneracy may be mitigated is by introducing the effect of each observation gradually, so that particles may be progressively drawn towards peaks in the likelihood. This can be achieved by using a discrete set of bridging distributions which transition smoothly between the prior and posterior. Each one is targeted in turn using importance sampling and particle diversity is maintained using Metropolis-Hastings moves. Such ``annealing'' schemes have been suggested by, amongst others, \citet{Neal2001} (using MCMC) and \citet{DelMoral2006} (using Sequential Monte Carlo (SMC) samplers) for static inference problems, and by \citet{Godsill2001b,Gall2007,Deutscher2000,Oudjane2000} for particle filters.
 
-It is possible to take the idea of bridging distributions to a limit and define a continuous sequence of distributions between the prior and the posterior. This device was used by \citet{Gelman1998} for the related task of simulating normalising constants, and has been used to design sophisticated assumed density filters \citep{Hanebeck2003a,Hanebeck2012,Hagmar2011}. More recently, particle filters have appeared which exploit the same principle, including the \emph{particle flow} methods described in series of papers including \citep{Daum2008,Daum2011d}, and the \emph{optimal transport} methods of \cite{Reich2011,Reich2012}. A particle is first sampled from the prior (i.e. the transition) density, and then moved continuously according to some velocity field over an interval of \emph{pseudo-time}, such that the evolution in the density corresponds to the progressive introduction of the likelihood.
+It is possible to take the idea of bridging distributions to a limit and define a continuous sequence of distributions between the prior and the posterior. This device was used by \citet{Gelman1998} for the related task of simulating normalising constants, and has been used to design sophisticated assumed density filters \citep{Hanebeck2003a,Hanebeck2012,Hagmar2011}. More recently, particle filters have appeared which exploit the same principle, including the \emph{particle flow} methods described in series of papers including \citep{Daum2008,Daum2011d}, and the \emph{optimal transport} methods of \cite{Reich2011,Reich2012a}. A particle is first sampled from the prior (i.e. the transition) density, and then moved continuously according to some differential equation over an interval of \emph{pseudo-time}, such that the evolution in the density corresponds to the progressive introduction of the likelihood.
 
-Although theoretically elegant and powerful, the principal difficulty with using optimal transport or particle flow methods within a particle filter is that they rarely admit analytic solutions. It is generally necessary to use approximations both in the calculation of the particle velocity field, and then in numerically integrating this to find the final particle locations. In this paper we introduce a new \emph{progressive proposal} method, in which the particle motion is approximated by a Gaussian flow, which is optimal for a linear Gaussian model, and which requires no numerical integration. Furthermore, it is possible to calculate pointwise the density associated with each particle trajectory, and thus use this approximation as an importance density in an importance sampler. In contrast to most resample-move or annealing algorithms, each particle is moved independently of all the others, reducing interaction and inter-sample dependence and also making the algorithm highly parallelisable.
+Although theoretically elegant and powerful, practical implementation of optimal transport or particle flow methods require a host of approximations to be made. First, even if the prior density were known, it would be often necessary to make approximations in order to find an appropriate flow. Second, when applying particle flow to the a filtering density, the prior is generally not known analytically, and must itself be approximated. Third, once an appropriate flow has been identified, it must usually then be integrated numerically.
 
-Secondly, we apply this particle flow proposal method to the OID of a particle filter, rather than to the filtering density directly. This allows particle flow to be applied within the standard framework for particle filtering, and also avoids the need to use approximations of the predictive density.
+In this paper we choose to move the particles according to a Gaussian flow, which is optimal for a linear Gaussian model, and which requires no numerical integration. Furthermore, it is possible to calculate pointwise the density associated with each particle trajectory. Rather than using this density directly as an approximation to the posterior, it is treated as the importance density to an importance sampler. Thus, we are able to correct for the discrepancies introduced by approximating the flow. Finally, we apply this particle flow proposal method to the OID of a particle filter, rather than to the filtering density itself. This allows the particle flow to be applied within the standard framework for particle filtering, and also avoids the need to use approximations of the predictive density.
 
-{\meta Something about properties.}
-
-Since particle flow sampling introduces the effect of the likelihood a little bit at a time, we refer to it as the \emph{progressive proposal} method, and the resulting particle filter as the \emph{progressive proposal particle filter} (PPPF). Performance of the PPPF is demonstrated on a number of challenging nonlinear models and shows performance improvements over alternative choices of importance density.
+We demonstrate the efficacy of Gaussian flow importance sampling for particle filtering with simulations on a number of challenging nonlinear models. Significant performance improvements are observed in error and effective sample size statistics. The new method delivers the greatest advantage when the prior and likelihood models have a Gaussian form, but the observation function is highly nonlinear.
 
 
 
 \section{Importance Sampling and Particle Flows}
 
-Consider the problem of sampling from a Bayesian posterior distribution over a hidden state variable $\ls{} \in \lsspace \subset \real^\lsdim$,
+Consider the problem of sampling from a Bayesian posterior distribution over a hidden state variable $\ls{} \in \lsspace = \real^\lsdim$,
 %
 \begin{IEEEeqnarray}{rCl}
  \postden(\ls{}) & = & \frac{ \priorden(\ls{}) \lhood(\ls{}) }{ \nconst{} } \\
@@ -125,7 +130,7 @@ The effectiveness of such an importance sampler depends crucially on the choice 
 %
 This scheme has the advantage of simplicity and generality. The only requirement is that it should be possible to sample from the prior. However, it is inefficient, especially when the variance of the prior is much greater than that of the posterior, i.e. the likelihood is highly informative about the state. In this situation, the samples are widely spread over the state space, and only a few fall in the region of high likelihood. The consequence is that many have very low weight and posterior estimates are based on only a few significant particles; the resulting estimators are poor, having a high Monte Carlo variance. This is a fundamental difficulty for importance samplers. Good posterior sampling relies on having a good approximation of the posterior to begin with!
 
-Particle flow and optimal transport methods are an alternative mechanism for generating posterior samples. They have been applied to Bayesian filtering and data assimilation problems by \cite{Daum2008,Daum2011d,Daum2013,Reich2011,Reich2012}, and a related method for static inference problems was published in \cite{Moselhy2012}. The general principle is to begin with samples from the prior, then to move these according to some dynamics over an interval of pseudo-time such that the final values are distributed according to the posterior. One suitable way to achieve this is to define the following geometric density sequence over the interval $\pt \in \left[0,1\right]$,
+Particle flow and optimal transport methods are an alternative mechanism for generating posterior samples. They have been applied to Bayesian filtering and data assimilation problems by \cite{Daum2008,Daum2011d,Daum2013,Reich2011,Reich2012a}. The general principle is to begin with samples from the prior, then to move these according to some dynamics over an interval of pseudo-time such that the final values are distributed according to the posterior. One suitable way to achieve this is to define the following geometric density sequence over the interval $\pt \in \left[0,1\right]$,
 %
 \begin{IEEEeqnarray}{rCl}
  \seqden{\pt}(\ls{\pt}) & = & \frac{ \priorden(\ls{\pt}) \lhood(\ls{\pt})^{\pt} }{ \nconst{\pt} } \label{eq:density_sequence} \\
@@ -146,7 +151,7 @@ At the end, since $\seqden{1} = \postden$, the final particles are distributed a
 
 The challenge in applying such a particle flow sampler comes in finding suitable dynamics with which to move the particles such that the correct density is maintained throughout. In general, this cannot be achieved analytically, and approximations are called for (see aforesaid references). While these may be effective, they result in the loss of asymptotic consistency, and the introduction of bias which is not easily quantified.
 
-The approach adopted in this paper, suggested by \cite{Reich2012a}, is to combine particle flow with importance sampling, by using a particle flow approximation of the posterior as an importance density; thus we retain asymptotic consistency of posterior estimators. The pseudo-time interval is divided up into many small increments, and for each one the particles are moved according to a \emph{Gaussian flow} approximation of the exact flow (i.e. that corresponding to \eqref{eq:density_sequence} precisely). This Gaussian flow defines an analytically tractable dynamical system which allows the density associated with the resulting particle trajectories to be evaluated pointwise. The state values generated in this manner are treated as proposals within an importance sampler, and each is assigned an appropriate weight. Since this approach involves incrementally modifying the particle states in order to generate a sample, we have named it the \emph{Progressive proposal} method.
+The approach adopted in this paper, suggested by \cite{Reich2012}, is to combine particle flow with importance sampling, by using a particle flow approximation of the posterior as an importance density; thus we retain asymptotic consistency of posterior estimators. The pseudo-time interval is divided up into many small increments, and for each one the particles are moved according to a \emph{Gaussian flow} approximation of the exact flow (i.e. that corresponding to \eqref{eq:density_sequence} precisely). This Gaussian flow defines an analytically tractable dynamical system which allows the density associated with the resulting particle trajectories to be evaluated pointwise. The state values generated in this manner are treated as proposals within an importance sampler, and each is assigned an appropriate weight.
 
 
 
@@ -156,14 +161,14 @@ The approach adopted in this paper, suggested by \cite{Reich2012a}, is to combin
 
 A difficulty in employing particle flow methods, encountered by both \cite{Daum2011d,Reich2011}, is the need for numerical integration. Particle dynamics corresponding to the density sequence \eqref{eq:density_sequence} are derived in the form of an ODE or SDE, which must then be solved numerically in order to find the new particle locations. Simple solvers may be unstable and more complex solvers very expensive to use. In addition, this numerical integration will introduce errors into the sampling procedure and hence alter the final particle distribution. We can avoid numerical integration by using approximations based on a Gaussian flow.
 
-When the model used is linear and Gaussian, the exact flow for particle motion may be derived analytically. Suppose the likelihood takes the form of an observation which is linearly dependent on the state with Gaussian noise, and that the prior is also Gaussian.
+When the model used is linear and Gaussian, the exact flow for particle motion may be derived analytically. Suppose the likelihood takes the form of an observation $\ob{}\in\obspace = \real^{\obdim}$ which is linearly dependent on the state with Gaussian noise, and that the prior is also Gaussian.
 %
 \begin{model} \label{mod:linear_gaussian}
 \begin{IEEEeqnarray}{rCl}
  \priorden(\ls{}) & = & \normalden{\ls{}}{\lsmn{0}}{\lsvr{0}} \\
  \lhood(\ls{})    & = & \normalden{\ob{}}{\lgmom\ls{}}{\lgmov}
 \end{IEEEeqnarray}
-where $\lsvr{0}$ and $\lgmov$ are positive definite covariance matrices.
+$\lsvr{0}$ and $\lgmov$ are positive definite covariance matrices.
 \end{model}
 %
 For this model, the following properties may be established.
@@ -178,15 +183,6 @@ The density sequence may be calculated analytically,
  \lsmn{\pt} & = & \lsvr{\pt} \left[ \lsvr{0}^{-1} \lsmn{0} + \pt \lgmom^T \lgmov^{-1} \ob{} \right] \nonumber \\
  & = &\lsmn{0} + \lsvr{0} \lgmom^T \left( \lgmom \lsvr{0} \lgmom^T + \frac{\lgmov}{\pt} \right)^{-1} \left( \ob{} - \lgmom \lsmn{0} \right) \nonumber      .
 \end{IEEEeqnarray}
-%%
-%An alternative representation for this is as a linear transformation of a standard Gaussian random variable (zero mean and identity covariance),
-%%
-%\begin{IEEEeqnarray}{rCl}
-% \ls{\pt} & = & \lsmn{\pt} + \lsvr{\pt}^{\half} \sn{\pt} \label{eq:gaussian_decomposition} \\
-% \sn{\pt} & \sim & \normal{\stdnorm{\pt}}{0}{I}      ,
-%\end{IEEEeqnarray}
-%%
-%where $\lsvr{\pt}^{\half}$ is the principal matrix square root of the covariance.
 \end{proposition}
 
 \begin{proof}
@@ -213,15 +209,6 @@ For a finite interval $\left[\pt_0,\pt_1\right]$, the corresponding change in st
  \snchange{\pt_0,\pt_1} & = & \frac{ \int_{\pt_0}^{\pt_1} \dsf^{\half}\exp\left\{ -\half \dsf (\pt_1-\pt_0) \right\} d\flowbm{\pt} }{ \left[1-\exp\left\{-\dsf(\pt_1-\pt_0)\right\}\right]^{\half} } \nonumber \\
  & \sim & \normalden{\cdot}{0}{I} \nonumber       .
 \end{IEEEeqnarray}
-%%
-%Alternatively, we could represent these dynamics in terms of the transformation,
-%%
-%\begin{IEEEeqnarray}{rCl}
-% \ls{\pt} & = & \lsmn{\pt} + \lsvr{\pt}^{\half} \sn{\pt} \nonumber \\
-% d\sn{\pt} & = & -\half \dsf \sn{\pt} d\pt + \dsf^{\half} d\flowbm{\pt} \label{eq:standard_normal_sde} \\
-% \sn{\pt_1} & = & \exp\left\{ -\half \dsf (\pt_1-\pt_0) \right\} \sn{\pt_0} + \left[ 1 - \exp\left\{ - \dsf (\pt_1-\pt_0) \right\} \right]^{\half} \snchange \label{eq:standard_normal_update}      .
-%\end{IEEEeqnarray}
-%%
 \end{theorem}
 
 \begin{proof}
@@ -235,7 +222,7 @@ Any Gaussian random vector may be written as a linear transformation of an under
 where $\lsvr{\pt}^{\half}$ is the principal matrix square root of the covariance matrix. This simplifies our task. Now, rather than finding an SDE or ODE which maintains the particle density $\seqden{\pt}(\ls{\pt}) = \normalden{\ls{\pt}}{\lsmn{\pt}}{\lsvr{\pt}}$, we merely need to maintain a standard Gaussian for all $\pt$. It is straightforward to verify that the following Ornstein-Uhlenbeck (OU) process has this required stationary distribution,
 %
 \begin{IEEEeqnarray}{rCl}
- d\sn{\pt} & = & -\half \dsf \sn{\pt} d\pt + \dsf^{\half} d\flowbm{\pt} \label{eq:standard_normal_sde} \nonumber      .
+ d\sn{\pt} & = & -\half \dsf \sn{\pt} d\pt + \dsf^{\half} d\flowbm{\pt} \label{eq:standard_normal_sde}      .
 \end{IEEEeqnarray}
 %
 More general OU processes also possess this stationary distribution, but these have non-isotropic volatility which is intuitively unappealing and have thus not been considered further.
@@ -256,11 +243,13 @@ Now differentiating $\lsmn{\pt}$ and $\lsvr{\pt}$ from \eqref{eq:linear_gaussian
  \pdv{\lsmn{\pt}}{\pt} & = & \lsvr{\pt} \lgmom^T \lgmov^{-1}(\ob{\ti}-\lgmom\lsmn{\pt}) \nonumber       .
 \end{IEEEeqnarray}
 %
-Substituting this in, the state evolution stochastic differential equation becomes,
+Substituting this in, the flow SDE becomes,
 %
 \begin{IEEEeqnarray}{rCl}
  d\ls{\pt} & = & \left[ \lsvr{\pt} \lgmom^T \lgmov^{-1} \left( (\ob{\ti}-\lgmom\lsmn{\pt}) - \half \lgmom (\ls{\pt}-\lsmn{\pt}) \right) - \half \dsf (\ls{\pt}-\lsmn{\pt}) \right] d\pt + \dsf^{\half} \lsvr{\pt}^{\half} d\flowbm{\pt} \nonumber       .
 \end{IEEEeqnarray}
+
+\vspace{0.5cm}
 
 To solve this SDE, consider applying It\={o}'s lemma to the function $\exp\left\{\half\dsf\pt\right\}\sn{\pt}$ and then substituting for $d\sn{\pt}$ from \eqref{eq:standard_normal_sde},
 %
@@ -283,7 +272,7 @@ Meanwhile on the right hand side we have,
  \int_{\pt_0}^{\pt_1} \dsf^{\half} \exp\left\{\half\dsf\pt\right\} d\flowbm{\pt} \nonumber      .
 \end{IEEEeqnarray}
 %
-Since the integrand is a deterministic function, this stochastic integral is a Gaussian random variable, and the mean and covariance may be shown to be $0$ and $\left[ \exp\left\{\lgexpsf\pt_1\right\} - \exp\left\{\lgexpsf\pt_0\right\} \right]I$ respectively. Hence, with some rearranging, we can write the update for $\sn{\pt}$ as follows,
+Since the integrand is a deterministic function, this stochastic integral is a Gaussian random variable, and the mean and covariance may be shown to be $0$ and $\left[ \exp\left\{\lgexpsf\pt_1\right\} - \exp\left\{\lgexpsf\pt_0\right\} \right]I$ respectively. Hence, with some algebra, we can write the update for $\sn{\pt}$ as follows,
 %
 \begin{IEEEeqnarray}{rCl}
  \stdnorm{\pt_1} & = & \exp\left\{ -\half \lgexpsf (\pt_1-\pt_0) \right\} \stdnorm{\pt_0} + \left[ 1 - \exp\left\{ - \lgexpsf (\pt_1-\pt_0) \right\} \right]^{\half} \snchange{\pt_0,\pt_1} \nonumber       ,
@@ -299,7 +288,15 @@ where
 Finally, combining \eqref{eq:stdnorm_update} and \eqref{eq:gaussian_decomposition}, we reach the state update formula \eqref{eq:state_update}.\qed
 \end{proof}
 
-The behaviour of the state dynamics is controlled through choice of $\dsf$. When $\dsf=0$, the particle motion is deterministic; when $\dsf>0$, stochastic. Using equation~\eqref{eq:state_update}, it is possible to calculate or sample the state at any point in pseudo-time given the state at some earlier point in pseudo-time.
+The behaviour of the state dynamics is controlled through the choice of $\dsf$. When $\dsf=0$, the particle motion is deterministic; when $\dsf>0$, stochastic. Using equation~\eqref{eq:state_update}, it is possible to calculate or sample the state at any point in pseudo-time given the state at some earlier point in pseudo-time. An example is shown in figure~\ref{fig:gaussian_flow_example}.
+
+\begin{figure}
+\centering
+\subfloat[]{ \input{figures/gaussian_flow.tikz} }
+\subfloat[]{ \input{figures/gaussian_flow_zoom.tikz} }
+\caption{An illustration of a Gaussian flow for a linear Gaussian model. The ellipses are 1 standard deviation contours of a selection of the sequence densities. The paths show the evolution of three particles from the same starting state using $\dsf=0$ (black), $\dsf=0.03$ (blue) and $\dsf=0.3$ (green). The second panel shows a detailed view of the final stages of the trajectories.}
+\label{fig:gaussian_flow_example}
+\end{figure}
 
 We comment briefly on the use of the principal matrix square root $\lsvr{\pt}^{\half}$, rather than any other choice, e.g. Cholesky. All other matrix square roots can be written in the form $\Theta_{\pt} \lsvr{\pt}^{\half}$ where $\Theta_{\pt}$ is a time-varying orthogonal matrix. When differentiated, this will add an extra drift term to the state SDE \eqref{eq:state_sde} causing the state to rotate around its mean. When using the Gaussian flow approximation this behaviour is undesirable as it increases the expected distance travelled in each step and thus exacerbates the effect of the approximation.
 
@@ -311,9 +308,9 @@ For the linear Gaussian models of the previous section, sampling using a particl
 \begin{model} \label{mod:nonlinear_gaussian}
 \begin{IEEEeqnarray}{rCl}
  \priorden(\ls{}) & = & \normalden{\ls{}}{\lsmn{0}}{\lsvr{0}} \\
- \lhood(\ls{})    & = & \normalden{\ob{}}{\obsfun(\ls{})}{\lgmov}     ,
+ \lhood(\ls{})    & = & \normalden{\ob{}}{\obsfun(\ls{})}{\lgmov}
 \end{IEEEeqnarray}
-in which $\obsfun$ is twice differentiable.
+$\obsfun$ is twice differentiable.
 \end{model}
 
 \subsubsection{Approximately Optimal State Updates using Gaussian Flow}
@@ -336,10 +333,11 @@ In order to apply the Gaussian flow we make two approximations. First, of the sa
 Second, using a truncated Taylor expansion of the nonlinear observation function around the current state,
 %
 \begin{IEEEeqnarray}{rCl}
- \obsfun(\ls{}) & \approx & \obsfun(\ls{\pt_0}) + \pd{\obsfun}{\ls{}}{\ls{\pt_0}} (\ls{}-\ls{\pt_0})      .
+ \obsfun(\ls{}) & \approx & \obsfun(\ls{\pt_0}) + \lgmomapprox{\pt_0} (\ls{}-\ls{\pt_0}) \\
+ \lgmomapprox{\pt_0} & = & \pd{\obsfun}{\ls{}}{\ls{\pt_0}}     .
 \end{IEEEeqnarray}
 %
-Using these, and by a straightforward comparison with the linear Gaussian case, the resulting approximation for the density sequence over the interval $\left[\pt_0,\pt_1\right]$ is,
+Using these, and by a straightforward comparison with the linear Gaussian case, the resulting approximation for the density sequence over the short pseudo-time interval $\left[\pt_0,\pt_1\right]$ is,
 %
 \begin{IEEEeqnarray}{rCl}
  \seqdenapprox{\pt}(\ls{}) & \propto & \normalden{\ls{}}{\lsmnapprox{\pt_0}}{\lsvrapprox{\pt_0}} \normalden{\obapprox{\pt_0}}{\lgmomapprox{\pt_0}\ls{}}{\frac{\lgmov}{\pt-\pt_0}} \\
@@ -349,13 +347,13 @@ Using these, and by a straightforward comparison with the linear Gaussian case, 
 where,
 %
 \begin{IEEEeqnarray}{rCl}
- \obapprox{\pt_0} & = & \ob{}-\obsfun(\ls{\pt_0})+\pd{\obsfun}{\ls{}}{\ls{\pt_0}}\ls{\pt_0} \\
  \lgmomapprox{\pt_0} & = & \pd{\obsfun}{\ls{}}{\ls{\pt_0}} \\
+ \obapprox{\pt_0} & = & \ob{} - \obsfun(\ls{\pt_0}) + \lgmomapprox{\pt_0} \ls{\pt_0} \\
  \lsmnapprox{\pt} & = & \lsmnapprox{\pt_0} + \lsvrapprox{\pt_0} \lgmomapprox{\pt_0}^T \left( \lgmomapprox{\pt_0} \lsvrapprox{0} \lgmomapprox{\pt_0}^T + \frac{\lgmov}{\pt-\pt_0} \right)^{-1} \left( \obapprox{\pt_0} - \lgmomapprox{\pt_0} \lsmnapprox{\pt_0} \right) \label{eq:approx_mean_update} \\
  \lsvrapprox{\pt} & = & \lsvrapprox{0} - \lsvrapprox{0} \lgmomapprox{\pt_0}^T \left( \lgmomapprox{\pt_0} \lsvrapprox{0} \lgmomapprox{\pt_0}^T + \frac{\lgmov}{\pt-\pt_0} \right)^{-1} \lgmomapprox{\pt_0} \lsvrapprox{0} \label{eq:approx_variance_update}      .
 \end{IEEEeqnarray}
 %
-The Gaussian flow dynamics defined by \eqref{eq:state_sde} and \eqref{eq:state_update} may now be applied in order to update the state (either by calculation or sampling, depending on $\dsf$) with $\lgmom$, $\ob{}$, $\lsmn{\pt}$ and $\lsvr{\pt}$ replaced by their approximations. For the interval $\left[\pt_0,\pt_1\right]$, the corresponding state update is,
+The Gaussian flow dynamics defined by \eqref{eq:state_sde} and \eqref{eq:state_update} may now be applied in order to update the state (either by calculation or sampling, depending on $\dsf$) with $\lgmom$, $\ob{}$, $\lsmn{\pt}$ and $\lsvr{\pt}$ replaced by their approximations. For the interval $\left[\pt_0,\pt_1\right]$, the state update is,
 %
 \begin{IEEEeqnarray}{rCl}
  \ls{\pt_1} & = & \lsmnapprox{\pt_1} + \lgupdmeanmat{\pt_0,\pt_1}(\ls{\pt_0}-\lsmnapprox{\pt_0}) + \lgupdcov{\pt_0,\pt_1}^{\half} \snchange{} \label{eq:approx_state_update} \\
@@ -371,7 +369,15 @@ The SDE followed by the state over this interval is,
  \flowdiffuseapprox{\pt}         & = & \dsf^{\half} \lsvrapprox{\pt}^{\half} \nonumber      .
 \end{IEEEeqnarray}
 
-Using these equations, the state is updated from $\pt_0$ to $\pt_1$. At the new pseudo-time, the mean and variance of the Gaussian approximation are updated using \eqref{eq:approx_mean_update} and \eqref{eq:approx_variance_update}, and the process repeats.
+Using these equations, the state is updated from $\pt_0$ to $\pt_1$. At the new pseudo-time, the mean and variance of the Gaussian approximation are updated using \eqref{eq:approx_mean_update} and \eqref{eq:approx_variance_update}, and the process repeats. An illustration of this process is shown in figure~\ref{approx_gaussian_flow_example}
+
+\begin{figure}
+\centering
+\subfloat[]{ \input{figures/approx_gaussian_flow.tikz} }
+\subfloat[]{ \input{figures/approx_gaussian_flow_zoom.tikz} }
+\caption{An illustration of a Gaussian flow approximation for a nonlinear Gaussian model. Solid contours represent the evolution of the true density sequence, and dotted contours those of the Gaussian approximations at the same times. The resulting path of a particle using $\dsf=0.1$ is also shown (green). The second panel shows a detailed view of the final stage of the trajectory.}
+\label{approx_gaussian_flow_example}
+\end{figure}
 
 
 
@@ -380,13 +386,13 @@ Using these equations, the state is updated from $\pt_0$ to $\pt_1$. At the new 
 A reasonable question to ask is how close is the Gaussian flow approximation to the exact flow. This can be addressed by considering the continuous time behaviour.
 
 \begin{theorem} \label{theo:flow_governing_equation}
-Suppose that the a particle state $\ls{\pt}$ is moved according to an SDE,
+Suppose that the a particle state $\ls{\pt}$ is moved according to the exact flow using the SDE,
 %
 \begin{IEEEeqnarray}{rCl}
  d\ls{\pt} & = & \flowdrift{\pt}(\ls{\pt}) d\pt + \flowdiffuse{\pt} d\flowbm{\pt} \label{eq:optimal_flow_sde}     ,
 \end{IEEEeqnarray}
 %
-and that the state is distributed according to the density, $\ls{\pt}\sim\seqden{\pt}(\ls{\pt})$. The density and flow are related by the following governing equation,
+such that the state is distributed according to the density, $\ls{\pt}\sim\seqden{\pt}(\ls{\pt})$. The density and flow are related by the following governing equation,
 %
 \begin{IEEEeqnarray}{rCl}
  \loglhood(\ls{\pt}) - \expect{\seqden{\pt}}\left[ \loglhood \right] & = & -\trace\left[ \pdv{\flowdrift{\pt}}{\ls{\pt}} \right] - \flowdrift{\pt}(\ls{\pt})^T \pdv{\logseqden{\pt}}{\ls{\pt}} \nonumber \\
@@ -404,7 +410,7 @@ in which
 \end{theorem}
 
 \begin{proof}
-The proof follows closely along the lines of \cite{Daum2008}. Fist, the log-density is,
+The proof follows closely the lines taken by \cite{Daum2008}. First, the log-density is,
 %
 \begin{IEEEeqnarray}{rCl}
  \logseqden{\pt}(\ls{\pt}) & = & \logprior(\ls{\pt}) + \pt \loglhood(\ls{\pt}) - \log\left(\nconst{\pt}\right) \nonumber     ,
@@ -422,7 +428,7 @@ and recall that the normalising constant is,
  \nconst{\pt} & = & \int \priorden(\ls{}) \lhood(\ls{})^{\pt} d\ls{}      .
 \end{IEEEeqnarray}
 %
-Now differentiating,
+Differentiating leads to,
 %
 \begin{IEEEeqnarray}{rCl}
  \pdv{\logseqden{\pt}}{\pt} & = & \loglhood(\ls{\pt}) - \frac{d}{d\pt}\log\left(\nconst{\pt}\right) \nonumber      .
@@ -437,13 +443,13 @@ Now since,
                                                & = & \expect{\seqden{\pt}}\left[ \loglhood \right] \nonumber     ,
 \end{IEEEeqnarray}
 %
-this may be written as,
+we have,
 %
 \begin{IEEEeqnarray}{rCl}
  \pdv{\logseqden{\pt}}{\pt} & = & \loglhood(\ls{\pt}) - \expect{\seqden{\pt}}\left[ \loglhood \right] \label{eq:sequence_logdensity}      .
 \end{IEEEeqnarray}
 
-Second, the Fokker-Planck equation relates the flow of a particle with the evolution of the density for its position. For a particle moving according to an the flow SDE \eqref{eq:optimal_flow_sde} it states,
+Second, the Fokker-Planck equation relates the motion of a particle with the evolution of the density for its position. For a particle moving according to \eqref{eq:optimal_flow_sde} it states,
 %
 \begin{IEEEeqnarray}{rCl}
  \pdv{\seqden{\pt}}{\pt} & = & - \nabla \cdot \left[ \flowdrift{\pt}(\ls{\pt}) \seqden{\pt}(\ls{\pt}) \right] + \nabla \cdot \left[ \flowcov{\pt} \nabla \seqden{\pt}(\ls{\pt}) \right] \nonumber \\
@@ -473,20 +479,19 @@ Dividing through by $\seqden{\pt}$ in the first step requires that this density 
 %
 \begin{IEEEeqnarray}{rCl}
  \loglhood(\ls{\pt}) - \expect{\seqden{\pt}}\left[ \loglhood \right] & = & -\trace\left[ \pdv{\flowdrift{\pt}}{\ls{\pt}} \right] - \flowdrift{\pt}(\ls{\pt})^T \pdv{\logseqden{\pt}}{\ls{\pt}} \nonumber \\
- & & \qquad + \: \trace\left[ \flowcov{\pt} \ppdv{\logseqden{\pt}}{\ls{\pt}} \right] + \pdv{\logseqden{\pt}}{\ls{\pt}}^T \flowcov{\pt} \pdv{\logseqden{\pt}}{\ls{\pt}} \nonumber         .
+ & & \qquad + \: \trace\left[ \flowcov{\pt} \ppdv{\logseqden{\pt}}{\ls{\pt}} \right] + \pdv{\logseqden{\pt}}{\ls{\pt}}^T \flowcov{\pt} \pdv{\logseqden{\pt}}{\ls{\pt}} \nonumber         . \qed
 \end{IEEEeqnarray}
-\qed
 \end{proof}
 
 The governing equation relates the SDE drift and diffusion to three quantities: the gradient $\pdv{\logseqden{\pt}}{\ls{\pt}}$ and Hessian $\ppdv{\logseqden{\pt}}{\ls{\pt}}$ of the log-density at the current location, and the expected value of the log-likelihood over the current sequence density $\expect{\seqden{\pt}}\left[ \loglhood \right]$. Intuitively, the first two terms may be seen as controlling the particle motion due to changes in the local shape of the sequence density, while the expectation controls motion due to shifts in the bulk of the probability mass.
 
-It is clear from theorem~\ref{theo:flow_governing_equation} that our Gaussian flow approximation is not optimal, and therefore that the density sequence of the resulting particle will not be equal to the desired sequence. However, the two are related in the following way.
+It is clear from theorem~\ref{theo:flow_governing_equation} that our Gaussian flow approximation does not satisfy the governing equation, and therefore that the density sequence of the resulting particle will not be equal to the desired sequence. However, the two are related in the following way.
 
 \begin{theorem} \label{theo:log_density_theorem}
 Write the log-density for desired sequence as $\logseqden{\pt}$ and the log-density of the actual sequence as $\logseqdenapprox{\pt}$. Use the nonlinear Gaussian model~\ref{mod:nonlinear_gaussian}, for which we have $\logseqdenapprox{0}=\logseqden{0}$. If the Gaussian approximation is continuously updated, then on the path of the particle and for $\pt \in \left[0,1\right]$,
 %
 \begin{IEEEeqnarray}{rCl}
- \logseqdenapprox{\pt} & = &  \logseqden{\pt} + \errconst{\pt} \label{eq:log_density_theorem}       ,
+ \logseqdenapprox{\pt}(\ls{\pt}) & = &  \logseqden{\pt}(\ls{\pt}) + \errconst{\pt} \label{eq:log_density_theorem}       ,
 \end{IEEEeqnarray}
 %
 where $\errconst{\pt}$ is a constant which depends on the path taken by the particle (and thus is different for each one). Hence also,
@@ -503,7 +508,7 @@ along the particle path.
 The proof is by induction. \eqref{eq:log_density_theorem} is clearly satisfied at $\pt=0$ with $\errconst{0}=0$ for the nonlinear Gaussian model. If $\logseqdenapprox{\pt}$ and $\logseqden{\pt}$ are well behaved (differentiable, no singularities, etc.), then \eqref{eq:log_density_theorem} is equivalent to,
 %
 \begin{IEEEeqnarray}{rCl}
- \npdv{k}{k}{\logseqdenapprox{\pt}}{\ls{\pt}} & = &  \npdv{k}{k}{\logseqden{\pt}}{\ls{\pt}} , \: k = 1,2,\dots \nonumber      .
+ \npdv{k}{\logseqdenapprox{\pt}}{\ls{\pt}} & = &  \npdv{k}{\logseqden{\pt}}{\ls{\pt}} , \: k = 1,2,\dots \nonumber      .
 \end{IEEEeqnarray}
 
 The variation of the first derivative of the desired log-density along the particle path is governed by,
@@ -541,7 +546,7 @@ and so,
  & = & \lgmomapprox{\pt}^T \lgmov^{-1} \left( \ob{\ti} - \obsfun(\ls{\pt}) \right) \nonumber       .
 \end{IEEEeqnarray}
 
-For the actual density sequence, we can find this mixed partial derivative by substituting the particle dynamics \eqref{eq:approx_state_sde} into \eqref{eq:log_fp} and differentiating,
+For the actual density sequence, we can find this mixed partial derivative by substituting the particle dynamics \eqref{eq:approx_state_sde} into \eqref{eq:optimal_flow_pde} and differentiating,
 %
 \begin{IEEEeqnarray}{rCl}
  \mpdv{\logseqdenapprox{\pt}}{\ls{\pt}}{\pt} & = & \pdv{}{\ls{\pt}} \left\{ -\trace\left[ \pdv{\flowdrift{\pt}}{\ls{\pt}} \right] - \flowdrift{\pt}(\ls{\pt})^T \pdv{\logseqdenapprox{\pt}}{\ls{\pt}} + \trace\left[ \flowcov{\pt} \npdv{2}{\logseqdenapprox{\pt}}{\ls{\pt}} \right] + \pdv{\logseqdenapprox{\pt}}{\ls{\pt}}^T \flowcov{\pt} \pdv{\logseqdenapprox{\pt}}{\ls{\pt}} \right\} \nonumber      ,
@@ -550,15 +555,15 @@ For the actual density sequence, we can find this mixed partial derivative by su
 where, if the Gaussian approximation and linearisation are updated continuously,
 %
 \begin{IEEEeqnarray}{rCl}
- \flowdrift{\pt}(\ls{\pt}) & = & \ctlgoivrapprox{\pt} \lgmomapprox{\ls{\pt}}^T \lgmov^{-1} \left( \left(\ob{\ti} - \obsfun(\ls{\pt}) \right) + \half \lgmomapprox{\ls{\pt}} (\ls{\pt}-\ctlgoimnapprox{\pt}) \right) - \half \lgexpsf (\ls{\pt}-\ctlgoimnapprox{\pt}) \nonumber
+ \flowdrift{\pt}(\ls{\pt}) & = & \lsvrapprox{\pt} \lgmomapprox{\pt}^T \lgmov^{-1} \left( \left(\ob{\ti} - \obsfun(\ls{\pt}) \right) + \half \lgmomapprox{\pt} (\ls{\pt}-\lsmnapprox{\pt}) \right) - \half \lgexpsf (\ls{\pt}-\lsmnapprox{\pt}) \nonumber
 \end{IEEEeqnarray}
 \begin{IEEEeqnarray}{rCl}
- \flowcov{\pt} & = & \half \lgexpsf \ctlgoivrapprox{\pt} \nonumber
+ \flowcov{\pt} & = & \half \lgexpsf \lsvrapprox{\pt} \nonumber
 \end{IEEEeqnarray}
 \begin{IEEEeqnarray}{rCl}
- \logseqdenapprox{\pt} & = & -\half \log\left(\determ{2\pi\ctlgoivrapprox{\pt}}\right) - \half\left[ \left(\ls{\pt}-\ctlgoimnapprox{\pt}\right)^T \ctlgoivrapprox{\pt}^{-1} \left(\ls{\pt}-\ctlgoimnapprox{\pt}\right) \right] \nonumber \\
- \pdv{\logseqdenapprox{\pt}}{\ls{\pt}} & = & - \ctlgoivrapprox{\pt}^{-1} \left(\ls{\pt}-\ctlgoimnapprox{\pt}\right) \nonumber \\
- \npdv{2}{\logseqdenapprox{\pt}}{\ls{\pt}} & = & - \ctlgoivrapprox{\pt}^{-1}\nonumber      .
+ \logseqdenapprox{\pt} & = & -\half \log\left(\determ{2\pi\lsvrapprox{\pt}}\right) - \half\left[ \left(\ls{\pt}-\lsmnapprox{\pt}\right)^T \lsvrapprox{\pt}^{-1} \left(\ls{\pt}-\lsmnapprox{\pt}\right) \right] \nonumber \\
+ \pdv{\logseqdenapprox{\pt}}{\ls{\pt}} & = & - \lsvrapprox{\pt}^{-1} \left(\ls{\pt}-\lsmnapprox{\pt}\right) \nonumber \\
+ \npdv{2}{\logseqdenapprox{\pt}}{\ls{\pt}} & = & - \lsvrapprox{\pt}^{-1}\nonumber      .
 \end{IEEEeqnarray}
 %
 Substituting in these terms, we find that,
@@ -578,16 +583,16 @@ This procedure is repeated trivially for the remaining derivatives, and the resu
 
 The implication of this theorem is that with small step sizes, the particle motion should accurately reflect local changes in the sequence density. Unfortunately, the expected log-likelihood is crudely approximated, and however small the step sizes are made this term will not be correct; this limits the performance of the algorithm. We can now reason about when Gaussian flow approximations will work well and when they are likely to fail. If the likelihood leads to the introduction of a large peak in the posterior far out in the tail of the prior, then the expected log-likelihood estimates will be poor, the particles will not ``know'' about it, and thus will not gravitate towards it.
 
-Clearly in practice it is not possible to recalculate the Jacobian ($\lgmomapprox{pt}$) continuously, nor to update the moments of the Gaussian approximation ($\lsmnapprox{\pt}$ and $\lsvrapprox{\pt}$). From theorem~\ref{theo:log_density_theorem}, it is apparent that using smaller step sizes between these updates will reduce the discrepancy in the derivatives of the desired and actual log-densities, and therefore is expected to improve the approximation.
+Clearly in practice it is not possible to recalculate the Jacobian $\lgmomapprox{\pt}$ continuously, nor to update the moments of the Gaussian approximation ($\lsmnapprox{\pt}$ and $\lsvrapprox{\pt}$). However, from theorem~\ref{theo:log_density_theorem}, it is clear that using smaller step sizes between these updates will reduce the discrepancy in the derivatives of the desired and actual log-densities, and therefore is expected to improve the approximation.
 
 
 
 \subsection{Gaussian Flow Approximations for Arbitrary Models} \label{sec:non_gaussian_models}
 
-It is possible to use a Gaussian flow approximation for arbitrary model.
+It is possible to use a Gaussian flow approximation for arbitrary models.
 %
 \begin{model} \label{mod:arbitrary}
-Let $\priorden(\ls{})$ and $\lhood(\ls{})$ be nowhere vanishing and twice differentiable.
+$\priorden(\ls{})$ and $\lhood(\ls{})$ are nowhere vanishing and twice differentiable.
 \end{model}
 
 As before, suppose we have a sample distributed approximately according to $\seqden{\pt_0}$. The density sequence for a short time after is,
@@ -603,7 +608,7 @@ and the sampled density is approximated as Gaussian,
  & = & \normalden{\ls{}}{\lsmnapprox{\pt_0}}{\lsvrapprox{\pt_0}}     .
 \end{IEEEeqnarray}
 %
-A more drastic approximation is required for the likelihood. In addition, the prior must be approximated as a Gaussian in order to initialise the Gaussian approximation at $\pt=0$ (i.e. to select $\lsmnapprox{0}$ and $\lsvrapprox{0}$). We could, for example use a Laplace approximation for each,
+A more drastic approximation is required for the likelihood. In addition, an initial Gaussian approximation is needed for the prior (i.e. to select $\lsmnapprox{0}$ and $\lsvrapprox{0}$). We could, for example, use a Laplace approximation for each,
 %
 \begin{IEEEeqnarray}{rCl}
  \priorden(\ls{}) & \approx & \normalden{\ls{}}{\lsmnapprox{0}}{\lsvrapprox{0}} \\
@@ -631,13 +636,13 @@ and
  \loglhood(\ls{}) & = & \log\left(\lhood(\ls{})\right) \nonumber      .
 \end{IEEEeqnarray}
 %
-This Laplacian method has been used in, for example, \citep{Doucet2000a,Pitt1999} for selecting a single Gaussian importance density.
+This Laplace method has been used in, for example, \citep{Doucet2000a,Pitt1999} for selecting a single Gaussian importance density.
 
-Using these approximations, a Gaussian flow may be used to perform incremental state updates as before, using \eqref{eq:approx_state_update}, \eqref{eq:approx_mean_update} and \eqref{eq:approx_variance_update}.
+Using these approximations, a Gaussian flow may be used to perform incremental state updates as before, using \eqref{eq:approx_mean_update}, \eqref{eq:approx_variance_update} and \eqref{eq:approx_state_update}.
 
-Although this procedure is widely applicable, no claims of optimality or general effectiveness can be made --- the effects of multiple interacting approximations are hard to characterise.
+Although this procedure is widely applicable, no claims of optimality or effectiveness can be made --- the effects of multiple interacting approximations are hard to characterise.
 
-A particular problem with this method is that the procedure will not work if the log-likelihood at $\ls{\pt}$ or the prior log-density at $\ls{0}$ does not have a negative curvature (i.e. a negative-definite Hessian), since the resulting covariance matrix of the Gaussian approximation is not positive definite. Furthermore, if the curvature in any direction is close to zero then the approximation can be very poor (since the expected log-likelihood term in \eqref{eq:optimal_flow_PDE} is poorly approximated). If such a failure occurs then various heuristics may be used to enforce the correct curvature. For example, one option is to perform an eigendecomposition of the Hessian matrices and replace any positive (or small negative) eigenvalues with a negative constant (e.g. the prior variance in that direction).
+A particular problem with this method is that the procedure will not work if the log-likelihood at $\ls{\pt}$ or the prior log-density at $\ls{0}$ does not have a negative curvature (i.e. a negative-definite Hessian), since the resulting covariance matrix of the Gaussian approximation is not positive definite. Furthermore, if the curvature in any direction is close to zero then the approximation can be very poor (since the expected log-likelihood term is poorly approximated). If such a failure occurs then various heuristics may be used to enforce the correct curvature. For example, one option is to perform an eigendecomposition of the Hessian matrices and replace any positive (or small negative) eigenvalues with a negative constant (e.g. the prior variance in that direction).
 
 
 
@@ -712,7 +717,7 @@ In \citep{DelMoral2006}, the optimal form for the artificial density is shown to
  \artden{\text{opt}}(\ls{\pt_0} | \ls{\pt_1}) & = & \frac{ \seqden{\pt_0}(\ls{\pt_0}) \incimpden{\pt_1}(\ls{\pt_1} | \ls{\pt_0}) }{ \int \seqden{\pt_0}(\ls{\pt_0}) \incimpden{\pt_1}(\ls{\pt_1} | \ls{\pt_0}) d\ls{\pt_0} } \label{eq:optimal_artificial_density}     .
 \end{IEEEeqnarray}
 %
-This is generally intractable, but using the existing Gaussian approximation \eqref{eq:gaussian_oid_approximation} for $\seqden{\pt}$,
+This is generally intractable, but using the existing Gaussian approximation \eqref{eq:gaussian_oid_approximation} for $\seqden{\pt_0}$,
 %
 \begin{IEEEeqnarray}{rCl}
  \artden{\pt_0}(\ls{\pt_0} | \ls{\pt_1}) & = & \frac{ \seqdenapprox{\pt_0}(\ls{\pt_0}) \incimpden{\pt_1}(\ls{\pt_1} | \ls{\pt_0}) }{ \int \seqdenapprox{\pt_0}(\ls{\pt_0}) \incimpden{\pt_1}(\ls{\pt_1} | \ls{\pt_0}) d\ls{\pt_0} } \nonumber \\
@@ -722,7 +727,7 @@ This is generally intractable, but using the existing Gaussian approximation \eq
 Hence the appropriate weight update is,
 %
 \begin{IEEEeqnarray}{rCl}
- \pw{\pt_1} & = & \pw{\pt_0} \times \frac{ \priorden(\ls{\pt_1}) \lhood(\ls{\pt_1})^{\pt_1} }{ \priorden(\ls{\pt_0}) \lhood(\ls{\pt_0})^{\pt_0} } \times \frac{ \normal{\ls{\pt_0}}{\lsmnapprox{\pt_0}}{\lsvrapprox{\pt_0}} }{ \normal{\ls{\pt_1}}{\lsmnapprox{\pt_1}}{\lsvrapprox{\pt_1}} } \label{eq:stocahstic_weight_update}     .
+ \pw{\pt_1} & = & \pw{\pt_0} \times \frac{ \priorden(\ls{\pt_1}) \lhood(\ls{\pt_1})^{\pt_1} }{ \priorden(\ls{\pt_0}) \lhood(\ls{\pt_0})^{\pt_0} } \times \frac{ \normal{\ls{\pt_0}}{\lsmnapprox{\pt_0}}{\lsvrapprox{\pt_0}} }{ \normal{\ls{\pt_1}}{\lsmnapprox{\pt_1}}{\lsvrapprox{\pt_1}} } \label{eq:stochastic_weight_update}     .
 \end{IEEEeqnarray}
 %
 It may easily be shown that as $\dsf\rightarrow0$, \eqref{eq:stochastic_weight_update} is equal to \eqref{eq:deterministic_weight_update}.
@@ -731,14 +736,14 @@ It may easily be shown that as $\dsf\rightarrow0$, \eqref{eq:stochastic_weight_u
 
 \subsection{Resample-Move with Particle Flow Proposals}
 
-If an importance sampler generates a set of particles which is dominated by a small number with large weights, then the resulting posterior estimates will have a high variance. When this happens, a post-processing stage known as resample-move \cite{Gilks2001} may improve the situation. The weighted particle set is first resampled to produce an unweighted set. Low-weight particles are discarded and high-weight particles copied to replace them, with the number of replicates chosen randomly in an appropriate manner as to ensure unbiasedness \cite{Hol2006}. These replicated particles are then perturbed by sampling from a Markov chain Monte Carlo (MCMC) kernel so as to spread them around and further explore the promising areas of the state space. Resampling reduces the weight variance of a particle set at the cost of introducing dependence between the particles. The MCMC steps are used to reduce this dependence.
+If an importance sampler generates a set of particles which is dominated by a small number with large weights, then the resulting posterior estimates will have a high variance. When this happens, a post-processing stage known as resample-move \citep{Gilks2001} may improve the situation. The weighted particle set is first resampled to produce an unweighted set. Low-weight particles are discarded and high-weight particles copied to replace them, with the number of replicates chosen randomly in an appropriate manner as to ensure unbiasedness \citep{Hol2006}. These replicated particles are then perturbed by sampling from a Markov chain Monte Carlo (MCMC) kernel so as to spread them around and further explore the promising areas of the state space. Resampling reduces the weight variance of a particle set at the cost of introducing dependence between the particles. The MCMC steps are used to reduce this dependence.
 
 Implementing resample-move effectively requires some additional algorithm parameters to be selected, such as the number of MCMC steps and an appropriate proposal distribution for Metropolis-Hastings (MH). When particle flow sampling is used, there is an obvious choice for this proposal. Simply return to the original state for each particle which was sampled from the prior, $\ls{0}$, and re-simulate a new path through pseudo-time. The choice of proposal distribution is thus reduced to setting a value of $\dsf$, the volatility scale factor, which will control the size of the proposed moves. Clearly with $\dsf=0$ the motion is deterministic and no move would be taken.
 
 In order to formulate a correct MH acceptance probability for a particle flow proposal, we must consider an extended target distribution similar to that used in the weight formulation. Specifically, consider the distribution over both the final state $\ls{1}=\ls{\pt_K}$ produced by the sampler and all the intermediate states visited along the way $\{\ls{\pt_k}\}_{k=0}^{K-1}$,
 %
 \begin{IEEEeqnarray}{rCl}
- \postden(\ls{K}) \prod_{k=0}^{K-1} \artden{\pt_k}(\ls{\pt_k}|\ls{\pt_{k+1}}     .
+ \postden(\ls{K}) \prod_{k=0}^{K-1} \artden{\pt_k}(\ls{\pt_k}|\ls{\pt_{k+1}})     .
 \end{IEEEeqnarray}
 %
 If the old state has weight $\pw{}$ (unnormalised, before resampling), and new state for the MH proposal has unnormalised weight $\pw{}\fixed$, then the MH acceptance probability is,
@@ -765,7 +770,7 @@ An example is shown in figure~\ref{fig:drone_rm_example}.
 
 An important practical consideration for implementing Gaussian flow sampling is how the sizes of the pseudo-time steps are chosen. State updates are calculated using local Gaussian approximations of the sequence density, with a best-case achieved with infinitesimally small steps between these approximations. In practice, the number of steps needs to be kept fairly low, to minimise the computational burden. In some instances, it may be sufficient to use a fixed step size, or a predetermined time grid chosen with a tuning run. However, an adaptive scheme is preferable for greatest efficiency.
 
-Step size adaptation may be carried out separately for each particle. It is straightforward to see from \eqref{eq:approx_state_update}, \eqref{eq:deterministic_weight_update} and \eqref{eq:stocahstic_weight_update} that two consecutive updates using the same values for $\lgmomapprox{}$ and $\ob{}$ are equivalent to a single update spanning both intervals. Thus, a large interval between update steps is equivalent to a number of shorter intervals with hypothetical intermediate update times aligned with those of the other particles.
+Step size adaptation may be carried out separately for each particle. It is straightforward to see from \eqref{eq:approx_state_update}, \eqref{eq:deterministic_weight_update} and \eqref{eq:stochastic_weight_update} that two consecutive updates using the same values for $\lgmomapprox{\pt}$ and $\obapprox{\pt}$ are equivalent to a single update spanning both intervals. Thus, a large interval between update steps is equivalent to a number of shorter intervals with hypothetical intermediate update times aligned with those of the other particles.
 
 
 \subsection{Local Error Estimates}
@@ -791,7 +796,7 @@ The last line follows from the definition of $\snchange{\pt_0,\pt_1}$ using appr
  \int_{\pt_0}^{\pt_1}d\flowbm{\pt} & \approx & (\pt_1-\pt_0)^{\half} \snchange{\pt_0,\pt_1} \nonumber      .
 \end{IEEEeqnarray}
 
-This formula also indicates that for small steps, the stochastic term is likely to dominate, and thus that the discretisation error can be reduced by setting $\dsf=0$. 
+This formula also indicates that for small steps, the stochastic term is likely to dominate, and thus that the discretisation error can be reduced by setting $\dsf=0$.
 
 
 
@@ -829,7 +834,7 @@ where the random variable $\ls{\ti}$ is the hidden state of a system at time $\t
 
 \subsection{Existing Approaches}
 
-The approach taken by \cite{Daum2008,Daum2011d,Daum2013,Reich2011,Reich2012} is to apply particle flow sampling directly to the filtering density. Assume that a set of unweighted particles exists approximating $\den(\ls{\ti-1}|\ob{1:\ti-1})$. The predictive density at the next step is related by,
+The approach taken by \cite{Daum2008,Daum2011d,Daum2013,Reich2011,Reich2012a} is to apply particle flow sampling directly to the filtering density. Assume that a set of unweighted particles exists approximating $\den(\ls{\ti-1}|\ob{1:\ti-1})$. The predictive density at the next step is related by,
 %
 \begin{IEEEeqnarray}{rCl}
  \den(\ls{\ti}|\ob{1:\ti-1}) & = & \int \den(\ls{\ti}|\ls{\ti-1}) \transden(\ls{\ti-1}|\ob{1:\ti-1}) d\ls{\ti-1}     ,
@@ -838,10 +843,10 @@ The approach taken by \cite{Daum2008,Daum2011d,Daum2013,Reich2011,Reich2012} is 
 which can thus be sampled by simply drawing $\ls{\ti}\pss{i} \sim \transden(\ls{\ti}|\ls{\ti-1}\pss{i})$ for each particle and then marginalising (i.e. discarding) the old states. Defining this predictive density as the prior and the filtering density as the posterior, a particle flow is used to sample from,
 %
 \begin{IEEEeqnarray}{rCl}
- \den(\ls{\ti}|\ob{1:\ti}) & = & \frac{\den(\ls{\ti}|\ob{1:\ti-1}) \obsden(\ob{\ti}|\ls{\ti})}{\nconst{}}      .
+ \den(\ls{\ti}|\ob{1:\ti}) & = & \frac{\den(\ls{\ti}|\ob{1:\ti-1}) \obsden(\ob{\ti}|\ls{\ti})}{\nconst{\ti}}      .
 \end{IEEEeqnarray}
 %
-The difficulty with this approach is that the calculation of most useful flows requires at least the prior and often also its gradient and Hessian to be calculable pointwise. This is not the case for the predictive density, $\den(\ls{\ti}|\ob{1:\ti-1})$. \cite{Reich2011,Reich2012} avoid this by making analytical approximations of this density as a Gaussian or Gaussian mixture, in the spirit of an ensemble or mixture Kalman filter. \cite{Daum2008,Daum2011d,Daum2013} use a number of methods, including Gaussian approximations and various numerical approximations \cite{Daum2009c}. These approximations alter the distribution of the particles. The filter is no longer \emph{exact}, in the sense of returning a correctly weighted set of particles representing the posterior and providing asymptotically consistent estimates of posterior expectations.
+The difficulty with this approach is that finding an appropriate flow generally requires at least the prior and often also its gradient and Hessian to be calculable pointwise. This is not the case for the predictive density, $\den(\ls{\ti}|\ob{1:\ti-1})$. (Note that we could use a Monte Carlo approximation of this density, but the resulting algorithm has a complexity of $\bigo{\numpart^2}$ in the number of particles.) \cite{Reich2011,Reich2012a} address this by making analytical approximations of this density as a Gaussian or Gaussian mixture, in the spirit of an ensemble or mixture Kalman filter. \cite{Daum2008,Daum2011d,Daum2013} use a number of methods, including Gaussian approximations and various numerical approximations \citep{Daum2009c}. These approximations alter the distribution of the particles. The filter is no longer \emph{exact}, in the sense of returning a correctly weighted set of particles representing the posterior and providing asymptotically consistent estimates of posterior expectations.
 
 In addition, the existing particle flow algorithms do not fall within the framework of ordinary particle filters. They only provide us with an estimate of the marginal filtering density $\den(\ls{\ti}|\ob{1:\ti})$, rather than the more conventional path filtering density $\den(\ls{1:\ti}|\ob{1:\ti})$. This may sometimes be all that is needed, but on other occasions samples of the entire path are essential, for example for smoothing or parameter estimation schemes \cite{Kitagawa1996,Andrieu2010}.
 
@@ -849,13 +854,13 @@ In this work, we use particle flow sampling within the standard particle filteri
 
 \subsection{A Generic Particle Filter}
 
-A conventional particle filter \cite{Cappe2007,Doucet2009} uses importance sampling to estimate distributions recursively over the path of the state variables, $\ls{1:\ti}=\{\ls{1}, \dots, \ls{\ti}\}$. Densities are approximated by a sum of weighted probability masses located at a discrete set of states,
+A conventional particle filter \citep{Cappe2007,Doucet2009} uses importance sampling to estimate distributions recursively over the path of the state variables, $\ls{1:\ti}=\{\ls{1}, \dots, \ls{\ti}\}$, such that,
 %
 \begin{IEEEeqnarray}{rCl}
- \den(\ls{1:\ti} | \ob{1:\ti}) & = & \sum_i \npw{\ti}\pss{i} \delta_{\ls{1:\ti}\pss{i}}(\ls{1:\ti})     .
+ \sum_{i=1}^{\numpart} \npw{\ti}\pss{i} \phi(\ls{1:\ti}\pss{i}) & \rightasconverge & \int \postden(\ls{1:\ti}) \phi(\ls{1:\ti}) d\ls{1:\ti}      \nonumber       .
 \end{IEEEeqnarray}
 %
-Each step begins by selecting a set of ancestors $\{\anc{\ti}{i}\}$ from amongst the ($\ti-1$) particles according to the corresponding weights. Next, a new state is proposed for each particle from an importance density,
+Each step begins by selecting a set of ancestors $\{\anc{\ti}{i}\}$ from amongst the ($\ti-1$)th step particles according to the corresponding weights. Next, a new state is proposed for each particle from an importance density,
 %
 \begin{IEEEeqnarray}{rCl}
  \ls{\ti}\pss{i} \sim \impden(\ls{\ti} | \ls{\ti-1}\pss{\anc{\ti}{i}}, \ob{\ti})
@@ -874,29 +879,13 @@ An importance weight is then assigned to the particle to account for the discrep
  & \propto & \frac{ \transden(\ls{\ti}\pss{i} | \ls{\ti-1}\pss{\anc{\ti}{i}}) \obsden(\ob{\ti}|\ls{\ti}\pss{i}) }{ \impden(\ls{\ti}\pss{i} | \ls{\ti-1}\pss{\anc{\ti}{i}}, \ob{\ti}) }     .
 \end{IEEEeqnarray}
 
-Assuming the new states for the particles at time $\ti$ are sampled independently, then the particle weight variance may be measured using the effective sample size (ESS), defined as,
-%
-\begin{IEEEeqnarray}{rCl}
- \ess{\ti} & = & \frac{ 1 }{ \sum_i \npw{\ti}\pss{i}{}^2 }     ,
-\end{IEEEeqnarray}
-%
-Intuitively, this is an estimate of the number of particles which would be present in an equivalent set comprised of independent, unweighted samples. It takes a value between $1$ (which is bad) and the number of filtering particles, $\numpart$ (which is good). Note that if the states proposed for the particles are not sampled independently then ESS does not provide a valid comparison.
-
-If the effective sample size is particularly low then it is likely that only a few particles are selected to be used in the next filtering step, resulting in high dependence amongst the particles. This effect may be partially mitigated using resample-move, the use of Metropolis-Hastings sampling between particle selection and proposal of a new state.
-
-The crucial consideration when designing a particle filter is the choice of importance density. The simplest option is to use the transition density,
+As in the case of any importance sampling, the simplest choice for the importance density is to use the prior, in this case the transition density,
 %
 \begin{IEEEeqnarray}{rCl}
  \impden(\ls{\ti} | \ls{\ti-1}\pss{\anc{\ti}{j}}, \ob{\ti}) = \transden(\ls{\ti} | \ls{\ti-1}\pss{\anc{\ti}{j}})     .
 \end{IEEEeqnarray}
 %
-This results in the ``bootstrap filter'' of \cite{Gordon1993}. It only requires that sampling be possible from the transition model, and not that the transition density be calculable. The weight formula simplifies to,
-%
-\begin{IEEEeqnarray}{rCl}
- \pw{\ti}\pss{j} & \propto & \obsden(\ob{\ti} | \ls{\ti}\pss{j}) \label{eq:weight_update_bootstrap}      .
-\end{IEEEeqnarray}
-
-Often the bootstrap filter is inefficient, especially when the variance of the transition density is much greater than that of the observation density. In this situation, the samples are widely spread over the state space, and only a few fall in the region of high likelihood. This results in a high weight variance, low ESS and poor filter performance.
+This is the bootstrap filter of \cite{Gordon1993}. It is often inefficient, especially when the variance of the transition density is much greater than that of the observation density. In this situation, the samples are widely spread over the state space, and only a few fall in the region of high likelihood. This results in a high variance of the weights and posterior estimates, and poor filter performance.
 
 It was shown in \citep{Doucet2000a}, and references therein, that the weight variance is minimised by using the conditional posterior as the importance distribution,
 %
@@ -911,19 +900,27 @@ resulting in the following weight formula,
            & \propto & \int \obsden(\ob{\ti} | \ls{\ti}) \transden(\ls{\ti} | \ls{\ti-1}\pss{\anc{\ti}{j}}) d\ls{\ti}      .
 \end{IEEEeqnarray}
 %
-This choice is therefore known as the ``optimal importance density'' (OID). It may be sampled and the weights calculated analytically when the observation density is linearly dependent on the state and both transition and observation densities are Gaussian. (The state need not be linearly dependent on the previous state.) However, for most models this density can neither be calculated, nor efficiently sampled. Thus, it is common to use methods such as linearisation and the unscented transform to approximate the OID with a Gaussian density, in an equivalent manner to extended and unscented Kalman filters \citep{Doucet2000a,Merwe2000}. These approximations may work well when the OID is unimodal, and the observation nonlinearity is weak, but can otherwise perform worse even than the bootstrap filter.
+This choice is therefore known as the optimal importance density (OID). It may be sampled and the weights calculated analytically when the observation density is linearly dependent on the state and both transition and observation densities are Gaussian. (The state need not be linearly dependent on the previous state.) However, for most models this density can neither be calculated, nor efficiently sampled. Thus, it is common to use methods such as linearisation and the unscented transform to approximate the OID with a Gaussian density, in an equivalent manner to extended and unscented Kalman filters \citep{Doucet2000a,Merwe2000}. These approximations may work well when the OID is unimodal, and the observation nonlinearity is weak, but can otherwise perform worse even than the bootstrap filter.
+
+Particle filter performance is often characterised by the effective sample size (ESS) at each time step. This is defined as,
+%
+\begin{IEEEeqnarray}{rCl}
+ \ess{\ti} & = & \frac{ 1 }{ \sum_i \npw{\ti}\pss{i}{}^2 }     ,
+\end{IEEEeqnarray}
+%
+Intuitively, this is an estimate of the number of particles which would be present in an equivalent set comprised of independent, unweighted samples. It takes a value between $1$ (which is bad) and the number of filtering particles, $\numpart$ (which is good).
 
 
 
 \subsection{Gaussian Flow Approximations to the Optimal Importance Density}
 
-Note, throughout this section we omit for clarity subscript $\ti$ on variables which vary with $\pt$. Applying the Gaussian flow sampling to the OID is straightforward, setting the prior to be the transition density and the likelihood the observation density,
+Note, in this section we omit for clarity subscript $\ti$ on variables which vary with $\pt$. Applying the Gaussian flow sampling to the OID is straightforward, setting the prior to be the transition density and the likelihood the observation density,
 %
 \begin{IEEEeqnarray}{rCl}
  \den(\ls{\ti}|\ls{\ti-1}\pss{i},\ob{\ti}) & = & \frac{ \transden(\ls{\ti}|\ls{\ti-1}\pss{i}) \obsden(\ob{\ti}|\ls{\ti}) }{ \nconst{}(\ls{\ti-1}\pss{i}) }     .
 \end{IEEEeqnarray}
 %
-The only modification required to the standard process is in the weight formulas. Although the particle flow is calculated based on the OID sequence, the target density for the importance sampler is now replaced by the filtering density. With this change, the required weight formulas become,
+The only modification required to the standard process is in the weight formulas. Although the particle flow is calculated based on the OID sequence, the target density for the importance sampler is now replaced by the filtering density. With this simple change, the required weight formulas become,
 %
 \begin{IEEEeqnarray}{rCl}
  \pw{\pt_1} & \propto & \pw{\pt_0} \times \frac{ \obsden(\ob{\ti} | \ls{\pt_1})^{\pt_1} \transden(\ls{\pt_1} | \ls{\ti-1}) }{ \obsden(\ob{\ti} | \ls{\pt_0})^{\pt_0} \transden(\ls{\pt_0} | \ls{\ti-1}) } \times \frac{ \normal{\ls{\pt_0}}{\lsmnapprox{\pt_0}}{\lsvrapprox{\pt_0}} }{ \normal{\ls{\pt_1}}{\lsmnapprox{\pt_1}}{\lsvrapprox{\pt_1}} } \label{eq:PPPF_stochastic_weight_update}       ,
@@ -937,20 +934,19 @@ for the stochastic case, and,
 %
 for the deterministic case.
 
-
 \section{Comparisons with Other Work}
 
-The progressive proposal method shares a number of features with existing algorithms. Here we summarise and highlight some of the similarities and differences.
+The Gaussian flow importance sampling method shares a number of features with existing algorithms. Here we summarise and highlight some of the similarities and differences.
 
 The concept of introducing intermediate distributions between the predictive and filtering densities has been employed in numerous ways, under the names ``annealing'' \citep{Neal2001,Deutscher2000,Gall2007}, ``tempering'' \citep{DelMoral2006}, ``bridging distributions'' \citep{Godsill2001b} and ``progressive corrections'' \citep{Oudjane2000}. These all use a discrete set of intermediate times, and do not consider the continuous evolution of the states. Furthermore they rely on importance sampling, Metropolis-Hastings and kernel sampling, all stochastic mechanisms, to advance between these pseudo-times. None of them include a deterministic component for updating the state. Moreover, these methods all rely on moving the particles through pseudo-time on the same fixed grid, and make use of intermediate resampling and interaction steps. In this work, each particle is moved entirely independently and with adaptive step sizes.
 
-There is no reason why a particle flow could not be used in parallel with an annealing scheme. The particles would be moved independently through pseudo-time, but periodically they are stopped and an intermediate resampling or resample-move step is performed. Particle flow and annealing should be seen as complementary rather than competing algorithms.
+There is no reason why a particle flow could not be used in combination with an annealing scheme. The particles would be moved independently through pseudo-time, but periodically they are stopped and an intermediate resampling or resample-move step is performed. Particle flow and annealing should be seen as complementary rather than competing algorithms.
 
-The particle flow and optimal transport methods of \citep{Daum2008,Daum2011d,Reich2011,Reich2012} use similar particle flow ideas to address the task of filtering as we do here. The essential differences in this work are:
+The particle flow and optimal transport methods of \citep{Daum2008,Daum2011d,Reich2011,Reich2012a} use similar particle flow ideas to address the task of filtering as we do here. The essential differences in this work are:
 %
 \begin{itemize}
   \item We target the optimal importance density rather than the filtering density directly. The OID is known pointwise up to a normalising constant, and thus we avoid the need for one layer of approximation.
-  \item In \citep{Daum2008,Daum2011d,Reich2011,Reich2012}, particle flow samples are used directly to form an approximation of the posterior, with a consequent result that asymptotic properties are lost. We use the particle flow samples as the input to an importance sampler, and correct for the difference between the implied importance density and the posterior density with an appropriate importance weight. This was suggested by \cite{Reich2012a}.
+  \item In \citep{Daum2008,Daum2011d,Reich2011,Reich2012a}, particle flow samples are used directly to form an approximation of the posterior, with a consequent result that asymptotic properties are lost. We use the particle flow samples as the input to an importance sampler, and correct for the difference between the implied importance density and the posterior density with an appropriate importance weight. This was suggested by \cite{Reich2012}.
   \item Rather than relying on numerical integration, we use the Gaussian flow exclusively, as this has an analytical solution.
 \end{itemize}
 
@@ -958,7 +954,7 @@ The particle flow and optimal transport methods of \citep{Daum2008,Daum2011d,Rei
 
 \section{Simulations}
 
-Numerical testing using simulated data is presented to demonstrate the efficacy of Gaussian flow sampling for particle filtering. The aim in developing the progressive proposal method is to provide a more efficient particle filter for challenging nonlinear models. In such cases, simple Gaussian approximations often work poorly, because the posterior filtering distributions of such models can assume complex and irregular shapes.
+Numerical testing using simulated data is presented to demonstrate the efficacy of Gaussian flow sampling for particle filtering. The aim in developing this method is to provide a more efficient particle filter for challenging nonlinear models. In such cases, simple Gaussian approximations often work poorly, because the posterior filtering distributions of such models can assume complex and irregular shapes.
 
 Our primary indicator of performance will be the average effective sample size, measured before resampling. RMSE values using the empirical particle mean as a point estimate are also included. However, they should be treated with caution, since when a distribution is irregular the particle mean may be distant from the true value even if the particles are drawn from it perfectly (see figure~\ref{fig:rmse_fail} for an illustration of this effect). All comparisons are conducted by adjusting the number of filter particles such that the running times for the various algorithms are roughly equal.
 %
@@ -969,12 +965,13 @@ Our primary indicator of performance will be the average effective sample size, 
 \label{fig:rmse_fail}
 \end{figure}
 
-The following particle filters (and their respective importance densities) are used for comparison with the PPPF:
+The following particle filters (and their respective importance densities) are used in testing:
 \begin{itemize}
         \item A bootstrap filter (BF), using the transition density.
         \item An extended particle filter (EPF), using a Gaussian density chosen by linearisation about the predictive mean, in the style of an extended Kalman filter.
         \item An unscented particle filter (UPF), using a Gaussian density chosen using the unscented transform, in the style of an unscented Kalman filter.
-        \item A Laplacian approximation particle filter (LAPF), using a Gaussian density chosen by truncation of the Taylor series of the log of the unnormalised OID around a local maximum \citep{Doucet2000a}. Gradient ascent is used to locate the maximum.
+        \item A Laplace approximation particle filter (LAPF), using a Gaussian density chosen by truncation of the Taylor series of the log of the unnormalised OID around a local maximum \citep{Doucet2000a}. Gradient ascent is used to locate the maximum.
+        \item A Gaussian flow particle filter (GFPF), using the the Gaussian flow importance sampling method.
 \end{itemize}
 
 
@@ -983,7 +980,7 @@ The following particle filters (and their respective importance densities) are u
 
 \subsubsection{The Model}
 
-The PPPF was tested on a modified form of the model used by \citet{Mihaylova2011}, which is a multivariate extension of the nonlinear benchmark model of \citep{Kitagawa1991}. The transition and observation functions are,
+First we study a modified form of the model used by \citet{Mihaylova2011}, which is a multivariate extension of the nonlinear benchmark model of \citep{Kitagawa1991}. The transition and observation functions are,
 %
 \begin{IEEEeqnarray}{rCl}
  \transfun(\ls{\ti-1}) & = & \half \ls{\ti-1} + 25 \frac{ \sum_d \ls{\ti-1,d} }{ 1 + \left(\sum_d \ls{\ti-1,d}\right)^2 } + 8 \cos(1.2 \ti) \nonumber \\
@@ -996,7 +993,7 @@ This model is particularly challenging because the observations give us informat
 
 \subsubsection{Algorithms and Results}
 
-Particle filters using extended or unscented Kalman-type importance densities fail immediately on this model; all the particles suffer numerical underflow of their weight due to states being sampled only in highly improbable regions. Tests were conducted on a BF, LAPF, and a deterministic PPPF (i.e. with $\dsf=0)$. The PPPF employed the adaptive step size method, and typically required in the region of $10$ to $20$ state updates at each time step. Figure~\ref{fig:nlng_example_frame} shows the motion of the particles from the PPPF on a typical frame, and the awkward shape of the posterior mode. Table~\ref{tab:nlng_results} shows the average ESSs and RMSEs for each algorithm over 100 simulated data sets, each of 100 time steps.
+Particle filters using extended or unscented Kalman-type importance densities fail immediately on this model; all the particles suffer numerical underflow of their weight due to states being sampled only in highly improbable regions. Tests were conducted on a BF, LAPF, and a GFPF. The GFPF used $\dsf=0$ and employed the adaptive step size method, typically requiring in the region of $10$ to $20$ state updates at each time step. Figure~\ref{fig:nlng_example_frame} shows the motion of the particles from the GFPF on a typical frame, and the awkward shape of the posterior mode. Table~\ref{tab:nlng_results} shows the average ESSs and RMSEs for each algorithm over 100 simulated data sets, each of 100 time steps.
 %
 \begin{table}
 \centering
@@ -1004,17 +1001,17 @@ Particle filters using extended or unscented Kalman-type importance densities fa
 Algorithm                                & $N_F$ & ESS  & RMSE \\
 \hline
 Bootstrap                                & 18500 &  1.7 & 43.6 \\
-Laplacian Approximation Proposal         &    70 &  1.7 & 42.8 \\
-Deterministic Progressive Proposal       &   540 & 81.1 & 32.6 \\
+Laplace Approximation                    &    70 &  1.7 & 42.8 \\
+Gaussian Flow                            &   540 & 81.1 & 32.6 \\
 \end{tabular}
-\caption{Algorithm performance results on the multivariate benchmark model, showing number of filter particle ($N_F$), effective sample size ($ESS$), and root mean square error ($RMSE$).}
+\caption{Algorithm performance results on the multivariate benchmark model, showing number of filter particle ($N_F$), effective sample size (ESS), and root mean square error (RMSE).}
 \label{tab:nlng_results}
 \end{table}
 %
 \begin{figure}
 \centering
 \includegraphics[width=0.7\columnwidth]{nlng_example_frame_deter.pdf}
-\caption{An example of the PPPF particle motion running on the multivariate benchmark model, showing $2$ of the $10$ state dimensions. Prior states are shown with circles and posterior states with crosses.}
+\caption{An example of the GFPF particle motion running on the multivariate benchmark model, showing $2$ of the $10$ state dimensions. Prior states are shown with circles and posterior states with crosses.}
 \label{fig:nlng_example_frame}
 \end{figure}
 
@@ -1049,7 +1046,7 @@ The observation function is described by the following equations,
 %
 where $\terrain( \pos{\ti,1}, \pos{\ti,2} )$ is the terrain height at the corresponding horizontal coordinates. The four measurements are independent and the respective variances are $\left(\frac{\pi}{9}\right)^2$, $0.1^2$, $0.1^2$, $0.1^2$.
 
-A linear Gaussian near-constant velocity transition model,
+A linear Gaussian near-constant velocity transition model is used,
 %
 \begin{IEEEeqnarray}{rCl}
  \transden(\ls{\ti} | \ls{\ti-1}) & = & \normal{\ls{\ti}}{\lgmtm\ls{\ti-1}}{\lgmtv} \nonumber \\
@@ -1073,14 +1070,14 @@ The accurate measurements of range, range rate and height constrain the region o
 
 \subsubsection{Algorithms and Results}
 
-Particle filters using extended or unscented Kalman-type importance densities again did not perform well, with the EPF losing track immediately. Furthermore, the LAPF also performed particularly poorly as maximisation procedures struggle with the narrow mode. Tests were conducted on a BF, UPF, LAPF, and a deterministic PPPF (i.e. with $\dsf=0)$. The PPPF employed the adaptive step size method, and uses in the region of $5$ to $10$ state updates at each time step.
+Particle filters using extended or unscented Kalman-type importance densities again did not perform well, with the EPF losing track immediately. Furthermore, the LAPF also performed particularly poorly as maximisation procedures struggle with the narrow mode. Tests were conducted on a BF, UPF, LAPF, and GFPF. The GFPF used $\dsf=0$ and employed the adaptive step size method, using in the region of $5$ to $10$ state updates at each time step.
 
-Figure~\ref{fig:drone_example_frame_deterministic} shows the motion of the particles from the deterministic PPPF on a typical frame, and the awkward shape of the posterior mode.
+Figure~\ref{fig:drone_example_frame_deterministic} shows the motion of the particles from the GFPF on a typical frame, and the awkward shape of the posterior mode.
 %
 \begin{figure}
 \centering
 \includegraphics[width=0.7\columnwidth]{drone_example_frame_deter.pdf}
-\caption{An example of the deterministic PPPF particle motion running on the terrain tracking model, showing one horizontal and the vertical state component. Prior states are shown with circles and posterior states with crosses.}
+\caption{An example of the GFPF particle motion running on the terrain tracking model, showing one horizontal and the vertical state component. Prior states are shown with circles and posterior states with crosses.}
 \label{fig:drone_example_frame_deterministic}
 \end{figure}
 
@@ -1090,7 +1087,7 @@ Particle flow resample-move was also tested on this problem. Figure~\ref{fig:dro
 \centering
 \subfloat[]{\includegraphics[width=0.45\columnwidth]{drone_example_frame.pdf}}
 \subfloat[]{\includegraphics[width=0.45\columnwidth]{drone_example_frame_zoom.pdf}}
-\caption{An example of the stochastic PPPF ($\lgexpsf=0.3$) particle motion running on the terrain tracking model, showing one horizontal and the vertical state component. Prior states are shown with circles and posterior states with crosses. The second panel is a close-up showing the stochastic motion of the particles.}
+\caption{An example of the stochastic GFPF ($\dsf=0.3$) particle motion running on the terrain tracking model, showing one horizontal and the vertical state component. Prior states are shown with circles and posterior states with crosses. The second panel is a close-up showing the stochastic motion of the particles.}
 \label{fig:drone_example_frame_stochastic}
 \end{figure}
 
@@ -1102,11 +1099,11 @@ Table~\ref{tab:drone_results_gaussian} shows the average ESSs and RMSEs for each
 Algorithm                                & $N_F$ & ESS  & RMSE \\
 \hline
 Bootstrap                                &  6000 &  1.0 & 78.6 \\
-Unscented Kalman Proposal                &   460 &  2.4 & 70.2 \\
-Laplacian Approximation Proposal         &    10 &  3.1 & 62.9 \\
-Deterministic Progressive Proposal       &   180 & 56.4 & 22.3 \\
+Unscented Kalman                         &   460 &  2.4 & 70.2 \\
+Laplace Approximation                    &    10 &  3.1 & 62.9 \\
+Gaussian Flow                            &   180 & 56.4 & 22.3 \\
 \end{tabular}
-\caption{Algorithm performance results on the multivariate benchmark model, showing number of filter particle ($N_F$), effective sample size ($ESS$), and root mean square error ($RMSE$).}
+\caption{Algorithm performance results on the multivariate benchmark model, showing number of filter particle ($N_F$), effective sample size (ESS), and root mean square error (RMSE).}
 \label{tab:drone_results_gaussian}
 \end{table}
 
@@ -1141,9 +1138,9 @@ The transition density is factorised into independent terms, with $\freq{\ti}$, 
 
 \subsubsection{Algorithms and Results}
 
-Particle filters using extended or unscented Kalman-type importance densities fail immediately on this model due to the highly multi-modal filtering distribution. Tests were conducted on a BF, LAPF, and a deterministic PPPF (i.e. with $\dsf=0)$. For the PPPF, the transition density is approximated by a Gaussian using the method described in section~\ref{sec:non_gaussian_models}. The PPPF uses the adaptive step size method and made in the region of $5$ to $15$ state updates per time step, with the exception of a few particles which tended to ``get stuck'' in low probability regions and which were discarded after 50 steps.
+Particle filters using extended or unscented Kalman-type importance densities fail immediately on this model due to the highly multi-modal filtering distribution. Tests were conducted on a BF, LAPF, and GFPF. For the GFPF, $\dsf=0$ and the transition density is approximated by a Gaussian using the method described in section~\ref{sec:non_gaussian_models}. The GFPF uses the adaptive step size method and made in the region of $5$ to $15$ state updates per time step, with the exception of a few particles which tended to ``get stuck'' in low probability regions and which were discarded after 50 steps.
 
-Figure~\ref{fig:sineha_example_frame} shows the motion of the particles from the PPPF on a typical frame. Table~\ref{tab:sineha_results} shows the average ESSs and RMSEs for each algorithm over 100 simulated data sets, each of 100 time steps.
+Figure~\ref{fig:sineha_example_frame} shows the motion of the particles from the GFPF on a typical frame. Table~\ref{tab:sineha_results} shows the average ESSs and RMSEs for each algorithm over 100 simulated data sets, each of 100 time steps.
 %
 \begin{table}
 \centering
@@ -1151,17 +1148,17 @@ Figure~\ref{fig:sineha_example_frame} shows the motion of the particles from the
 Algorithm                                & $N_F$ & ESS  & RMSE \\
 \hline
 Bootstrap                                & 15000 &  7.6 &  2.0 \\
-Laplacian Approximation Proposal         &   200 &  8.8 &  2.0 \\
-Deterministic Progressive Proposal       &   800 & 72.8 &  1.4 \\
+Laplace Approximation                    &   200 &  8.8 &  2.0 \\
+Gaussian Flow                            &   800 & 72.8 &  1.4 \\
 \end{tabular}
-\caption{Algorithm performance results on the multivariate benchmark model, showing number of filter particle ($N_F$), effective sample size ($ESS$), and root mean square error ($RMSE$).}
+\caption{Algorithm performance results on the multivariate benchmark model, showing number of filter particle ($N_F$), effective sample size (ESS), and root mean square error (RMSE).}
 \label{tab:sineha_results}
 \end{table}
 %
 \begin{figure}
 \centering
 \includegraphics[width=0.7\columnwidth]{sineha_example_frame.pdf}
-\caption{An example of the PPPF particle motion running on the heartbeat inference model, showing amplitude and delay state components. Prior states are shown with circles and posterior states with crosses.}
+\caption{An example of the GFPF particle motion running on the heartbeat inference model, showing amplitude and delay state components. Prior states are shown with circles and posterior states with crosses.}
 \label{fig:sineha_example_frame}
 \end{figure}
 
@@ -1182,7 +1179,7 @@ We have detailed the use of Gaussian particle flows for sampling approximately f
 
 The algorithm exploits the fact that the Gaussian flow may be integrated analytically to avoid numerical integration, and uses an importance sampling framework to correct for the necessary approximations. By applying particle flow sampling to the OID in a particle filter, we avoid the need to make additional approximations of the filtering density.
 
-The models for which the method is most effective are those with Gaussian prior and likelihood but highly nonlinear dependence between the observations and latent state. For this class, the performance improvement relative to the simpler algorithms with an equal processing time is very great. Moreover, the requisite Gaussian approximation is ``obvious'', simply a linearisation of the observation function, meaning that the algorithm requires almost no tuning (the tolerance for the adaptive step-size selection process is the only critical parameter). With non-Gaussian model densities, the performance gains from the progressive proposal particle filter are more modest, and when more drastic approximations are required a greater degree of algorithm tuning is required, such as limiting the variance of the approximation to prevent instability.
+The models for which the method is most effective are those with Gaussian prior and likelihood but highly nonlinear dependence between the observations and latent state. For this class, the performance improvement relative to the simpler algorithms with an equal processing time is very great. Moreover, the requisite Gaussian approximation is ``obvious'', simply a linearisation of the observation function, meaning that the algorithm requires almost no tuning (the tolerance for the adaptive step-size selection process is the only critical parameter). With non-Gaussian model densities, the performance gains from the Gaussian flow method are more modest, and when more drastic approximations are required a greater degree of algorithm tuning is required, such as limiting the variance of the approximation to prevent instability.
 
 
 
