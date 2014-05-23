@@ -1,4 +1,4 @@
-\documentclass{article}
+\documentclass[12pt]{article}
 \pdfoutput=1
 
 %%% Packages %%%
@@ -12,6 +12,7 @@
 \usepackage{amsmath}
 \usepackage{amsfonts}
 \usepackage{bbm}
+\usepackage{setspace}\doublespacing%\onehalfspacing%
 
 \usepackage[scaled]{helvet}
 \renewcommand*\familydefault{\sfdefault} %% Only if the base font of the document is to be sans serif
@@ -310,7 +311,7 @@ For the linear Gaussian models of the previous section, sampling using a particl
  \priorden(\ls{}) & = & \normalden{\ls{}}{\lsmn{0}}{\lsvr{0}} \\
  \lhood(\ls{})    & = & \normalden{\ob{}}{\obsfun(\ls{})}{\lgmov}
 \end{IEEEeqnarray}
-$\obsfun$ is twice differentiable.
+$\obsfun$ is differentiable.
 \end{model}
 
 \subsubsection{Approximately Optimal State Updates using Gaussian Flow}
@@ -758,8 +759,8 @@ An example is shown in figure~\ref{fig:drone_rm_example}.
 %
 \begin{figure}
 \centering
-\subfloat[]{\includegraphics[width=0.45\columnwidth]{drone_example_rm.pdf}}
-\subfloat[]{\includegraphics[width=0.45\columnwidth]{drone_example_rm_zoom.pdf}}
+\subfloat[]{\input{figures/drone_example_rm.tikz}}
+\subfloat[]{\input{figures/drone_example_rm_zoom.tikz}}
 \caption{Four particle trajectories simulated from the same starting point using $\lgexpsf=0.3$, as used in the resample-move proposal stage. The second panel shows a close-up of the final states. This example uses the terrain tracking model from section~\ref{sec:numsim:tracking}, showing one horizontal and the vertical state component. Prior states are shown with circles and posterior states with crosses.}
 \label{fig:drone_rm_example}
 \end{figure}
@@ -960,7 +961,7 @@ Our primary indicator of performance will be the average effective sample size, 
 %
 \begin{figure}
 \centering
-\includegraphics[width=0.7\columnwidth]{rmse_fail.pdf}
+\input{figures/rmse_fail.tikz}
 \caption{An illustration of how RMSE can be a misleading performance measure. A large number of samples (crosses) are drawn from the same distribution as the true value (square). The resulting sample mean (circle) is a very poor estimate of the true value, and the RMSE is large.}
 \label{fig:rmse_fail}
 \end{figure}
@@ -1010,7 +1011,7 @@ Gaussian Flow                            &   540 & 81.1 & 32.6 \\
 %
 \begin{figure}
 \centering
-\includegraphics[width=0.7\columnwidth]{nlng_example_frame_deter.pdf}
+\input{figures/nlng_example_frame_deter.tikz}
 \caption{An example of the GFPF particle motion running on the multivariate benchmark model, showing $2$ of the $10$ state dimensions. Prior states are shown with circles and posterior states with crosses.}
 \label{fig:nlng_example_frame}
 \end{figure}
@@ -1063,7 +1064,7 @@ The accurate measurements of range, range rate and height constrain the region o
 %
 \begin{figure}
 \centering
-\includegraphics[width=0.7\columnwidth]{drone_terrain_map.pdf}
+\input{figures/drone_terrain_map.tikz}
 \caption{Contour plot of an example simulated terrain map.}
 \label{fig:drone_terrain_map}
 \end{figure}
@@ -1076,7 +1077,7 @@ Figure~\ref{fig:drone_example_frame_deterministic} shows the motion of the parti
 %
 \begin{figure}
 \centering
-\includegraphics[width=0.7\columnwidth]{drone_example_frame_deter.pdf}
+\input{figures/drone_example_frame_deter.tikz}
 \caption{An example of the GFPF particle motion running on the terrain tracking model, showing one horizontal and the vertical state component. Prior states are shown with circles and posterior states with crosses.}
 \label{fig:drone_example_frame_deterministic}
 \end{figure}
@@ -1085,8 +1086,8 @@ Particle flow resample-move was also tested on this problem. Figure~\ref{fig:dro
 %
 \begin{figure}
 \centering
-\subfloat[]{\includegraphics[width=0.45\columnwidth]{drone_example_frame.pdf}}
-\subfloat[]{\includegraphics[width=0.45\columnwidth]{drone_example_frame_zoom.pdf}}
+\subfloat[]{\input{figures/drone_example_frame.tikz}}
+\subfloat[]{\input{figures/drone_example_frame_zoom.tikz}}
 \caption{An example of the stochastic GFPF ($\dsf=0.3$) particle motion running on the terrain tracking model, showing one horizontal and the vertical state component. Prior states are shown with circles and posterior states with crosses. The second panel is a close-up showing the stochastic motion of the particles.}
 \label{fig:drone_example_frame_stochastic}
 \end{figure}
@@ -1123,7 +1124,7 @@ where $T$ is the sampling period of the sensor. Each observation consists of $50
 %
 \begin{figure}
 \centering
-\includegraphics[width=0.7\columnwidth]{sineha_example_beat.pdf}
+\input{figures/sineha_example_beat.tikz}
 \caption{An example heartbeat simulated from the model.}
 \label{fig:sineha_example_beat}
 \end{figure}
@@ -1157,7 +1158,7 @@ Gaussian Flow                            &   800 & 72.8 &  1.4 \\
 %
 \begin{figure}
 \centering
-\includegraphics[width=0.7\columnwidth]{sineha_example_frame.pdf}
+\input{figures/sineha_example_frame.tikz}
 \caption{An example of the GFPF particle motion running on the heartbeat inference model, showing amplitude and delay state components. Prior states are shown with circles and posterior states with crosses.}
 \label{fig:sineha_example_frame}
 \end{figure}
@@ -1182,7 +1183,7 @@ The algorithm exploits the fact that the Gaussian flow may be integrated analyti
 The models for which the method is most effective are those with Gaussian prior and likelihood but highly nonlinear dependence between the observations and latent state. For this class, the performance improvement relative to the simpler algorithms with an equal processing time is very great. Moreover, the requisite Gaussian approximation is ``obvious'', simply a linearisation of the observation function, meaning that the algorithm requires almost no tuning (the tolerance for the adaptive step-size selection process is the only critical parameter). With non-Gaussian model densities, the performance gains from the Gaussian flow method are more modest, and when more drastic approximations are required a greater degree of algorithm tuning is required, such as limiting the variance of the approximation to prevent instability.
 
 
-
+\singlespacing
 \bibliographystyle{chicago}
 \bibliography{D:/pb404/Dropbox/PhD/thesisbib}
 %\bibliography{/home/pete/Dropbox/PhD/OTbib}
