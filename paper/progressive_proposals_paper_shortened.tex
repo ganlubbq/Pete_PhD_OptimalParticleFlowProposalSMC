@@ -97,6 +97,8 @@ We demonstrate the efficacy of Gaussian flow importance sampling for particle fi
 
 In section~\ref{sec:gaussian_flows}, we review particle flow methods and demonstrate how Gaussian flow sampling may be used as an effective proposal for importance sampling. In \ref{sec:gaussian_flows_for_particle_filters}, this strategy is applied to particle filtering, and in section~\ref{sec:simulations}, performance is evaluated in a number of challenging simulation studies.
 
+A preliminary version of this work covering a particular special case has been published previously \cite{Bunch2013a}.
+
 
 \section{Importance Sampling and Particle Flows} \label{sec:gaussian_flows}
 
@@ -205,7 +207,7 @@ The behaviour of the state dynamics is controlled through the choice of $\dsf$. 
 \centering
 \subfloat[]{ \input{figures/gaussian_flow.tikz} }
 \subfloat[]{ \input{figures/gaussian_flow_zoom.tikz} }
-\caption{An illustration of a Gaussian flow for a linear Gaussian model. The ellipses are 1 standard deviation contours of a selection of the sequence densities. The paths show the evolution of three particles from the same starting state using $\dsf=0$ (black), $\dsf=0.03$ (blue) and $\dsf=0.3$ (green). The second panel shows a detailed view of the final stages of the trajectories.}
+\caption{An illustration of a Gaussian flow for a linear Gaussian model. The ellipses are 1 standard deviation contours of a selection of the sequence densities. The paths show the evolution of three particles from the same starting state using $\dsf=0$, $\dsf=0.03$ and $\dsf=0.3$. The second panel shows a detailed view of the final stages of the trajectories.}
 \label{fig:gaussian_flow_example}
 \end{figure}
 
@@ -415,7 +417,14 @@ Hence the appropriate weight update is,
  \pw{\pt_1} & = & \pw{\pt_0} \times \frac{ \priorden(\ls{\pt_1}) \lhood(\ls{\pt_1})^{\pt_1} }{ \priorden(\ls{\pt_0}) \lhood(\ls{\pt_0})^{\pt_0} } \times \frac{ \normal{\ls{\pt_0}}{\lsmnapprox{\pt_0}}{\lsvrapprox{\pt_0}} }{ \normal{\ls{\pt_1}}{\lsmnapprox{\pt_1}}{\lsvrapprox{\pt_1}} } \label{eq:stochastic_weight_update}     .
 \end{IEEEeqnarray}
 %
-It may easily be shown that as $\dsf\rightarrow0$, \eqref{eq:stochastic_weight_update} is equal to \eqref{eq:deterministic_weight_update}.
+It may easily be shown that as $\dsf\rightarrow0$, \eqref{eq:stochastic_weight_update} is equal to \eqref{eq:deterministic_weight_update}. Gaussian flow importance sampling is illustrated with an example in figure~\ref{fig:gaussian_flow_importance_sampling}.
+
+\begin{figure}[bt]
+\centering
+\input{figures/gaussian_flow_importance_sampling.tikz}
+\caption{A simple example of Gaussian flow importance sampling in use. Contours of the target posterior are shown with solid lines. Particle paths are shown with dotted lines, with the initial and final state shown by a circle and cross respectively. This test used $30$ samples and the resulting effective sample size is $21$.}
+\label{fig:gaussian_flow_importance_sampling}
+\end{figure}
 
 
 
@@ -437,15 +446,15 @@ If the old state has weight $\pw{}$ (unnormalised, before resampling), and new s
  \min\left\{1, \frac{\pw{}\fixed}{\pw{}} \right\}     .
 \end{IEEEeqnarray}
 %
-An example is shown in figure~\ref{fig:drone_rm_example}.
-%
-\begin{figure}[bt]
-\centering
-\subfloat[]{\input{figures/drone_example_rm.tikz}}
-\subfloat[]{\input{figures/drone_example_rm_zoom.tikz}}
-\caption{Four particle trajectories simulated from the same starting point using $\lgexpsf=0.3$, as used in the resample-move proposal stage. The second panel shows a close-up of the final states. This example uses the terrain tracking model from section~\ref{sec:numsim:tracking}, showing one horizontal and the vertical state component. Prior states are shown with circles and posterior states with crosses.}
-\label{fig:drone_rm_example}
-\end{figure}
+%An example is shown in figure~\ref{fig:drone_rm_example}.
+%%
+%\begin{figure}[bt]
+%\centering
+%\subfloat[]{\input{figures/drone_example_rm.tikz}}
+%\subfloat[]{\input{figures/drone_example_rm_zoom.tikz}}
+%\caption{Four particle trajectories simulated from the same starting point using $\lgexpsf=0.3$, as used in the resample-move proposal stage. The second panel shows a close-up of the final states. This example uses the terrain tracking model from section~\ref{sec:numsim:tracking}, showing one horizontal and the vertical state component. Prior states are shown with circles and posterior states with crosses.}
+%\label{fig:drone_rm_example}
+%\end{figure}
 
 
 
@@ -549,7 +558,7 @@ The only modification required to the standard process is in the weight formulas
 
 
 
-\section{Simulations} \label{sec:simulations}
+\subsection{Simulations} \label{sec:simulations}
 
 Numerical testing using simulated data is presented to demonstrate the efficacy of Gaussian flow sampling for particle filtering. Our primary indicator of performance is the average effective sample size (ESS), measured before resampling. The effective sample size at time step $\ti$ is defined as,
 %
@@ -557,14 +566,14 @@ Numerical testing using simulated data is presented to demonstrate the efficacy 
  \ess{\ti} & = & \frac{ 1 }{ \sum_i \npw{\ti}\pss{i}{}^2 }     ,
 \end{IEEEeqnarray}
 %
-which intuitively is an estimate of the size of an equivalent set of independent, unweighted samples. RMSE values using the empirical particle mean as a point estimate are also included. However, they should be treated with caution, since when a distribution is irregular the particle mean may be distant from the true value even if the particles are drawn from it perfectly (see figure~\ref{fig:rmse_fail} for an illustration of this effect). All comparisons are conducted by adjusting the number of filter particles such that the running times for the various algorithms are roughly equal.
-%
-\begin{figure}[bt]
-\centering
-\input{figures/rmse_fail.tikz}
-\caption{An illustration of how RMSE can be a misleading performance measure. A large number of samples (dots) are drawn from the same distribution as the true value (square). The resulting sample mean (circle) is a very poor estimate of the true value, and the RMSE is large.}
-\label{fig:rmse_fail}
-\end{figure}
+which intuitively is an estimate of the size of an equivalent set of independent, unweighted samples. RMSE values using the empirical particle mean as a point estimate are also included. All comparisons are conducted by adjusting the number of filter particles such that the running times for the various algorithms are roughly equal.% However, they should be treated with caution, since when a distribution is irregular the particle mean may be distant from the true value even if the particles are drawn from it perfectly (see figure~\ref{fig:rmse_fail} for an illustration of this effect).
+%%
+%\begin{figure}[bt]
+%\centering
+%\input{figures/rmse_fail.tikz}
+%\caption{An illustration of how RMSE can be a misleading performance measure. A large number of samples (dots) are drawn from the same distribution as the true value (square). The resulting sample mean (circle) is a very poor estimate of the true value, and the RMSE is large.}
+%\label{fig:rmse_fail}
+%\end{figure}
 
 The following particle filters (and their respective importance densities) were tested:
 \begin{itemize}
@@ -575,21 +584,19 @@ The following particle filters (and their respective importance densities) were 
         \item A Gaussian flow particle filter (GFPF), using the the Gaussian flow importance sampling method, with $\dsf=0$. The adaptive step size mechanism is used and requires roughly $5$ to $20$ steps. Particles taking more than $50$ steps are discarded --- this is only necessary for the heartbeat model.
 \end{itemize}
 
-The purpose the Gaussian flow sampling is to provide a more effective particle filter for challenging nonlinear models. In such cases, simple Gaussian approximations often work poorly, because the posterior filtering distributions of such models can assume complex and irregular shapes. In many of the following tests the EPF and UPF fail after a few steps; all the particles suffer numerical underflow of their weight due to states being sampled only in highly improbable regions. When this occurs, the results are excluded. Furthermore, the LAPF is generally very slow. The maximisation procedure struggles with the irregular mode shapes.
+The purpose the Gaussian flow sampling is to provide a more effective particle filter for challenging nonlinear models. In such cases, simple Gaussian approximations often work poorly, because the posterior filtering distributions of such models can assume complex and irregular shapes. In many of the following tests the EPF and UPF fail after a few steps; all the particles suffer numerical underflow of their weight due to states being sampled only in highly improbable regions. When this occurs, the results are excluded. Furthermore, the LAPF is generally very slow because the maximisation procedure struggles with the irregular mode shapes.
 
-\subsection{Models}
-
-\subsubsection{Nonlinear Benchmark model}
-We study a modified form of the model used by \citet{Mihaylova2011}, which is a multivariate extension of the nonlinear benchmark model of \citep{Kitagawa1991}. The transition and observation functions are,
+%\subsubsection{Nonlinear Benchmark model}
+%We study a modified form of the model used by \citet{Mihaylova2011}, which is a multivariate extension of the nonlinear benchmark model of \citep{Kitagawa1991}. The transition and observation functions are,
+%%
+%\begin{IEEEeqnarray}{rCl}
+% \transfun(\ls{\ti-1}) & = & \half \ls{\ti-1} + 25 \frac{ \sum_d \ls{\ti-1,d} }{ 1 + \left(\sum_d \ls{\ti-1,d}\right)^2 } + 8 \cos(1.2 \ti) \nonumber \\
+% \obsfun(\ls{\ti})_d   & = & \alpha \left( \ls{\ti,2d-1}^2 + \ls{\ti,2d}^2 \right) \nonumber      ,
+%\end{IEEEeqnarray}
+%%
+%where $\ls{\ti,d}$ and $\obsfun(\ls{\ti})_d$ are the $d$th components of the state vector and observation function respectively. A $10$-dimensional state and a $5$-dimensional observation were used. The transition and observation densities are Gaussian with $\lgmtv = 100 \times I$ and $\lgmov = I$.
 %
-\begin{IEEEeqnarray}{rCl}
- \transfun(\ls{\ti-1}) & = & \half \ls{\ti-1} + 25 \frac{ \sum_d \ls{\ti-1,d} }{ 1 + \left(\sum_d \ls{\ti-1,d}\right)^2 } + 8 \cos(1.2 \ti) \nonumber \\
- \obsfun(\ls{\ti})_d   & = & \alpha \left( \ls{\ti,2d-1}^2 + \ls{\ti,2d}^2 \right) \nonumber      ,
-\end{IEEEeqnarray}
-%
-where $\ls{\ti,d}$ and $\obsfun(\ls{\ti})_d$ are the $d$th components of the state vector and observation function respectively. A $10$-dimensional state and a $5$-dimensional observation were used. The transition and observation densities are Gaussian with $\lgmtv = 100 \times I$ and $\lgmov = I$.
-
-This model is particularly challenging because the observations give us information only about the magnitudes of a set of sub-vectors of the state. Information about the corresponding bearing is only available via the transition model. Consequently, the region of high posterior probability corresponds to a ``thin'' section of the space bounding a hyper-sphere. A Gaussian density is a very poor approximation of this region. (See figure~\ref{fig:nlng_example_frame}.)
+%This model is particularly challenging because the observations give us information only about the magnitudes of a set of sub-vectors of the state. Information about the corresponding bearing is only available via the transition model. Consequently, the region of high posterior probability corresponds to a ``thin'' section of the space bounding a hyper-sphere. A Gaussian density is a very poor approximation of this region. (See figure~\ref{fig:nlng_example_frame}.)
 
 \subsubsection{Altitude-Assisted Tracking}
 We consider tracking a small aircraft over a mapped landscape, an scenario inspired by \cite{Schon2005}. Time of flight and Doppler measurements from a radio transmitter on the aircraft provide accurate measurements of range $\rng{\ti}$, and range rate $\rngrt{\ti}$, but only a low resolution measurement of bearing $\bng{\ti}$. In addition, accurate measurements are made of the height above the ground $\hei{\ti}$. The profile of the terrain (i.e. the height of the ground above a datum at each point) has been mapped.
@@ -608,11 +615,9 @@ where $\pos{\ti}$ and $\vel{\ti}$ are the $3$-dimensional position and velocity 
 %
 The observation function is described by the following equations,
 %
-\begin{IEEEeqnarray}{rCl}
- \bng{\ti}   & = & \arctan\left(\frac{\pos{\ti,1}}{\pos{\ti,2}}\right) \nonumber \\
- \rng{\ti}   & = & \sqrt{ \pos{\ti,1}^2 + \pos{\ti,3}^2 + \pos{\ti,3}^2 } \nonumber \\
- \hei{\ti}   & = & \pos{\ti,3} - \terrain( \pos{\ti,1}, \pos{\ti,2} ) \nonumber \\
- \rngrt{\ti} & = & \frac{ \pos{\ti}\cdot\vel{\ti} }{ \rng{\ti} } \nonumber      ,
+\begin{IEEEeqnarray}{rClCrCl}
+ \bng{\ti} & = & \arctan\left(\frac{\pos{\ti,1}}{\pos{\ti,2}}\right) & \qquad \qquad & \rng{\ti} & = & \sqrt{ \pos{\ti,1}^2 + \pos{\ti,3}^2 + \pos{\ti,3}^2 } \nonumber \\
+ \hei{\ti} & = & \pos{\ti,3} - \terrain( \pos{\ti,1}, \pos{\ti,2} ) & \qquad \qquad & \rngrt{\ti} & = & \frac{ \pos{\ti}\cdot\vel{\ti} }{ \rng{\ti} } \nonumber      ,
 \end{IEEEeqnarray}
 %
 where $\terrain( \pos{\ti,1}, \pos{\ti,2} )$ is the terrain height at the corresponding horizontal coordinates. The four measurements are independent and the respective variances are $\left(\frac{\pi}{9}\right)^2$, $0.1^2$, $0.1^2$, $0.1^2$. A linear Gaussian near-constant velocity transition model is used, with the scale factor on the covariance set to $10$. The terrain profile was modelled as a mixture of randomly-generated Gaussian blobs. An example is shown in figure~\ref{fig:drone_terrain_map}.
@@ -656,14 +661,15 @@ The transition density is factorised into independent terms, with $\freq{\ti}$, 
 
 \subsection{Results}
 
-Figures~\ref{fig:nlng_example_frame}, \ref{fig:drone_example_frame_deterministic} and \ref{fig:sineha_example_frame} show the motion of the particles from the GFPF on a typical frame, and the awkward shapes of the posterior mode. Tables~\ref{tab:nlng_results}, \ref{tab:drone_results} and \ref{tab:sineha_results} show the average ESSs and RMSEs for each algorithm over 100 simulated data sets, each of 100 time steps.
+%Figures~\ref{fig:nlng_example_frame}, \ref{fig:drone_example_frame_deterministic} and \ref{fig:sineha_example_frame} show the motion of the particles from the GFPF on a typical frame, and the awkward shapes of the posterior mode. Tables~\ref{tab:nlng_results}, \ref{tab:drone_results} and \ref{tab:sineha_results} show the average ESSs and RMSEs for each algorithm over 100 simulated data sets, each of 100 time steps.
+Figures~\ref{fig:drone_example_frame_deterministic} and \ref{fig:sineha_example_frame} show the motion of the particles from the GFPF on a typical frame, and the awkward shapes of the posterior mode. Tables~\ref{tab:drone_results} and \ref{tab:sineha_results} show the average ESSs and RMSEs for each algorithm over 100 simulated data sets, each of 100 time steps.
 
-\begin{figure}
-\centering
-\input{figures/nlng_example_frame_deter.tikz}
-\caption{An example of the GFPF particle motion running on the multivariate benchmark model, showing $2$ of the $10$ state dimensions. Prior states are shown with circles and posterior states with crosses.}
-\label{fig:nlng_example_frame}
-\end{figure}
+%\begin{figure}
+%\centering
+%\input{figures/nlng_example_frame_deter.tikz}
+%\caption{An example of the GFPF particle motion running on the multivariate benchmark model, showing $2$ of the $10$ state dimensions. Prior states are shown with circles and posterior states with crosses.}
+%\label{fig:nlng_example_frame}
+%\end{figure}
 
 \begin{figure}
 \centering
@@ -679,18 +685,18 @@ Figures~\ref{fig:nlng_example_frame}, \ref{fig:drone_example_frame_deterministic
 \label{fig:sineha_example_frame}
 \end{figure}
 
-\begin{table}
-\centering
-\begin{tabular}{l||c|c|c}
-Algorithm                                & $N_F$ & ESS  & RMSE \\
-\hline
-Bootstrap                                & 18500 &  1.7 & 43.6 \\
-Laplace Approximation                    &    70 &  1.7 & 42.8 \\
-Gaussian Flow                            &   540 & 81.1 & 32.6 \\
-\end{tabular}
-\caption{Algorithm performance results on the multivariate benchmark model, showing number of filter particle ($N_F$), effective sample size (ESS), and root mean square error (RMSE).}
-\label{tab:nlng_results}
-\end{table}
+%\begin{table}
+%\centering
+%\begin{tabular}{l||c|c|c}
+%Algorithm                                & $N_F$ & ESS  & RMSE \\
+%\hline
+%Bootstrap                                & 18500 &  1.7 & 43.6 \\
+%Laplace Approximation                    &    70 &  1.7 & 42.8 \\
+%Gaussian Flow                            &   540 & 81.1 & 32.6 \\
+%\end{tabular}
+%\caption{Algorithm performance results on the multivariate benchmark model, showing number of filter particle ($N_F$), effective sample size (ESS), and root mean square error (RMSE).}
+%\label{tab:nlng_results}
+%\end{table}
 
 \begin{table}
 \centering
@@ -703,7 +709,7 @@ Laplace Approximation                    &    10 &  3.1 & 62.9 \\
 Gaussian Flow                            &   180 & 56.4 & 22.3 \\
 \end{tabular}
 \caption{Algorithm performance results on the altitude-assisted tracking model, showing number of filter particle ($N_F$), effective sample size (ESS), and root mean square error (RMSE).}
-\label{tab:drone_results_gaussian}
+\label{tab:drone_results}
 \end{table}
 
 \begin{table}
@@ -823,9 +829,8 @@ Since the integrand is a deterministic function, this stochastic integral is a G
 %
 where
 %
-\begin{IEEEeqnarray}{rCl}
- \snchange{\pt_0,\pt_1} & = & \frac{ \int_{\pt_0}^{\pt_1} \dsf^{\half}\exp\left\{ -\half \dsf (\pt_1-\pt_0) \right\} d\flowbm{\pt} }{ \left[ 1-\exp\left\{-\dsf(\pt_1-\pt_0)\right\}\right]^{\half} } \nonumber \\
- & \sim & \normalden{\cdot}{0}{I} \label{app-eq:stdnorm_update}       .
+\begin{IEEEeqnarray}{rClCl}
+ \snchange{\pt_0,\pt_1} & = & \frac{ \int_{\pt_0}^{\pt_1} \dsf^{\half}\exp\left\{ -\half \dsf (\pt_1-\pt_0) \right\} d\flowbm{\pt} }{ \left[ 1-\exp\left\{-\dsf(\pt_1-\pt_0)\right\}\right]^{\half} } & \sim & \normalden{\cdot}{0}{I} \label{app-eq:stdnorm_update}       .
 \end{IEEEeqnarray}
 
 Finally, combining \eqref{app-eq:stdnorm_update} and \eqref{app-eq:gaussian_decomposition}, we reach the state update formula \eqref{eq:state_update}.\qed
@@ -850,15 +855,13 @@ Differentiating the log of the normalising constant, we find,
 \begin{IEEEeqnarray}{rCl}
  \frac{d}{d\pt}\log\left(\nconst{\pt}\right) & = & \frac{1}{\nconst{\pt}} \frac{d\nconst{\pt}}{d\pt} \nonumber \\
                                                & = & \frac{ \int \priorden(\ls{}) \lhood(\ls{})^\pt \loglhood(\ls{}) d\ls{} }{ \int \priorden(\ls{}) \lhood(\ls{})^\pt d\ls{} } \nonumber \\
-                                               & = & \int \seqden{\pt}(\ls{}) \loglhood(\ls{}) d\ls{} \nonumber \\
-                                               & = & \expect{\seqden{\pt}}\left[ \loglhood \right] \nonumber     ,
+                                               & = & \int \seqden{\pt}(\ls{}) \loglhood(\ls{}) d\ls{} = \expect{\seqden{\pt}}\left[ \loglhood \right] \nonumber     ,
 \end{IEEEeqnarray}
 %
 and so for the log-density,
 %
 \begin{IEEEeqnarray}{rCl}
- \pdv{\logseqden{\pt}}{\pt} & = & \loglhood(\ls{\pt}) - \frac{d}{d\pt}\log\left(\nconst{\pt}\right) \nonumber \\
- & = & \loglhood(\ls{\pt}) - \expect{\seqden{\pt}}\left[ \loglhood \right] \label{eq:sequence_logdensity}      .
+ \pdv{\logseqden{\pt}}{\pt} & = & \loglhood(\ls{\pt}) - \expect{\seqden{\pt}}\left[ \loglhood \right] \label{eq:sequence_logdensity}      .
 \end{IEEEeqnarray}
 
 Second, the Fokker-Planck equation relates the motion of a particle with the evolution of the density for its position. For a particle moving according to \eqref{eq:state_sde} it states,
@@ -870,11 +873,10 @@ Second, the Fokker-Planck equation relates the motion of a particle with the evo
 
 This may be recast using log-densities instead of densities using the following identities,
 %
-\begin{IEEEeqnarray}{rCl}
+\begin{IEEEeqnarray}{rClCl}
  \pdv{\logseqden{\pt}}{\pt} & = & \frac{ 1 }{ \seqden{\pt}(\ls{\pt}) } \pdv{\seqden{\pt}}{\pt} \nonumber \\
  \pdv{\logseqden{\pt}}{\ls{\pt}} & = & \frac{ 1 }{ \seqden{\pt}(\ls{\pt}) } \pdv{\seqden{\pt}}{\ls{\pt}} \nonumber \\
- \npdv{2}{\logseqden{\pt}}{\ls{\pt}} & = & \frac{ \seqden{\pt}(\ls{\pt}) \npdv{2}{\seqden{\pt}}{\ls{\pt}} - \pdv{\seqden{\pt}}{\ls{\pt}} \pdv{\seqden{\pt}}{\ls{\pt}}^T }{ \seqden{\pt}(\ls{\pt})^2 } \nonumber \\
- & = & \frac{ 1 }{ \seqden{\pt}(\ls{\pt}) } \npdv{2}{\seqden{\pt}}{\ls{\pt}} - \pdv{\logseqden{\pt}}{\ls{\pt}}\pdv{\logseqden{\pt}}{\ls{\pt}}^T \nonumber     ,
+ \npdv{2}{\logseqden{\pt}}{\ls{\pt}} & = & \frac{ \seqden{\pt}(\ls{\pt}) \npdv{2}{\seqden{\pt}}{\ls{\pt}} - \pdv{\seqden{\pt}}{\ls{\pt}} \pdv{\seqden{\pt}}{\ls{\pt}}^T }{ \seqden{\pt}(\ls{\pt})^2 } & = & \frac{ 1 }{ \seqden{\pt}(\ls{\pt}) } \npdv{2}{\seqden{\pt}}{\ls{\pt}} - \pdv{\logseqden{\pt}}{\ls{\pt}}\pdv{\logseqden{\pt}}{\ls{\pt}}^T \nonumber     ,
 \end{IEEEeqnarray}
 %
 leading to,
@@ -905,13 +907,12 @@ For any $\ls{}$ and $\pt$, the first spatial derivative of the desired log-densi
  \pdv{\logseqden{\pt}}{\ls{}} & = & \logseqden{0}(\ls{0}) + \int_{0}^{\pt} \mpdv{\logseqden{l}}{\ls{}}{l} dl \nonumber      ,
 \end{IEEEeqnarray}
 %
-and there is an equivalent formula for $\logseqdenapprox{\pt}$. Since the initial values are equal, if the mixed partial derivatives for the two log-densities are also equal then these the first spatial derivatives of the two log-densities must be equal everywhere.
+and there is an equivalent formula for $\logseqdenapprox{\pt}$. Since the initial values are equal, if the mixed partial derivatives for the two log-densities are also equal then we would have $\pdv{\logseqdenapprox{\pt}}{\ls{}} = \pdv{\logseqden{\pt}}{\ls{}}$ everywhere and for all $\pt$.
 
 For the desired density sequence, differentiating \eqref{eq:sequence_logdensity} and substituting from \eqref{eq:optimal_flow_pde_terms},
 %
-\begin{IEEEeqnarray}{rCl}
- \mpdv{\logseqden{\pt}}{\ls{}}{\pt} & = & \pdv{\loglhood}{\ls{}} \nonumber \\
- & = & \pdv{\obsfun}{\ls{}}^T \lgmov^{-1} \left(\ob{\ti} - \obsfun(\ls{})\right) \nonumber      .
+\begin{IEEEeqnarray}{rClCl}
+ \mpdv{\logseqden{\pt}}{\ls{}}{\pt} & = & \pdv{\loglhood}{\ls{}} & = & \pdv{\obsfun}{\ls{}}^T \lgmov^{-1} \left(\ob{\ti} - \obsfun(\ls{})\right) \nonumber      .
 \end{IEEEeqnarray}
 
 For the actual density sequence, substituting \eqref{eq:gaussian_flow_drift_diffusion} into \eqref{eq:optimal_flow_pde} and differentiating,
@@ -932,13 +933,7 @@ Substituting terms from \eqref{eq:optimal_flow_pde_terms} we find that,
  \mpdv{\logseqdenapprox{\pt}}{\ls{\pt}}{\pt} & = & \pdv{\obsfun}{\ls{}}^T \lgmov^{-1} \left( \ob{\ti} - \obsfun(\ls{}) \right) \nonumber       ,
 \end{IEEEeqnarray}
 %
-and thus,
-%
-\begin{IEEEeqnarray}{rCl}
- \pdv{\logseqdenapprox{\pt}}{\ls{\pt}}  & = & \pdv{\logseqden{\pt}}{\ls{\pt}} \nonumber      .
-\end{IEEEeqnarray}
-%
-This procedure is repeated trivially for the remaining derivatives, and the result follows.\qed
+which is the same as the ideal case. This procedure is repeated trivially for the remaining derivatives, and the result follows.\qed
 
 
 

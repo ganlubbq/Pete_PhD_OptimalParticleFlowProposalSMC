@@ -15,7 +15,7 @@ scale only axis,
 xmin=0.55,
 xmax=0.85,
 ymin=0,
-ymax=0.25,
+ymax=0.3,
 axis x line*=bottom,
 axis y line*=left
 ]
