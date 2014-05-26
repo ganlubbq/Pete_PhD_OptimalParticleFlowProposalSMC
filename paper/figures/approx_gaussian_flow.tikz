@@ -10,7 +10,7 @@
 
 \begin{axis}[%
 width=4cm,
-height=3.15483870967742cm,
+height=4cm,
 colormap={mymap}{[1pt] rgb(0pt)=(0,0,0); rgb(1pt)=(0,0,0)},
 unbounded coords=jump,
 scale only axis,

@@ -10,7 +10,7 @@
 
 \begin{axis}[%
 width=4cm,
-height=3.15483870967742cm,
+height=4cm,
 scale only axis,
 xmin=0.55,
 xmax=0.85,
