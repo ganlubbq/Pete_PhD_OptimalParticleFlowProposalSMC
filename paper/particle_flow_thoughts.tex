@@ -1,0 +1,139 @@
+\documentclass{article}
+
+% Graphics
+\usepackage{graphicx}
+\usepackage[caption=false,font=footnotesize]{subfig}
+
+% Formatting
+\usepackage{color}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{bbm}
+
+\usepackage[scaled]{helvet}
+\renewcommand*\familydefault{\sfdefault} %% Only if the base font of the document is to be sans serif
+\usepackage[T1]{fontenc}
+
+% Environments
+\usepackage{IEEEtrantools}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+
+% Logic
+\usepackage{ifthen}
+\usepackage{etoolbox}
+
+% References
+\usepackage{natbib}
+
+% Drawing
+\usepackage{tikz}
+\usepackage{pgfplots}
+ \usetikzlibrary{plotmarks}
+ \pgfplotsset{compat=newest}
+ \pgfplotsset{plot coordinates/math parser=false}
+ \usepgfplotslibrary{external}
+ \tikzexternalize[prefix=tikz/]
+ 
+ %%% Macros %%%
+\input{progressive_proposals_paper_macros}
+
+
+
+%%% Environments %%%
+\newenvironment{meta}[0]{\color{red} \em}{}
+
+
+
+%%% Titles and stuff %%%
+\title{Thoughts on Particle Flow}
+\author{Pete Bunch}
+\date{May 2014}
+
+
+
+%%% DOCUMENT %%%
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+
+Consider the task of sampling from a Bayesian posterior distribution over a hidden state variable $\ls{} \in \lsspace = \real^\lsdim$,
+%
+\begin{IEEEeqnarray}{rCl}
+ \postden(\ls{}) & = & \frac{ \priorden(\ls{}) \lhood(\ls{}) }{ \nconst{} } \\
+ \nconst{} & = & \int \priorden(\ls{}) \lhood(\ls{}) d\ls{}      .
+\end{IEEEeqnarray}
+%
+in which $\priorden$ and $\postden$ are the prior and posterior densities respectively, which are assumed to exist, $\lhood$ is the likelihood and $\nconst{}$ is a normalising constant. The posterior density is often only available up to a constant of proportionality since this constant cannot be evaluated.
+
+The general principle behind particle flows is to begin with samples from the prior, then to move these according to some dynamics over an interval of pseudo-time such that the final values are distributed according to the posterior. One suitable way to achieve this is to define the following geometric density sequence over the pseudo-time interval $\pt \in \left[0,1\right]$,
+%
+\begin{IEEEeqnarray}{rCl}
+ \seqden{\pt}(\ls{\pt}) & = & \frac{ \priorden(\ls{\pt}) \lhood(\ls{\pt})^{\pt} }{ \nconst{\pt} } \label{eq:density_sequence} \\
+ \nconst{\pt}           & = & \int \priorden(\ls{}) \lhood(\ls{})^{\pt} d\ls{}      .
+\end{IEEEeqnarray}
+%
+Since $\seqden{0} = \priorden$, initial particles may be sampled from the prior. These are then moved according to a stochastic (SDE) differential equation such that at every instant in pseudo-time each one is distributed according to the appropriate density in the sequence \eqref{eq:density_sequence},
+%
+\begin{IEEEeqnarray}{rCl}
+ d\ls{\pt} & = & \flowdrift{\pt}(\ls{\pt}) d\pt + \flowdiffuse{\pt} d\flowbm{\pt} \label{eq:state_sde}     .
+\end{IEEEeqnarray}
+
+At the end, since $\seqden{1} = \postden$, the final particles are distributed according to the posterior. These can be used to construct an unbiased, asymptotically consistent estimator of any posterior expectation. Hooray.
+
+The challenge in applying such a particle flow sampler comes in finding suitable dynamics with which to move the particles such that the correct density is maintained throughout. In general, this cannot be achieved analytically, and approximations are called for. While these may be effective, they result in the loss of asymptotic consistency, and the introduction of bias which is not easily quantified.
+
+It may be shown that the SDE drift and diffusion need to satisfy the following governing equation,
+%
+\begin{IEEEeqnarray}{rCl}
+ \loglhood(\ls{\pt}) - \expect{\seqden{\pt}}\left[ \loglhood \right] & = & -\trace\left[ \pdv{\flowdrift{\pt}}{\ls{\pt}} \right] - \flowdrift{\pt}(\ls{\pt})^T \pdv{\logseqden{\pt}}{\ls{\pt}} \nonumber \\
+ & & \qquad + \: \trace\left[ \flowcov{\pt} \ppdv{\logseqden{\pt}}{\ls{\pt}} \right] + \pdv{\logseqden{\pt}}{\ls{\pt}}^T \flowcov{\pt} \pdv{\logseqden{\pt}}{\ls{\pt}} \label{eq:optimal_flow_pde}        ,
+\end{IEEEeqnarray}
+%
+in which
+%
+\begin{IEEEeqnarray}{rCl}
+ \logseqden{\pt}(\ls{\pt}) & = & \log(\seqden{\pt}(\ls{\pt})) \nonumber \\
+ \loglhood(\ls{\pt})  & = & \log(\lhood(\ls{\pt}))  \nonumber \\
+ \flowcov{\pt}             & = & \half \flowdiffuse{\pt} \flowdiffuse{\pt}^T \nonumber \\
+ \expect{\seqden{\pt}}\left[ \loglhood \right] & = & \int \seqden{\pt}(\ls{}) \loglhood(\ls{}) d\ls{} \label{eq:optimal_flow_pde_terms}      .
+\end{IEEEeqnarray}
+
+\emph{All} we need to do is choose $\flowdrift{\pt}$ and $\flowdiffuse{\pt}$ which satisfy \eqref{eq:optimal_flow_pde}, then analytically integrate \label{eq:state_sde} to find the final particle locations.
+
+
+\section{Fred's Methods}
+
+Fred Daum has a number of particle flows which he uses to implement particle filters. In deriving this assortment, he routinely makes three separate approximations:
+%
+\begin{enumerate}
+  \item He chooses $\flowdrift{\pt}$ and $\flowdiffuse{\pt}$ which do not satisfy \eqref{eq:optimal_flow_pde}. He does this because it is actually hard to solve. \label{item:approx-flow}
+  \item He integrates \eqref{eq:state_sde} numerically. \label{item:approx-integration}
+  \item Since he applies the particle flow directly to the filtering density, the prior $\priorden(\ls{})$ is the predictive density which is not known. So he approximates this, along with its gradient. \label{item:approx-prior}
+\end{enumerate}
+
+\section{Thoughts and Observations}
+
+\begin{itemize}
+  \item The desirable property of his filters, that they maintain equal weights throughout and hence evade particle degeneracy, actually arises from approximation~\ref{item:approx-prior}, and not directly from the use of particle flow. Is there a non-flow way to use this approximation?
+  \item We can always correct for the discrepancy between the actual and ideal particle densities introduced by approximation~\ref{item:approx-flow} using an importance weight. All we need is a Jacobian of the state update, which comes from the integrated SDE.
+  \item Of course, in reality the only useful flow which can be integrated analytically is the Gaussian case. The rest of the time we will need numerical integration. We can still use importance sampling to correct for the errors that this introduces, as long as we can calculate appropriate Jacobians for the state changes.
+\end{itemize}
+
+\section{Lines for Future Work}
+
+\begin{itemize}
+  \item Try out flows other than the Gaussian case.
+  \item Deduce Jacobians for numerical integration schemes more complex than Euler.
+  \item Try out other approximations of the prior and likelihood which allow a more robust application of the Gaussian flow.
+  \item Think about the effect of the prior approximation. Is it somehow equivalent to resampling? Can it be used in other ways?
+\end{itemize}
+
+
+
+
+
+\end{document}

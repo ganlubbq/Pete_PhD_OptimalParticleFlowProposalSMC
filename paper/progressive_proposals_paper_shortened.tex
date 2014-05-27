@@ -272,7 +272,7 @@ The formula for the Gaussian case \eqref{eq:state_update} may now be applied in 
 A reasonable question to ask is how close is the Gaussian flow approximation to the exact flow. This can be addressed by considering the continuous time behaviour.
 
 \begin{theorem} \label{theo:flow_governing_equation}
-For a particle moving according to \eqref{eq:state_sde}, in order to maintain the correct density $\ls{\pt}\sim\seqden{\pt}(\ls{\pt})$ defined by \eqref{eq:density_sequence}, the SDE drift and diffusion must satisfy the following governing equation,
+For a particle moving according to \eqref{eq:state_sde}, in order to maintain the correct density $\ls{\pt}\sim\seqden{\pt}(\ls{\pt})$ defined by \eqref{eq:density_sequence}, the SDE drift and diffusion must satisfy,
 %
 \begin{IEEEeqnarray}{rCl}
  \loglhood(\ls{\pt}) - \expect{\seqden{\pt}}\left[ \loglhood \right] & = & -\trace\left[ \pdv{\flowdrift{\pt}}{\ls{\pt}} \right] - \flowdrift{\pt}(\ls{\pt})^T \pdv{\logseqden{\pt}}{\ls{\pt}} \nonumber \\
@@ -323,17 +323,12 @@ It is possible to use a Gaussian flow approximation for arbitrary models where t
 %
 \begin{IEEEeqnarray}{rCl}
  \priorden(\ls{}) & \approx & \normalden{\ls{}}{\lsmnapprox{0}}{\lsvrapprox{0}} \nonumber \\
- \lhood(\ls{})    & \approx & \normalden{\obapprox{\pt}}{\lgmomapprox{\pt} \ls{}}{\lgmovapprox{\pt}} \nonumber      
+ \lhood(\ls{})    & \approx & \normalden{\obapprox{\pt}}{\lgmomapprox{\pt} \ls{}}{\lgmovapprox{\pt}} \nonumber
 \end{IEEEeqnarray}
 %
-\begin{IEEEeqnarray}{rClCrCl}
- \lsvrapprox{0} & = & - \left[ \npd{2}{\logprior}{\ls{}}{\ls{0}}\right]^{-1} & \qquad & \lsmnapprox{0} & = & \ls{0} + \lsvrapprox{0} \pd{\logprior}{\ls{}}{\ls{0}}  \nonumber \\
- \lgmovapprox{\pt} & = & - \left[ \npd{2}{\loglhood}{\ls{}}{\ls{\pt}} \right]^{-1} & \qquad & \obapprox{\pt} & = & \ls{\pt} + \lgmovapprox{\pt} \pd{\loglhood}{\ls{}}{\ls{\pt}} \nonumber
-\end{IEEEeqnarray}
-%
-\begin{IEEEeqnarray}{rCl}
- \logprior(\ls{}) & = & \log\left(\priorden(\ls{})\right) \nonumber \\
- \loglhood(\ls{}) & = & \log\left(\lhood(\ls{})\right) \nonumber      .
+\begin{IEEEeqnarray}{rClCrClCrCl}
+ \lsvrapprox{0} & = & - \left[ \npd{2}{\logprior}{\ls{}}{\ls{0}}\right]^{-1} & \qquad & \lsmnapprox{0} & = & \ls{0} + \lsvrapprox{0} \pd{\logprior}{\ls{}}{\ls{0}} & \qquad & \logprior(\ls{}) & = & \log\left(\priorden(\ls{})\right) \nonumber \\
+ \lgmovapprox{\pt} & = & - \left[ \npd{2}{\loglhood}{\ls{}}{\ls{\pt}} \right]^{-1} & \qquad & \obapprox{\pt} & = & \ls{\pt} + \lgmovapprox{\pt} \pd{\loglhood}{\ls{}}{\ls{\pt}} & \qquad & \loglhood(\ls{}) & = & \log\left(\lhood(\ls{})\right) \nonumber      .
 \end{IEEEeqnarray}
 %
 Using these approximations, a Gaussian flow may be used to perform incremental state updates as before, using \eqref{eq:approx_mean_variance_update} and \eqref{eq:state_update}. Although this procedure is widely applicable, no general claims of optimality or effectiveness can be made --- the effects of multiple interacting approximations are hard to characterise.
@@ -510,9 +505,8 @@ A conventional particle filter \citep{Cappe2007,Doucet2009} uses importance samp
 %
 Each step begins by selecting a set of ancestors $\{\anc{\ti}{i}\}$ from amongst the ($\ti-1$)th step particles according to the corresponding weights. Next, a new state is proposed for each particle from an importance density $\ls{\ti}\pss{i} \sim \impden(\ls{\ti} | \ls{\ti-1}\pss{\anc{\ti}{i}}, \ob{\ti})$, and this is concatenated to the ancestral path to form the new particle $\ls{1:\ti}\pss{i} \leftarrow \left\{ \ls{1:\ti-1}\pss{\anc{\ti}{i}},  \ls{\ti}\pss{i} \right\}$. An importance weight is then assigned to the particle to account for the discrepancy between importance and target distributions,
 %
-\begin{IEEEeqnarray}{rCl}
- \pw{\ti}\pss{i} & = & \frac{ \den(\ls{1:\ti}\pss{i} | \ob{1:\ti}) }{ \den(\ls{1:\ti}\pss{\anc{\ti}{i}} | \ob{1:\ti}) \impden(\ls{\ti}\pss{i} | \ls{\ti}\pss{\anc{\ti}{i}}, \ob{\ti}) } \nonumber \\
- & \propto & \frac{ \transden(\ls{\ti}\pss{i} | \ls{\ti-1}\pss{\anc{\ti}{i}}) \obsden(\ob{\ti}|\ls{\ti}\pss{i}) }{ \impden(\ls{\ti}\pss{i} | \ls{\ti-1}\pss{\anc{\ti}{i}}, \ob{\ti}) }     .
+\begin{IEEEeqnarray}{rClCl}
+ \pw{\ti}\pss{i} & = & \frac{ \den(\ls{1:\ti}\pss{i} | \ob{1:\ti}) }{ \den(\ls{1:\ti}\pss{\anc{\ti}{i}} | \ob{1:\ti}) \impden(\ls{\ti}\pss{i} | \ls{\ti}\pss{\anc{\ti}{i}}, \ob{\ti}) } & \propto & \frac{ \transden(\ls{\ti}\pss{i} | \ls{\ti-1}\pss{\anc{\ti}{i}}) \obsden(\ob{\ti}|\ls{\ti}\pss{i}) }{ \impden(\ls{\ti}\pss{i} | \ls{\ti-1}\pss{\anc{\ti}{i}}, \ob{\ti}) }     .
 \end{IEEEeqnarray}
 
 It was shown by \cite{Doucet2000a} that the weight variance is minimised by proposing from the conditional posterior $\impden(\ls{\ti} | \ls{\ti-1}\pss{\anc{\ti}{j}}, \ob{\ti}) = \den(\ls{\ti} | \ls{\ti-1}\pss{\anc{\ti}{j}}, \ob{\ti})$, known as the optimal importance density. This cannot be used routinely due to an intractable normalising constant.
@@ -563,10 +557,11 @@ The only modification required to the standard process is in the weight formulas
 Numerical testing using simulated data is presented to demonstrate the efficacy of Gaussian flow sampling for particle filtering. Our primary indicator of performance is the average effective sample size (ESS), measured before resampling. The effective sample size at time step $\ti$ is defined as,
 %
 \begin{IEEEeqnarray}{rCl}
- \ess{\ti} & = & \frac{ 1 }{ \sum_i \npw{\ti}\pss{i}{}^2 }     ,
+ \ess{\ti} & = & \left[\sum_i \npw{\ti}\pss{i}{}^2\right]^{-1} \nonumber      ,
 \end{IEEEeqnarray}
 %
-which intuitively is an estimate of the size of an equivalent set of independent, unweighted samples. RMSE values using the empirical particle mean as a point estimate are also included. All comparisons are conducted by adjusting the number of filter particles such that the running times for the various algorithms are roughly equal.% However, they should be treated with caution, since when a distribution is irregular the particle mean may be distant from the true value even if the particles are drawn from it perfectly (see figure~\ref{fig:rmse_fail} for an illustration of this effect).
+which intuitively is an estimate of the size of an equivalent set of independent, unweighted samples. RMSE values using the empirical particle mean as a point estimate are also included.
+%Comparisons are conducted by adjusting the number of filter particles such that the running times for the various algorithms are roughly equal.% However, they should be treated with caution, since when a distribution is irregular the particle mean may be distant from the true value even if the particles are drawn from it perfectly (see figure~\ref{fig:rmse_fail} for an illustration of this effect).
 %%
 %\begin{figure}[bt]
 %\centering
@@ -584,19 +579,9 @@ The following particle filters (and their respective importance densities) were 
         \item A Gaussian flow particle filter (GFPF), using the the Gaussian flow importance sampling method, with $\dsf=0$. The adaptive step size mechanism is used and requires roughly $5$ to $20$ steps. Particles taking more than $50$ steps are discarded --- this is only necessary for the heartbeat model.
 \end{itemize}
 
-The purpose the Gaussian flow sampling is to provide a more effective particle filter for challenging nonlinear models. In such cases, simple Gaussian approximations often work poorly, because the posterior filtering distributions of such models can assume complex and irregular shapes. In many of the following tests the EPF and UPF fail after a few steps; all the particles suffer numerical underflow of their weight due to states being sampled only in highly improbable regions. When this occurs, the results are excluded. Furthermore, the LAPF is generally very slow because the maximisation procedure struggles with the irregular mode shapes.
+The posterior filtering distributions of the chosen models can assume complex and irregular shapes, often leading to the complete failure of the EPF and UPF. All the particles suffer numerical underflow of their weight due to states being sampled only in highly improbable regions. When this occurs, the results are excluded. The LAPF is generally slow because the maximisation procedure struggles with the irregular mode shapes.
 
-%\subsubsection{Nonlinear Benchmark model}
-%We study a modified form of the model used by \citet{Mihaylova2011}, which is a multivariate extension of the nonlinear benchmark model of \citep{Kitagawa1991}. The transition and observation functions are,
-%%
-%\begin{IEEEeqnarray}{rCl}
-% \transfun(\ls{\ti-1}) & = & \half \ls{\ti-1} + 25 \frac{ \sum_d \ls{\ti-1,d} }{ 1 + \left(\sum_d \ls{\ti-1,d}\right)^2 } + 8 \cos(1.2 \ti) \nonumber \\
-% \obsfun(\ls{\ti})_d   & = & \alpha \left( \ls{\ti,2d-1}^2 + \ls{\ti,2d}^2 \right) \nonumber      ,
-%\end{IEEEeqnarray}
-%%
-%where $\ls{\ti,d}$ and $\obsfun(\ls{\ti})_d$ are the $d$th components of the state vector and observation function respectively. A $10$-dimensional state and a $5$-dimensional observation were used. The transition and observation densities are Gaussian with $\lgmtv = 100 \times I$ and $\lgmov = I$.
-%
-%This model is particularly challenging because the observations give us information only about the magnitudes of a set of sub-vectors of the state. Information about the corresponding bearing is only available via the transition model. Consequently, the region of high posterior probability corresponds to a ``thin'' section of the space bounding a hyper-sphere. A Gaussian density is a very poor approximation of this region. (See figure~\ref{fig:nlng_example_frame}.)
+The number of particles for the GFPF was specified in order to achieve a particular running time. For the remaining filters, the number of particles was either set equal to this number (in the case of the LAPF), or increased so as to achieve a similar running time (in the case of the BF, EPF and UPF). In this way, the GFPF is always at a disadvantage when compared to the other filters, leaving no doubt as to its superior performance.
 
 \subsubsection{Altitude-Assisted Tracking}
 We consider tracking a small aircraft over a mapped landscape, an scenario inspired by \cite{Schon2005}. Time of flight and Doppler measurements from a radio transmitter on the aircraft provide accurate measurements of range $\rng{\ti}$, and range rate $\rngrt{\ti}$, but only a low resolution measurement of bearing $\bng{\ti}$. In addition, accurate measurements are made of the height above the ground $\hei{\ti}$. The profile of the terrain (i.e. the height of the ground above a datum at each point) has been mapped.
@@ -661,15 +646,7 @@ The transition density is factorised into independent terms, with $\freq{\ti}$, 
 
 \subsection{Results}
 
-%Figures~\ref{fig:nlng_example_frame}, \ref{fig:drone_example_frame_deterministic} and \ref{fig:sineha_example_frame} show the motion of the particles from the GFPF on a typical frame, and the awkward shapes of the posterior mode. Tables~\ref{tab:nlng_results}, \ref{tab:drone_results} and \ref{tab:sineha_results} show the average ESSs and RMSEs for each algorithm over 100 simulated data sets, each of 100 time steps.
 Figures~\ref{fig:drone_example_frame_deterministic} and \ref{fig:sineha_example_frame} show the motion of the particles from the GFPF on a typical frame, and the awkward shapes of the posterior mode. Tables~\ref{tab:drone_results} and \ref{tab:sineha_results} show the average ESSs and RMSEs for each algorithm over 100 simulated data sets, each of 100 time steps.
-
-%\begin{figure}
-%\centering
-%\input{figures/nlng_example_frame_deter.tikz}
-%\caption{An example of the GFPF particle motion running on the multivariate benchmark model, showing $2$ of the $10$ state dimensions. Prior states are shown with circles and posterior states with crosses.}
-%\label{fig:nlng_example_frame}
-%\end{figure}
 
 \begin{figure}
 \centering
@@ -685,28 +662,15 @@ Figures~\ref{fig:drone_example_frame_deterministic} and \ref{fig:sineha_example_
 \label{fig:sineha_example_frame}
 \end{figure}
 
-%\begin{table}
-%\centering
-%\begin{tabular}{l||c|c|c}
-%Algorithm                                & $N_F$ & ESS  & RMSE \\
-%\hline
-%Bootstrap                                & 18500 &  1.7 & 43.6 \\
-%Laplace Approximation                    &    70 &  1.7 & 42.8 \\
-%Gaussian Flow                            &   540 & 81.1 & 32.6 \\
-%\end{tabular}
-%\caption{Algorithm performance results on the multivariate benchmark model, showing number of filter particle ($N_F$), effective sample size (ESS), and root mean square error (RMSE).}
-%\label{tab:nlng_results}
-%\end{table}
-
 \begin{table}
 \centering
 \begin{tabular}{l||c|c|c}
-Algorithm                                & $N_F$ & ESS  & RMSE \\
+Algorithm                                & $N_F$  & ESS  & RMSE \\
 \hline
-Bootstrap                                &  6000 &  1.0 & 78.6 \\
-Unscented Kalman                         &   460 &  2.4 & 70.2 \\
-Laplace Approximation                    &    10 &  3.1 & 62.9 \\
-Gaussian Flow                            &   180 & 56.4 & 22.3 \\
+Bootstrap                                &  12000 & 1.0  & 74.0 \\
+Unscented Kalman                         &   1000 & 4.0  & 62.1 \\
+Laplace Approximation                    &    200 & 7.8  & 52.4 \\
+Gaussian Flow                            &    200 & 59.9 & 21.7 \\
 \end{tabular}
 \caption{Algorithm performance results on the altitude-assisted tracking model, showing number of filter particle ($N_F$), effective sample size (ESS), and root mean square error (RMSE).}
 \label{tab:drone_results}
@@ -717,9 +681,9 @@ Gaussian Flow                            &   180 & 56.4 & 22.3 \\
 \begin{tabular}{l||c|c|c}
 Algorithm                                & $N_F$ & ESS  & RMSE \\
 \hline
-Bootstrap                                & 15000 &  7.6 &  2.0 \\
-Laplace Approximation                    &   200 &  8.8 &  2.0 \\
-Gaussian Flow                            &   800 & 72.8 &  1.4 \\
+Bootstrap                                & 8000 & 5.0   &  2.1 \\
+Laplace Approximation                    & 1000 & 13.4  &  1.9 \\
+Gaussian Flow                            & 1000 & 102.4 &  1.4 \\
 \end{tabular}
 \caption{Algorithm performance results on the heartbeat model, showing number of filter particle ($N_F$), effective sample size (ESS), and root mean square error (RMSE).}
 \label{tab:sineha_results}
