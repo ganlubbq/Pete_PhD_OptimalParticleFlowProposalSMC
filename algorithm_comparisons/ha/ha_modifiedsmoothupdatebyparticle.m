@@ -50,6 +50,12 @@ else
     zD = zeros(ds,1);
 end
 
+% Initialise Gaussian
+tau_mn = model.tau_shape * model.tau_scale;
+tau_vr = model.tau_shape * model.tau_scale^2;
+mu = [tau_mn; A_mn];
+Sigma = diag([tau_vr, A_vr]);
+
 % Loop
 while lam < 1
     
@@ -68,98 +74,16 @@ while lam < 1
     
     % Linearise observation model around the current point
     H = ha_obsjacobian(model, x0);
-    y = obs - obs_mn + H*x0;
-    
-    % SMoN scaling.
-    if ~isinf(model.dfy)
-        xi = chi2rnd(model.dfy);
-    else
-        xi = 1;
-    end
-    R = model.R / xi;
-    
-    % Features of prior density
-    tau = x0(1);
-    prior_grad = (model.tau_shape-1)./(tau-model.tau_shift) - 1/model.tau_scale;
-    
-    % GRADIENT-HESSIAN MATCHING
-    prior_hess = -(model.tau_shape-1)./(tau-model.tau_shift)^2;
-   tau_vr = min(-1/prior_hess,0.02);
-    tau_mn = tau + tau_vr*prior_grad;
-        
-%     % VALUE-GRADIENT MATCHING
-%     prior_value = gampdf(tau-model.tau_shift, model.tau_shape, model.tau_scale);
-%     if (tau > model.tau_shift) && (prior_value > 0)
-%         [tau_mn, tau_vr] = gaussian_match_prior(tau, prior_value, prior_grad);
-%     else
-%         tau_mn = model.tau_shape * model.tau_scale;
-%         tau_vr = model.tau_shape * model.tau_scale^2;
-%     end
-
-%     % MOMENT MATCHING
-%     tau_mn = model.tau_shape * model.tau_scale;
-%     tau_vr = model.tau_shape * model.tau_scale^2;
-
-%     % MEAN-GRADIENT MATCHING
-%     tau_mn = model.tau_shape * model.tau_scale;
-%     tau_vr = (tau_mn-tau)/prior_grad;
-%     if tau_vr < 0
-%         tau_vr = model.tau_shape * model.tau_scale^2;
-%     end
-
-%     % IGNORING
-%     tau_vr = 1E3;
-%     tau_mn = 0;
-        
-    % Matched prior Gaussian
-    m = [tau_mn; A_mn];
-    P = diag([tau_vr, A_vr]);
+    ymhx = obs - obs_mn;
+    R = model.R;
     
     % Analytical flow
-    [ x, prob_ratio, drift, diffuse] = linear_flow_move( lam1, lam0, x0, m, P, y, H, R, algo.Dscale, zD );
+    [ x, mu, Sigma, prob_ratio, drift, diffuse] = modified_linear_flow_move( lam1, lam0, x0, mu, Sigma, ymhx, H, R, algo.Dscale, zD );
     
     % Error estimate
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        % Features of prior density
-    tau = x(1);
-    prior_grad = (model.tau_shape-1)./(tau-model.tau_shift) - 1/model.tau_scale;
-    
-    % GRADIENT-HESSIAN MATCHING
-    prior_hess = -(model.tau_shape-1)./(tau-model.tau_shift)^2;    
-    tau_vr = min(-1/prior_hess,0.02);
-    tau_mn = tau + tau_vr*prior_grad;
-        
-%     % VALUE-GRADIENT MATCHING
-%     prior_value = gampdf(tau-model.tau_shift, model.tau_shape, model.tau_scale);
-%     if (tau > model.tau_shift) && (prior_value > 0)
-%         [tau_mn, tau_vr] = gaussian_match_prior(tau, prior_value, prior_grad);
-%     else
-%         tau_mn = model.tau_shape * model.tau_scale;
-%         tau_vr = model.tau_shape * model.tau_scale^2;
-%     end
-
-%     % MOMENT MATCHING
-%     tau_mn = model.tau_shape * model.tau_scale;
-%     tau_vr = model.tau_shape * model.tau_scale^2;
-
-%     % MEAN-GRADIENT MATCHING
-%     tau_mn = model.tau_shape * model.tau_scale;
-%     tau_vr = (tau_mn-tau)/prior_grad;
-%     if tau_vr < 0
-%         tau_vr = model.tau_shape * model.tau_scale^2;
-%     end
-
-%     % IGNORING
-%     tau_vr = 1E3;
-%     tau_mn = 0;
-
-    % Matched prior Gaussian
-    m_new = [tau_mn; A_mn];
-    P_new = diag([tau_vr, A_vr]);
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     H_new = ha_obsjacobian(model, x);
-    y_new = obs - ha_h(model, x) + H_new*x;
-    [drift_new, diffuse_new] = linear_drift( lam1, x, m_new, P_new, y_new, H_new, R, algo.Dscale );
+    ymhx_new = obs - ha_h(model, x);
+    [drift_new, diffuse_new] = linear_drift( lam1, x, mu, Sigma, ymhx_new, H_new, R, algo.Dscale );
 
     deter_err_est = 0.5*(lam1-lam0)*(drift_new-drift);
     stoch_err_est = 0.5*(diffuse_new-diffuse)*zD*sqrt(lam1-lam0);
@@ -175,7 +99,7 @@ while lam < 1
     end
     
     % Accept/reject step
-    if (err_crit < err_thresh) || (dl == dl_min)
+    if 1%(err_crit < err_thresh) || (dl == dl_min)
         
         % Update time
         lam = lam1;

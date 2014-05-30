@@ -1,4 +1,4 @@
-function [ time, state, observ ] = nlng_generatedata( model )
+function [ time, state, observ ] = nlng_poisson_generatedata( model )
 %nlng_generatedata Generate a data set for the nonlinear non-Gaussian
 %benchmark model.
 
@@ -17,8 +17,8 @@ for kk = 1:model.K
         [state(:,kk), ~] = nlng_transition(model, state(:,kk-1));
     end
     
-    [observ(:,kk), ~] = nlng_observation(model, state(:,kk));
-%     [observ(:,kk), ~] = nlng_poisson_observation(model, state(:,kk));
+%     [observ(:,kk), ~] = nlng_observation(model, state(:,kk));
+    [observ(:,kk), ~] = nlng_poisson_observation(model, state(:,kk));
     
 end
 

@@ -16,7 +16,7 @@ for hh = 1:map.num_hills
     height = height + map.alt(hh)*mvnpdf(coord, map.mn(:,hh)', map.vr(:,:,hh));
 end
 
-figure, contour(x_rng, x_rng, reshape(height,Nx,Nx) );
+figure, contour(x_rng, x_rng, reshape(height,Nx,Nx), 20 );
 figure, surf(x_rng, x_rng, reshape(height,Nx,Nx) );
 shading interp;
 

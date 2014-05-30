@@ -26,7 +26,10 @@ end
 R = model.R;
 h_of = @(x) log_oid_with_derivs(model, prior_mn, prior_vr, obs, R, x);
 % options = optimset('GradObj','on','Hessian','on','Display','off');%'notify-detailed');
-options = optimset('GradObj','on','Display','off');%,'notify-detailed');
+options = optimset('GradObj','on',...
+                   'Display','off',...
+                   'TolX', 0.1,...
+                   'MaxIter', 100);%,'notify-detailed');
 start_x = prior_mn+2*rand(model.ds,1)-1;
 lin_x = fminunc(h_of,start_x,options);
 
@@ -96,10 +99,11 @@ if nargout > 2
     lhood_hess = lhood_hess - at;
     
     Hess = prior_hess + lhood_hess;
+    Hess = (Hess+Hess')/2;
     if ~isposdef(Hess)
         min_eig = min(eig(Hess));
         Hess = Hess - 2*min_eig*eye(ds);
-        warning('Uh oh! The Hessian of the log of the optimal importance density is not positive definite at the maximum.');
+%         warning('Uh oh! The Hessian of the log of the optimal importance density is not positive definite at the maximum.');
     end
     
 end

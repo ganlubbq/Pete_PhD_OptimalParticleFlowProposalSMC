@@ -40,9 +40,10 @@ for kk = 1:model.K
     % Initialise state and weight arrays
     pf(kk).state = zeros(model.ds, algo.N);
     pf(kk).weight = zeros(1, algo.N);
+    step_count = zeros(1, algo.N);
     
     switch flag_ppsl_type
-        case {1, 2, 3, 4, 6}
+        case {1, 2, 3, 4, 6, 8}
             %%% Ordinary particle filters %%%
             
             % Particle loop
@@ -73,7 +74,7 @@ for kk = 1:model.K
                         % Weight
                         weight = prior_weight + lhood_prob;
                         
-                    case {2, 3, 4, 6}
+                    case {2, 3, 4, 6, 8}
                         %%% Other importance densities %%%
                         
                         switch flag_ppsl_type
@@ -104,10 +105,28 @@ for kk = 1:model.K
                                 
                             case 6
                                 %%% Smooth update by particle
+%                                 if kk > 1
+%                                     [state, ppsl_prob, step_count(ii), loglhood(ii), expectloglhoodest(ii)] = feval(fh.smoothupdatebyparticle, display, algo, model, fh, prev_state, observ(:,kk));
+%                                 else
+%                                     [state, ppsl_prob, step_count(ii), loglhood(ii), expectloglhoodest(ii)] = feval(fh.smoothupdatebyparticle, display, algo, model, fh, [], observ(:,kk));
+%                                 end
+%                                 if kk > 1
+%                                     [state, ppsl_prob, step_count(ii)] = feval(fh.smoothupdatebyparticle, display, algo, model, fh, prev_state, observ(:,kk));
+%                                 else
+%                                     [state, ppsl_prob, step_count(ii)] = feval(fh.smoothupdatebyparticle, display, algo, model, fh, [], observ(:,kk));
+%                                 end
                                 if kk > 1
                                     [state, ppsl_prob] = feval(fh.smoothupdatebyparticle, display, algo, model, fh, prev_state, observ(:,kk));
                                 else
                                     [state, ppsl_prob] = feval(fh.smoothupdatebyparticle, display, algo, model, fh, [], observ(:,kk));
+                                end
+                                
+                            case 8
+                                %%% MCMC proposal %%%
+                                if kk > 1
+                                    [state, ppsl_prob] = feval(fh.mcmcproposal, model, prev_state, observ(:,kk));
+                                else
+                                    [state, ppsl_prob] = feval(fh.mcmcproposal, model, [], observ(:,kk));
                                 end
                                 
                         end
@@ -138,8 +157,8 @@ for kk = 1:model.K
                 
             end
             
-        case 5
-            %%% Smooth Update Particle Filter %%%
+        case {5 7}
+            %%% All particles at once %%%
             
             % Initialise arrays to store particle intermediates
             prior_weight = zeros(1, algo.N);
@@ -158,11 +177,22 @@ for kk = 1:model.K
                 
             end
             
-            % Smooth update
-            if kk > 1
-                [state, weight] = feval(fh.smoothupdate, display, algo, model, fh, observ(:,kk), prev_state, prior_weight);
-            else
-                [state, weight] = feval(fh.smoothupdate, display, algo, model, fh, observ(:,kk), [], prior_weight);
+            % Update
+            switch flag_ppsl_type
+                case 5
+                    if kk > 1
+                        [state, weight] = feval(fh.smoothupdate, display, algo, model, fh, observ(:,kk), prev_state, prior_weight);
+                    else
+                        [state, weight] = feval(fh.smoothupdate, display, algo, model, fh, observ(:,kk), [], prior_weight);
+                    end
+                    
+                case 7
+                    if kk > 1
+                        [state, weight] = feval(fh.annealedupdate, display, algo, model, fh, observ(:,kk), prev_state, prior_weight);
+                    else
+                        [state, weight] = feval(fh.annealedupdate, display, algo, model, fh, observ(:,kk), [], prior_weight);
+                    end
+                    
             end
             
             % Store modified states and weights
@@ -192,10 +222,16 @@ for kk = 1:model.K
     diagnostics(kk).rt = toc;
     diagnostics(kk).ess = calc_ESS(pf(kk).weight);
     diagnostics(kk).se = true_state(:,kk) - pf(kk).mn;
+    diagnostics(kk).step_count = step_count;
+    
+%     %%%%% TESTING DIAGNOSTIC STATISTICS %%%%%
+%     expectloglhoodptest = norm_weight*loglhood';
+%     figure, plot(expectloglhoodest-expectloglhoodptest)
+%     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
     if display.text
         fprintf(1, '      - Took %fs.\n', diagnostics(kk).rt);
-        fprintf(1, '      - ESS of %fs.\n', diagnostics(kk).ess);
+        fprintf(1, '      - ESS of %f.\n', diagnostics(kk).ess);
     end
     
 end

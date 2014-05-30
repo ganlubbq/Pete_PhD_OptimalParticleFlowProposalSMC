@@ -33,7 +33,7 @@ end
 
 % Maximise OID
 h_of = @(x) log_oid_with_derivs(model, prior_mn, prior_vr, obs, x);
-options = optimset('GradObj','on','Hessian','on','Display','notify-detailed');
+% options = optimset('GradObj','on','Hessian','on','Display','notify-detailed');
 options = optimset('GradObj','on','Display','notify-detailed');
 start_x = prior_mn+2*rand(model.ds-1,1)-1;
 lin_x = fminunc(h_of,start_x,options);

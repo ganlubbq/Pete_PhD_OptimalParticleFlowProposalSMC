@@ -8,7 +8,7 @@ function model = drone_setmodel(test)
 %%%%%%%%%%%%%%%%
 
 % General things
-model.K = 100;                   % Number of time points
+model.K = 20;                   % Number of time points
 model.ds = 6;                   % Dimension of the state
 model.do = 4;                   % Dimension of the observations
 

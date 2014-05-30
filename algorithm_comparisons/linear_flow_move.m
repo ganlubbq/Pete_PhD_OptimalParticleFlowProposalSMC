@@ -36,11 +36,14 @@ if Dscale > 0
     prob_ratio = exp(loggausspdf(x0,mu0,Sigma0)-loggausspdf(x,mut,Sigmat));
 else
     x = x_mn;
-    prob_ratio = sqrt(det(Sigmat)/det(Sigma0));
+%     prob_ratio = sqrt(det(Sigmat)/det(Sigma0));
+    prob_ratio = 1/sqrt( det(eye(size(Sigma0)) + (t-t0)*Sigma0*HRH) );
 end
 
 % Drift at and diffusion end state
-drift = Sigmat*(H'/R)*( (y-H*mut)-0.5*H*(x-mut) ) - Dscale*(x-mut);
+% drift = Sigmat*(H'/R)*( (y-H*mut)-0.5*H*(x-mut) );% - Dscale*(x-mut);
+% diffuse = sqrtSigmat;%*sqrt(Dscale);
+drift = Sigmat*(H'/R)*( (y-H*mut)-0.5*H*(x-mut) );% - Dscale*(x-mut);
 diffuse = sqrtSigmat*sqrt(Dscale);
 
 end

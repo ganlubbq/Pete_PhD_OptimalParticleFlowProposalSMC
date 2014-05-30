@@ -21,7 +21,7 @@ axis y line*=left
 ]
 \addplot [
 color=gray,
-dotted,
+solid,
 forget plot
 ]
 table[row sep=crcr]{
@@ -78,7 +78,7 @@ table[row sep=crcr]{
 };
 \addplot [
 color=gray,
-dotted,
+solid,
 forget plot
 ]
 table[row sep=crcr]{
@@ -135,7 +135,7 @@ table[row sep=crcr]{
 };
 \addplot [
 color=gray,
-dotted,
+solid,
 forget plot
 ]
 table[row sep=crcr]{
@@ -192,7 +192,7 @@ table[row sep=crcr]{
 };
 \addplot [
 color=gray,
-dotted,
+solid,
 forget plot
 ]
 table[row sep=crcr]{
@@ -249,7 +249,7 @@ table[row sep=crcr]{
 };
 \addplot [
 color=gray,
-dotted,
+solid,
 forget plot
 ]
 table[row sep=crcr]{
@@ -306,7 +306,7 @@ table[row sep=crcr]{
 };
 \addplot [
 color=gray,
-dotted,
+solid,
 forget plot
 ]
 table[row sep=crcr]{
@@ -363,7 +363,7 @@ table[row sep=crcr]{
 };
 \addplot [
 color=gray,
-dotted,
+solid,
 forget plot
 ]
 table[row sep=crcr]{
@@ -419,8 +419,18 @@ table[row sep=crcr]{
 1.0205476199241 0.0146304111508795\\
 };
 \addplot [
+color=blue,
+only marks,
+mark=o,
+mark options={solid},
+forget plot
+]
+table[row sep=crcr]{
+-0.423658160306465 -0.265544277298046\\
+};
+\addplot [
 color=black,
-solid,
+dotted,
 line width=1.0pt,
 forget plot
 ]
@@ -529,7 +539,7 @@ table[row sep=crcr]{
 };
 \addplot [
 color=blue,
-solid,
+dashed,
 line width=1.0pt,
 forget plot
 ]

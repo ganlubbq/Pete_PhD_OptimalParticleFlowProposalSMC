@@ -4,6 +4,8 @@ function [ state, weight ] = drone_smoothupdate( display, algo, model, fh, obs, 
 % Set up integration schedule
 ratio = 1.2;
 num_steps = 50;
+% ratio = 1.1;
+% num_steps = 100;
 % ratio = 1.02;
 % num_steps = 500;
 scale_fact = (1-ratio)/(ratio*(1-ratio^num_steps));
@@ -24,6 +26,7 @@ for ii = 1:algo.N
     else
         [init_state(:,ii), init_trans_prob(ii)] = feval(fh.stateprior, model);
     end
+    [~, init_lhood_prob(ii)] = feval(fh.observation, model, init_state(:,ii), obs);
 end
 
 % Sample mixing variable
@@ -44,8 +47,15 @@ pf(1).origin = 1:algo.N;
 
 % Loop initialisation
 last_prob = init_trans_prob;
+last_full_prob = init_trans_prob + init_lhood_prob;
 
+weight_diff = zeros(algo.N,L);
+lhoods = zeros(algo.N,L);
 errors = zeros(algo.N,L);
+ess_evo = zeros(1,L);
+bs_ess_evo = zeros(1,L);
+bs_weight_evo = zeros(algo.N,L);
+ess_evo(1) = calc_ESS(init_weight);
 
 % Pseudo-time loop
 for ll = 1:L-1
@@ -59,6 +69,7 @@ for ll = 1:L-1
     pf(ll+1).mix = zeros(1, algo.N);
     pf(ll+1).weight = zeros(1, algo.N);
     prob = zeros(1, algo.N);
+    full_prob = zeros(1, algo.N);
     
     % Resampling
     if algo.flag_intermediate_resample && (calc_ESS(pf(ll).weight)<(algo.N/2))
@@ -68,6 +79,8 @@ for ll = 1:L-1
         pf(ll+1).ancestor = 1:algo.N;
         flag_resamp = false;
     end
+    
+    bs_weight = zeros(algo.N,1);
     
     % Particle loop
     for ii = 1:algo.N
@@ -165,7 +178,24 @@ for ll = 1:L-1
 %         
 %         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-
+%         %%%%%%%%%%%%%%%%%%%%%
+%         %%% Second order matching %%%
+%         T = drone_obssecondderivtensor(model, x0);
+%         obs_diff = obs-obs_mn;
+%         if obs_diff(1) > pi
+%             obs_diff(1) = obs_diff(1) - 2*pi;
+%         elseif obs_diff(1) < -pi
+%             obs_diff(1) = obs_diff(1) + 2*pi;
+%         end
+%         yR = model.R\obs_diff;
+%         invR = H'*(model.R\H);
+%         for dd = 1:model.do
+%             invR = invR - squeeze(T(dd,:,:))*yR(dd);
+%         end
+%         R = inv(invR);
+%         y = x0 + invR\(H'*yR);
+%         H = eye(model.ds);
+%         %%%%%%%%%%%%%%%%%%%%%
         
         % Analytical flow
         [ x, prob_ratio, drift, diffuse] = linear_flow_move( lam, lam0, x0, m, P, y, H, R, algo.Dscale, zD );
@@ -192,6 +222,7 @@ for ll = 1:L-1
         end
         [~, lhood_prob] = feval(fh.observation, model, state, obs);
         prob(ii) = trans_prob + lam*lhood_prob;
+        full_prob(ii) = trans_prob + lhood_prob;
         
         % Weight update
         if flag_resamp
@@ -200,6 +231,11 @@ for ll = 1:L-1
             resamp_weight = pf(ll).weight(pf(ll+1).ancestor(ii));
         end
         pf(ll+1).weight(ii) = resamp_weight + prob(ii) - last_prob(pf(ll+1).ancestor(ii)) + log(prob_ratio);
+        
+        lhoods(ii,ll+1) = lhood_prob + trans_prob;
+        bs_weight(ii) = pf(ll+1).weight(ii) + (1-lam)*lhood_prob;
+        bs_weight_evo(ii,ll+1) = bs_weight(ii);
+        weight_diff(ii,ll+1) = full_prob(ii) - last_full_prob(pf(ll+1).ancestor(ii)) + log(prob_ratio);
         
         if ~isreal(pf(ll+1).weight(ii))
             pf(ll+1).weight(ii) = -inf;
@@ -210,6 +246,10 @@ for ll = 1:L-1
     end
     
     last_prob = prob;
+    last_full_prob = full_prob;
+    
+    ess_evo(ll+1) = calc_ESS(pf(ll+1).weight);
+    bs_ess_evo(ll+1) = calc_ESS(bs_weight);
     
 end
 
@@ -242,6 +282,11 @@ if display.plot_particle_paths
         for ii = 1:algo.N
             plot(lam_rng, mix_evo(:,ii), 'color', [0 rand rand]);
         end
+        figure(5), clf, hold on
+        plot(lam_rng, ess_evo);
+        plot(lam_rng, bs_ess_evo, 'r');
+        figure(6), clf, hold on
+        plot(lam_rng, bs_weight_evo);
         drawnow;
     else
         weight_traj = zeros(algo.N,L);
@@ -273,7 +318,7 @@ if display.plot_particle_paths
     end
 end
 
-figure(4), plot(lam_rng, errors), drawnow
+figure(7), plot(lam_rng, errors), drawnow
 
 end
 

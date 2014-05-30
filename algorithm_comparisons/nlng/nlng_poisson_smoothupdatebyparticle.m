@@ -1,14 +1,14 @@
-function [ state, ppsl_prob, ll_count ] = nlng_smoothupdatebyparticle( display, algo, model, fh, prev_state, obs )
+function [ state, ppsl_prob, ll_count ] = nlng_poisson_smoothupdatebyparticle( display, algo, model, fh, prev_state, obs )
 %nlng_smoothupdatebyparticle Apply a smooth update for the nonlinear non-Gaussian
 %benchmark model for a single particle (which means no intermediate
 %resampling, but step size control is easier.)
 
 ds = model.ds-1;
 
-dl_start = 1E-3;
+dl_start = 1E-5;
 dl_min = 1E-7;
 dl_max = 0.5;
-err_thresh = 0.1;
+err_thresh = 0.01;
 dl_sf = 0.8;1;
 dl_pow = 0.7;1;
 
@@ -60,6 +60,9 @@ else
     zD = zeros(ds,1);
 end
 
+mu = m;
+Sigma = P;
+
 % Loop
 ll_count = 0;
 while lam < 1
@@ -85,59 +88,27 @@ while lam < 1
     
     % Linearise observation model around the current point
     H = nlng_obsjacobian(model, x0);
-    y = obs - obs_mn + H*x0;
-    
-    % SMoN scaling.
-    if ~isinf(model.dfy)
-        xi = chi2rnd(model.dfy);
-    else
-        xi = 1;
-    end
-    R = model.R / xi;
-    
-%     %%%%%% TESTING 1ST ORDER TS MATCHING %%%%%%%%
-%     
-%     R = model.R;
-%     dy = obs - obs_mn;
-%     dfy = model.dfy;
-%     do = model.do;
-%     yR = (R\dy);
-%     tdist = 1 + yR'*yR/dfy;
-%     
-%     lhood_grad = -((dfy+do)/dfy)*H'*yR/tdist;
-%     
-%     [ T ] = nlng_obssecondderivtensor( model, x0 );
-%     at = zeros(model.ds-1);
-%     for dd = 1:model.do
-%         at = at + yR(dd)*squeeze(T(:,:,dd));
-%     end
-%     lhood_hess = (dfy+do)*( H'*(R\H) - 2*H'*(yR*yR')*H/(dfy*tdist) - at )/(dfy*tdist);
-%     
-%     [hess_eigvec, hess_eigval] = eig(lhood_hess);
-%     hess_eigval(hess_eigval>0) = -1;
-%     lhood_hess = hess_eigvec*hess_eigval*hess_eigvec';
-%     
-%     %         max_eig = max(eig(prior_hess));
-%     %         while ~isposdef(eye(ds) - lam*prior_hess\HRH)
-%     %             prior_hess = prior_hess - 1.1 * max_eig*eye(ds);
-%     %             fprintf(1,'.');
-%     %         end
-%     
-%     P = -pinv(lhood_hess);
-%     m = x0 + P*lhood_grad;
-%     
-%     %         assert(isposdef(P));
-%     
-%     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    ll_b = obs./obs_mn - 1;
+    ll_Om = diag(max(obs,0.1)./(obs_mn.^2));
+    R = inv(ll_Om);
+    y = ll_Om\ll_b;
     
     % Analytical flow
-    [ x, prob_ratio, drift, diffuse] = linear_flow_move( lam1, lam0, x0, m, P, y, H, R, algo.Dscale, zD );
+    [ x, mu, Sigma, prob_ratio, drift, diffuse] = modified_linear_flow_move( lam1, lam0, x0, mu, Sigma, y, H, R, algo.Dscale, zD );
+%     y = y + H*x0;
+%     [ x, prob_ratio, drift, diffuse] = linear_flow_move( lam1, lam0, x0, m, P, y, H, R, algo.Dscale, zD );
     
     % Error estimate
-    H_new = nlng_obsjacobian(model, x);
-    y_new = obs - nlng_h(model, x) + H_new*x;
-    [drift_new, diffuse_new] = linear_drift( lam1, x, m, P, y_new, H_new, R, algo.Dscale );
-    %%%%%%%
+    obs_mn = nlng_h(model, x);
+    H = nlng_obsjacobian(model, x);
+    ll_b = obs./obs_mn - 1;
+    ll_Om = diag(max(obs,0.1)./(obs_mn.^2));
+    R = inv(ll_Om);
+    y = ll_Om\ll_b;
+    [drift_new, diffuse_new] = modified_linear_drift( lam1, x, mu, Sigma, y, H, R, algo.Dscale );
+%     y = y + H*x;
+%     [drift_new, diffuse_new] = linear_drift( lam1, x, m, P, y, H, R, algo.Dscale );
+
 %     stoch_err_vr = 0.5*(lam1-lam0)*(diffuse_new-diffuse)*(diffuse_new-diffuse)';
     deter_err_est = 0.5*(lam1-lam0)*(drift_new-drift);
 %     stoch_err_est = sqrt(1-exp(-algo.Dscale*(lam1-lam0)))*(diffuse_new-diffuse)*zD/sqrt(algo.Dscale);
@@ -148,7 +119,7 @@ while lam < 1
     err_crit = err_est'*err_est;
     
     % Accept/reject step
-    if err_crit < err_thresh
+    if 1%err_crit < err_thresh
         
         ll_count = ll_count + 1;
         
@@ -168,6 +139,11 @@ while lam < 1
         % Step size adjustment
         dl = min(dl_max, min(sqrt(dl), dl_sf * (err_thresh/err_crit)^(dl_pow) * dl));
         
+        if dl < dl_min
+            ppsl_prob = 1E10;
+            break;
+        end
+        
         % Densities
         if ~isempty(prev_state)
             [~, trans_prob] = feval(fh.transition, model, prev_state, state);
@@ -179,6 +155,16 @@ while lam < 1
         % Update probabilities
         post_prob = trans_prob + lam*lhood_prob;
         ppsl_prob = ppsl_prob - log(prob_ratio);
+        
+        if post_prob-ppsl_prob < - 1000
+            ppsl_prob = 1E10;
+            break;
+        end
+        if ~isreal(state)
+            state = real(state);
+            ppsl_prob = 1E10;
+            break;
+        end
         
         % Update evolution
         dl_evo = [dl_evo dl];

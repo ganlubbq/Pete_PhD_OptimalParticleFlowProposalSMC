@@ -20,8 +20,11 @@ R = model.R;
 % start_x = [model.tau_shift+model.tau_shape*model.tau_scale; A_mn];
 start_x = [model.tau_shift+gamrnd(model.tau_shape,model.tau_scale); mvnrnd(A_mn, A_vr)];
 h_of = @(x) log_oid_with_derivs(model, A_mn, A_vr, obs, R, x);
-options = optimset('GradObj','on','Display','notify-detailed');
-lin_x = fminunc(h_of,start_x,options);
+options = optimset('GradObj','on','Hessian','on','Display','notify-detailed');
+% lin_x = fminunc(h_of,start_x,options);
+LB = start_x - [0.05; 5];
+UB = start_x + [0.05; 5];
+lin_x = fmincon(h_of, start_x, [], [], [], [], LB, UB, [], options);
 
 % figure(1), hold on
 % plot([start_x(1) lin_x(1)], [start_x(2) lin_x(2)]);

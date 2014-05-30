@@ -5,6 +5,7 @@
 \usepackage[caption=false,font=footnotesize]{subfig}
 
 % Formatting
+\usepackage[nodisplayskipstretch]{setspace} \onehalfspacing
 \usepackage{color}
 \usepackage{amsmath}
 \usepackage{amsfonts}
@@ -34,7 +35,7 @@
  \pgfplotsset{plot coordinates/math parser=false}
  \usepgfplotslibrary{external}
  \tikzexternalize[prefix=tikz/]
- 
+
  %%% Macros %%%
 \input{progressive_proposals_paper_macros}
 
@@ -76,7 +77,7 @@ The general principle behind particle flows is to begin with samples from the pr
  \nconst{\pt}           & = & \int \priorden(\ls{}) \lhood(\ls{})^{\pt} d\ls{}      .
 \end{IEEEeqnarray}
 %
-Since $\seqden{0} = \priorden$, initial particles may be sampled from the prior. These are then moved according to a stochastic (SDE) differential equation such that at every instant in pseudo-time each one is distributed according to the appropriate density in the sequence \eqref{eq:density_sequence},
+Since $\seqden{0} = \priorden$, initial particles may be sampled from the prior. These are then moved according to a stochastic differential equation(SDE) such that at every instant in pseudo-time each one is distributed according to the appropriate density in the sequence \eqref{eq:density_sequence},
 %
 \begin{IEEEeqnarray}{rCl}
  d\ls{\pt} & = & \flowdrift{\pt}(\ls{\pt}) d\pt + \flowdiffuse{\pt} d\flowbm{\pt} \label{eq:state_sde}     .
@@ -105,28 +106,29 @@ in which
 \emph{All} we need to do is choose $\flowdrift{\pt}$ and $\flowdiffuse{\pt}$ which satisfy \eqref{eq:optimal_flow_pde}, then analytically integrate \label{eq:state_sde} to find the final particle locations.
 
 
-\section{Fred's Methods}
+\section{Thoughts and Observations}
 
 Fred Daum has a number of particle flows which he uses to implement particle filters. In deriving this assortment, he routinely makes three separate approximations:
 %
 \begin{enumerate}
-  \item He chooses $\flowdrift{\pt}$ and $\flowdiffuse{\pt}$ which do not satisfy \eqref{eq:optimal_flow_pde}. He does this because it is actually hard to solve. \label{item:approx-flow}
+  \item He chooses $\flowdrift{\pt}$ and $\flowdiffuse{\pt}$ which do not satisfy \eqref{eq:optimal_flow_pde}. He does this because this partial differential equation (PDE) is actually really hard to solve, even though it is highly underdetermined. \label{item:approx-flow}
   \item He integrates \eqref{eq:state_sde} numerically. \label{item:approx-integration}
   \item Since he applies the particle flow directly to the filtering density, the prior $\priorden(\ls{})$ is the predictive density which is not known. So he approximates this, along with its gradient. \label{item:approx-prior}
 \end{enumerate}
 
-\section{Thoughts and Observations}
-
+Some observations:
+%
 \begin{itemize}
   \item The desirable property of his filters, that they maintain equal weights throughout and hence evade particle degeneracy, actually arises from approximation~\ref{item:approx-prior}, and not directly from the use of particle flow. Is there a non-flow way to use this approximation?
   \item We can always correct for the discrepancy between the actual and ideal particle densities introduced by approximation~\ref{item:approx-flow} using an importance weight. All we need is a Jacobian of the state update, which comes from the integrated SDE.
-  \item Of course, in reality the only useful flow which can be integrated analytically is the Gaussian case. The rest of the time we will need numerical integration. We can still use importance sampling to correct for the errors that this introduces, as long as we can calculate appropriate Jacobians for the state changes.
+  \item Of course, in reality the only useful flow which can be integrated analytically is the Gaussian case. The rest of the time we will need numerical integration. We can still use importance sampling to correct for the errors that this introduces, as long as we can calculate appropriate Jacobians for the state changes. This is \emph{not} the case if we use numerical approximations of $\flowdrift{\pt}$ and $\flowdiffuse{\pt}$.
 \end{itemize}
 
-\section{Lines for Future Work}
-
+Some lines for future work:
+%
 \begin{itemize}
-  \item Try out flows other than the Gaussian case.
+  \item Try out existing flows other than the Gaussian case.
+  \item Think about finding an exact solution to \eqref{eq:optimal_flow_pde} and approximating the required integrals numerically, rather than just ignoring or making assumptions about the various terms.
   \item Deduce Jacobians for numerical integration schemes more complex than Euler.
   \item Try out other approximations of the prior and likelihood which allow a more robust application of the Gaussian flow.
   \item Think about the effect of the prior approximation. Is it somehow equivalent to resampling? Can it be used in other ways?
@@ -134,6 +136,64 @@ Fred Daum has a number of particle flows which he uses to implement particle fil
 
 
 
+\section{Jacobians for Numerical Integration}
+
+If we integrate our SDE \eqref{eq:state_sde} numerically, then we need an appropriate Jacobian for the transformation in order to calculate an appropriate importance weight. The simplest possibility is to set $\flowcov{\pt}=0$ so we just have an ODE and then use Euler integration,
+%
+\begin{IEEEeqnarray}{rCl}
+ \ls{k+1} & = & \ls{k} + \flowdrift{\pt_k}(\ls{k}) \dpt \nonumber      .
+\end{IEEEeqnarray}
+%
+Here the Jacobian is easy,
+%
+\begin{IEEEeqnarray}{rCl}
+ \determ{\frac{\ls{k+1}}{\ls{k}}} & = & \determ{ I + \pdv{\flowdrift{\pt_k}}{\ls{\pt_k}} \dpt } \nonumber \\
+ & \approx & 1 + \dpt \trace\left[\pdv{\flowdrift{\pt_k}}{\ls{\pt_k}}\right]
+\end{IEEEeqnarray}
+%
+As long as this can be calculated, then we're in business.
+
+A similar scheme is possible for all explicit Runge-Kutta methods. Just write the update as a single equation and then differentiate. An $n$th order method will require $n$ Jacobians to be calculated.
+
+When $\flowcov{\pt}>0$, the simplest choice is to use the Euler-Maruyama method. This is equivalent to sampling a Gaussian random variable, and so the same extended distribution trick may be used as in the Gaussian flow case. For higher order Runge-Kutta methods, it becomes necessary to extend the distribution over all the intermediate integration points. This will give us a proper weight, but I suspect it is not likely to work well.
 
 
-\end{document}
+
+\section{The 1D Case}
+
+Suppose we work in one dimension and set $\flowcov{\pt} = 0$. Then we can solve \eqref{eq:optimal_flow_pde}. It becomes,
+%
+\begin{IEEEeqnarray}{rCl}
+ \loglhood(\ls{\pt}) - \expect{\seqden{\pt}}\left[ \loglhood \right] & = & -\pdv{\flowdrift{\pt}}{\ls{\pt}} - \flowdrift{\pt}(\ls{\pt}) \pdv{\logseqden{\pt}}{\ls{\pt}} \label{eq:optimal_flow_pde_1D}      .
+\end{IEEEeqnarray}
+%
+Use the integrating factor method. Multiplying the right hand side by $\seqden{\pt}$,
+%
+\begin{IEEEeqnarray}{rCl}
+ \seqden{\pt}(\ls{\pt}) \left[ - \pdv{\flowdrift{\pt}}{\ls{\pt}} - \flowdrift{\pt}(\ls{\pt}) \pdv{\logseqden{\pt}}{\ls{\pt}} \right] & = & - \left[ \seqden{\pt}(\ls{\pt}) \pdv{\flowdrift{\pt}}{\ls{\pt}} - \flowdrift{\pt}(\ls{\pt}) \pdv{\seqden{\pt}}{\ls{\pt}} \right] \nonumber \\
+ & = & - \pdv{}{\ls{\pt}} \left[ \seqden{\pt}(\ls{\pt}) \flowdrift{\pt}(\ls{\pt}) \right] \nonumber     ,
+\end{IEEEeqnarray}
+%
+and so integrating and with a little algebra,
+%
+\begin{IEEEeqnarray}{rCl}
+ - \seqden{\pt}(\ls{\pt}) \flowdrift{\pt}(\ls{\pt}) & = & \int_{-\infty}^{\ls{\pt}} \seqden{\pt}(\ls{\pt}) \left\{\loglhood(z) - \expect{\seqden{\pt}}\left[ \loglhood \right] \right\} dz \nonumber \\
+ & = & \int_{-\infty}^{\ls{\pt}} \seqden{\pt}(z) \loglhood(z) dz \int_{\ls{\pt}}^{\infty} \seqden{\pt}(z) dz + \int_{\ls{\pt}}^{\infty} \seqden{\pt}(z) \loglhood(z) dz \int_{-\infty}^{\ls{\pt}}  \seqden{\pt}(z) dz \nonumber      ,
+\end{IEEEeqnarray}
+%
+and so,
+%
+\begin{IEEEeqnarray}{rCl}
+ \flowdrift{\pt}(\ls{\pt}) & = & - \frac{ \int_{-\infty}^{\ls{\pt}} \seqden{\pt}(z) \loglhood(z) dz \int_{\ls{\pt}}^{\infty} \seqden{\pt}(z) dz + \int_{\ls{\pt}}^{\infty} \seqden{\pt}(z) \loglhood(z) dz \int_{-\infty}^{\ls{\pt}}  \seqden{\pt}(z) dz }{ \seqden{\pt}(\ls{\pt}) } \nonumber      .
+\end{IEEEeqnarray}
+%
+We could estimate this using Monte Carlo using the current set of particles. Furthermore, since $\pdv{\flowdrift{\pt}}{\ls{\pt}}$ is given by \eqref{eq:optimal_flow_pde_1D}, we can clearly calculate the appropriate Jacobian for simpler numerical integration schemes (e.g. Euler).
+
+The problems is that there is no obvious extension to higher dimensions.
+
+
+
+
+
+
+\end{document} 

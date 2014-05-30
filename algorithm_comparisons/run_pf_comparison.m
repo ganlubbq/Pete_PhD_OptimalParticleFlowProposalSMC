@@ -23,7 +23,7 @@ if ~exist('test', 'var') || ~isfield(test,'flag_batch') || (~test.flag_batch)
     rand_seed = 0;
     
     % Which model?
-    model_flag = NaN;     % 1 = linear Gaussian
+    model_flag = 5;     % 1 = linear Gaussian
                         % 2 = nonlinear non-Gaussian benchmark
                         % 3 = heartbeat alignment
                         % 4 = tracking
@@ -35,7 +35,7 @@ if ~exist('test', 'var') || ~isfield(test,'flag_batch') || (~test.flag_batch)
     display.plot_during = false;    
     display.plot_after = true;
     display.plot_particle_paths = false;
-    display.plot_colours = {'k', 'b', 'c', 'm', 'g', 'g'};
+    display.plot_colours = {'k', 'b', 'c', 'm', 'g', 'g', 'm', 'g'};
     if display.plot_during
         display.h_pf(1) = figure;
         display.h_pf(2) = figure;
@@ -57,22 +57,28 @@ if ~exist('test', 'var') || ~isfield(test,'flag_batch') || (~test.flag_batch)
                                     % 4 = linearised OID proposal
                                     % 5 = SUPF
                                     % 6 = SUPF by particle
+                                    % 
+                                    % 8 = MCMC proposal
     
 	% Set number of particles for each algorithm
-%     test.num_filt_pts = 100*ones(1,6);
+%     test.num_filt_pts = 100*ones(1,8);
+    test.num_filt_pts = [12000, 5000, 1000, 200, NaN, 200];          % Time normalised for model 5
+%     test.num_filt_pts = [8000, 4000, 2000, 1000, NaN, 1000];          % Time normalised for model 6
+
 %     test.num_filt_pts = [185, 100, 100, 100, 100];          % Time normalised for model 1
 %     test.num_filt_pts = [18500, NaN, NaN, 70, NaN, 540];       % Time normalised for model 2 with Gaussian densities
+%     test.num_filt_pts = [2000, NaN, NaN, 50, NaN, 100];       % Time normalised for model 2 with Poisson observations
 %     test.num_filt_pts = [2500, 1000, 1000, 50, 100, 100];       % Time normalised for model 3
 %     test.num_filt_pts = [20000 12000 3500 10 100];               % Time normalised for model 4
 %     test.num_filt_pts = [6000 NaN 460 10 100 180];               % Time normalised for model 5
-    test.num_filt_pts = [15000, NaN, NaN, 200, NaN, 800];       % Time normalised for model 6
+%     test.num_filt_pts = [15000, NaN, NaN, 200, NaN, 800, 1000];       % Time normalised for model 6
 
     % Model settings
     test.STdof = Inf;
 
     % SUPF settings
     test.flag_stochastic = true;
-    test.flag_intermediate_resample = true;
+    test.flag_intermediate_resample = false;
     test.Dscale = 0.3;
 
 end
@@ -80,6 +86,9 @@ end
 
 
 %% Setup
+
+fprintf('Running tests with model flag %u.\n', model_flag);
+fprintf('   Random seed: %u.\n', rand_seed);
 
 % Set function handles
 if model_flag == 1
@@ -108,6 +117,11 @@ elseif model_flag == 2
     fh.smoothupdate = @nlng_smoothupdate;
     fh.smoothupdatebyparticle = @nlng_smoothupdatebyparticle;
 %     fh.smoothupdatebyparticle = @nlng_smoothupdatebyparticle_scalemix;
+
+    fh.observation = @nlng_poisson_observation;
+    fh.generatedata = @nlng_poisson_generatedata;
+    fh.linearisedoidproposal = @nlng_poisson_linearisedoidproposal;
+    fh.smoothupdatebyparticle = @nlng_poisson_smoothupdatebyparticle;
 elseif model_flag == 3
     addpath('ha');
     fh.setmodel = @ha_setmodel;
@@ -120,7 +134,9 @@ elseif model_flag == 3
     fh.ukfproposal = @ha_ukfproposal;
     fh.linearisedoidproposal = @ha_linearisedoidproposal;
     fh.smoothupdate = @ha_smoothupdate;
-    fh.smoothupdatebyparticle = @ha_smoothupdatebyparticle;
+%     fh.smoothupdatebyparticle = @ha_smoothupdatebyparticle;
+    fh.smoothupdatebyparticle = @ha_modifiedsmoothupdatebyparticle;
+    fh.mcmcproposal = @ha_mcmcproposal;
 elseif model_flag == 4
     addpath('tracking');
     fh.setmodel = @tracking_setmodel;
@@ -144,9 +160,12 @@ elseif model_flag == 5
     fh.ekfproposal = @drone_ekfproposal;
     fh.ukfproposal = @drone_ukfproposal;
     fh.linearisedoidproposal = @drone_linearisedoidproposal;
-    fh.smoothupdate = @drone_smoothupdatewithIR;
-%     fh.smoothupdate = @drone_smoothupdate;
+%     fh.smoothupdate = @drone_smoothupdatewithRM;
+%     fh.smoothupdate = @drone_smoothupdatewithIR;
+    fh.smoothupdate = @drone_smoothupdate;
     fh.smoothupdatebyparticle = @drone_smoothupdatebyparticle;
+%     fh.smoothupdatebyparticle = @drone_modifiedsmoothupdatebyparticle;
+    fh.annealedupdate = @drone_annealedupdate;
 elseif model_flag == 6
     addpath('sineha');
     fh.setmodel = @sineha_setmodel;
@@ -160,6 +179,8 @@ elseif model_flag == 6
     fh.linearisedoidproposal = @sineha_linearisedoidproposal;
     fh.smoothupdate = @sineha_smoothupdate;
     fh.smoothupdatebyparticle = @sineha_smoothupdatebyparticle;
+%     fh.smoothupdatebyparticle = @sineha_smoothupdatebyparticle;
+    fh.smoothupdatebyparticle = @sineha_modifiedsmoothupdatebyparticle;
 end
 
 % Set random seed

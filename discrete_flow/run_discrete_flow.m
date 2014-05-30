@@ -12,7 +12,7 @@ RandStream.setDefaultStream(s);
 nu = 3;
 K = 100;
 lambda = 20;
-N = 100;
+N = 1000;
 nu_lim = 50;
 
 % Create some data by simulating from a student-t distribution
@@ -36,7 +36,7 @@ for kk = 1:length(nu_rng), lhood_rng(kk) = sum(log(tpdf(observ,nu_rng(kk)))); en
 lhood_rng(1) = -inf;
 
 % Set random seed
-rand_seed = 1;
+rand_seed = 0;
 s = RandStream('mt19937ar', 'seed', rand_seed);
 RandStream.setDefaultStream(s);
 
@@ -78,6 +78,7 @@ for ll = 1:L-1
         
         % Get things
         nu = last_nu_arr(anc(ii));
+        last_nu = nu;
         lhood = lhood_rng(nu==nu_rng);
         
         % Exit rate
@@ -133,9 +134,24 @@ for ll = 1:L-1
         nu_arr(ii) = nu;
         
         % Weight particle
-        inc_w(ii) = prior_rng(nu==nu_rng) + lam*lhood_rng(nu==nu_rng);
-        weight(ii) = inc_w(ii) - last_inc_w(anc(ii));
+%         inc_w(ii) = prior_rng(nu==nu_rng) + lam*lhood_rng(nu==nu_rng);
+%         weight(ii) = inc_w(ii) - last_inc_w(anc(ii));
 %         weight(ii) = last_weight(anc(ii)) + inc_w(ii) - last_inc_w(anc(ii));
+%         weight(ii) = 0;
+        
+        lin_oid_rng = exp(prior_rng + lam*lhood_rng);
+        if nu ~= last_nu
+            if nu > 0
+                w_up1 =   lin_oid_rng( (last_nu-1)==nu_rng ) / ( lin_oid_rng( (nu-2)==nu_rng ) + lin_oid_rng( (nu)==nu_rng ) );
+            else
+                w_up1 =   0;
+            end
+            w_down1 = lin_oid_rng( (last_nu+1)==nu_rng ) / ( lin_oid_rng( (nu)==nu_rng ) + lin_oid_rng( (nu+2)==nu_rng ) );
+            weight(ii) = -log( w_up1 + w_down1 );
+        else
+            weight(ii) = 0;
+        end
+        weight(ii) = weight(ii) + prior_rng(nu==nu_rng) + lam*lhood_rng(nu==nu_rng);
         
     end
     
@@ -145,8 +161,14 @@ for ll = 1:L-1
     
 end
 
+% Resample
 [anc] = sample_weights(weight,N,2);
 nu_arr = nu_arr(anc);
+
+% Estimate posterior probability.
+count = hist(nu_arr, nu_rng);
+pt_prob_rng = count/N;
+
 figure(1), hist(nu_arr, 0:20);
 
 
@@ -161,7 +183,9 @@ post_rng = post_rng - logsumexp(post_rng,2);
 % plot(nu_rng, prior_rng, 'b')
 % plot(nu_rng, lhood_rng, 'r')
 figure, hold on
-plot(nu_rng, exp(post_rng), 'm')
+plot(nu_rng, exp(prior_rng), 'b');
+plot(nu_rng, exp(post_rng), 'm');
+plot(nu_rng, pt_prob_rng, ':g');
 figure, plot(histc(nu_arr,0:nu_lim)/N-exp(post_rng'))
 
 %%

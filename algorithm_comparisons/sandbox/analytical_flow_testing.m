@@ -1,5 +1,7 @@
 clup
 
+addpath('../')
+
 ds = 2;
 I = eye(ds);
 P = eye(ds);
@@ -48,7 +50,7 @@ for ii = 1:N
         lam0 = lam_rng(ll);
         lam = lam_rng(ll+1);
         
-        [ x, S] = linear_flow_move( lam, lam0, x, m, P, y, H, R, Dscale );
+        [ x, S] = linear_flow_move( lam, lam0, x, m, P, y, H, R, Dscale, [0 0]' );
         
         x_rng(:,ll+1) = x;
         

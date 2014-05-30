@@ -49,7 +49,7 @@
 % Particle shizzle
 \newcommand{\pss}[2][]{^{(#2)#1}}               % Particle superscript
 \newcommand{\pw}[1]{w_{#1}}                     % Particle weight
-\newcommand{\predpw}[1]{w_{#1}}                 % Predictive particle weight
+\newcommand{\predpw}[1]{\hat{w}_{#1}}           % Predictive particle weight
 \newcommand{\npw}[1]{\bar{w}_{#1}}              % Normalised particle weight
 \newcommand{\naw}[1]{\bar{v}_{#1}}              % Normalised auxiliary weight
 \newcommand{\anc}[1]{a_{#1}}                    % Particle ancestor
@@ -126,13 +126,13 @@
 
 A particle filter is an algorithm used for sequential estimation of a filtering distribution for a state-space model. For a comprehensive introduction, see for example \cite{Cappe2007,Doucet2009}. In this paper we consider the use of particle filters for inference with a standard discrete-time hidden Markov model (HMM).
 
-The particle filter advances a set of samples through time, drawn approximately from the filtering distribution. This is achieved by sampling at each time step from an importance distribution and then weighting the particles to account for the discrepancy between target and importance distributions. Particles filters have attractive asymptotic properties: as the number of particles is increased, estimates are guaranteed to converge to their true values.
+The particle filter advances a set of samples through time, drawn approximately from the filtering distribution. This is achieved by sampling at each time step from an importance distribution and then weighting the particles to account for the discrepancy between target and importance distributions. Particle filters have attractive asymptotic properties: as the number of particles is increased, estimates are guaranteed to converge to their true values.
 
-One of the principal difficulties when designing a particle filter is the selection of the importance distribution. The easiest choice is often to sample from the transition model, which leads to a simplification in the weight formula. The resulting algorithm is the ``bootstrap filter'' of \cite{Gordon1993}. In many cases, such bootstrap proposals result in poor filter performance due to a mismatch in the areas of high probability in the transition and observation distributions.
+One of the principal difficulties when designing a particle filter is the selection of the importance distribution. The simplest choice is often to sample from the transition model resulting algorithm in the ``bootstrap filter'' of \cite{Gordon1993}. In many cases, such bootstrap proposals result in poor filter performance due to a mismatch in the areas of high probability between the transition and observation distributions.
 
-Amongst others, \cite{Doucet2000a} demonstrated that the ideal choice of importance distribution is the conditional posterior given both the previous state and the new observation, dubbed the ``optimal importance distribution'' (OID). In all but a few cases, this cannot be calculated analytically. When the state variables are continuous, a popular solution is to use an extended (EKF) or unscented (UKF) Kalman filter to select a Gaussian importance distribution. However, such schemes can fail when the model is highly nonlinear or non-Gaussian, as the approximation is poor.
+Amongst others, \cite{Doucet2000a} demonstrated that the ideal choice of importance distribution is the conditional posterior given both the previous state and the new observation, dubbed the ``optimal importance distribution'' (OID). In all but a few cases, this cannot be calculated analytically. When the state variables are continuous, a popular solution is to use an extended (EKF) or unscented (UKF) Kalman filter to select a Gaussian importance distribution for each particle. However, such schemes can fail when the model is highly nonlinear or non-Gaussian, as the approximation is poor.
 
-The effect of using a poor importance distribution (i.e. one which is not ``close'' to the OID) is that the variance of the importance weights is increased, resulting in a degeneracy of the filter. In the worst cases, there may be no particles proposed in regions of high posterior probability, causing the filter to diverge.
+The effect of using a poor importance distribution (i.e. one which is not ``close'' to the OID) is that the variance of the importance weights is increased, resulting in a degeneracy of the filter. In the worst cases, there may be no particles at all proposed in regions of high posterior probability, causing the filter to fail entirely.
 
 Many solutions to the problem of particle filter degeneracy have been proposed, including the addition of Markov chain Monte Carlo (MCMC) steps to regenerate a particle approximation \cite{Gilks2001} and the marginalisation of variables which can be filtered analytically, a process known as ``Rao-Blackwellisation'' \cite{Casella1996,Doucet2000}. Degeneracy can also be mitigated by introducing the effect of each observation gradually, so that particles are progressively drawn towards peaks in the likelihood. This idea of tempering using a discrete set of bridging distributions between the prior and the posterior has appeared, for example, in \cite{Godsill2001b}. The new algorithms described here may be thought of as optimal versions of such tempering schemes.
 
@@ -616,7 +616,63 @@ where,
  \transmean & = & \transfun(\ls{\rt-1}) \nonumber      .
 \end{IEEEeqnarray}
 
-Such a solution will only work reliably when the log-densities are concave, and hence the Hessian matrices are negative definite at all points. This is the case for many exponential family distributions {\meta Erm... is it?}, but does not include heavy tailed distributions such as the student-t distribution.
+Such a solution will only work reliably when the log-densities are concave (i.e. the Hessian with respect to $\ls{}$ is negative semi-definite at all points). If this is not the case, then the offending eigenvalues may be set to zero in order to force this condition to hold. The resulting flow often works effectively, but no longer retains its optimality.
+
+
+
+\subsection{Other Approximations}
+
+A cruder form of approximation is possible, which has been found to be effective when . The troublesome density is approximated by a Gaussian for short intervals of pseudo-time, with the mean and variance chosen simply so that the Gaussian is has the same value and gradient as the true density at some particular point, $\ls{}^*$.
+
+To match the transition density, we first write,
+%
+\begin{IEEEeqnarray}{rCl}
+ \flowtd(\ls{}) & = & p(\ob{\rt} | \ls{\rt})     ,
+\end{IEEEeqnarray}
+%
+and calculate $\flowtd(\ls{}^*)$ and $\Delta := \frac{\left. \nabla_{\ls{}} \flowtd \right|_{\ls{}^*}}{\flowtd(\ls{}^*)}$. Denoting the matched Gaussian density and its parameters with tildes, we can write the following,
+%
+\begin{IEEEeqnarray}{rCl}
+ \tilde{\flowtd}(\ls{}) & := & \left| 2 \pi \tilde{\transcov} \right|^{-\frac{1}{2}} \exp\left\{ -\frac{1}{2} (\ls{}-\tilde{\transmean})^T \tilde{\transcov}^{-1} (\ls{}-\tilde{\transmean}) \right\} \nonumber \\
+                   & = & \left| 2 \pi \tilde{\transcov} \right|^{-\frac{1}{2}} \exp\left\{ -\frac{1}{2} \tilde{\Delta}^T \tilde{\transcov} \tilde{\Delta} \right\} \nonumber \\
+ \tilde{\Delta} := \frac{\left.\nabla_{\ls{}} \tilde{\flowtd}(\ls{})\right|_{\ls{}^*}}{\tilde{\flowtd}(\ls{})} & = & - \tilde{\transcov}^{-1} (\ls{}-\tilde{\transmean}) \nonumber      .
+\end{IEEEeqnarray}
+%
+Now equating $\flowtd(\ls{}^*)=\tilde{\flowtd}(\ls{}^*)$ and $\Delta=\tilde{\Delta}$, and selecting $\tilde{\transcov} = \tilde{\sigma}_P^2 I$, we have,
+%
+\begin{IEEEeqnarray}{rCl}
+ \flowtd(\ls{}^*) & = & (2 \pi \tilde{\sigma}_P^2)^{\frac{-d_S}{2}} \exp \left\{ -\frac{1}{2} \left|\Delta\right|^2 \tilde{\sigma}_P^2 \right\} \nonumber
+ \end{IEEEeqnarray}
+%
+and thus the parameters of the matched Gaussian are given by,
+%
+\begin{IEEEeqnarray}{rCl}
+ \tilde{\transcov}  & = & \tilde{\sigma}_P^2 I \nonumber \\
+ \tilde{\sigma}_P^2 & = & \frac{d_S}{\left|\Delta\right|^2} \lambert\left[ \frac{\left|\Delta\right|^2}{2 \pi d_S} \flowtd(\ls{}^*)^{-\frac{2}{d_S}} \right] \nonumber \\
+ \tilde{\transmean} & = & \ls{}^* + \tilde{\sigma}_P^2 \Delta     ,
+\end{IEEEeqnarray}
+%
+where $\lambert$ is the Lambert-W or product-log function and $d_S$ is the number of state dimensions.
+
+Repeating the same process for the observation density,
+%
+\begin{IEEEeqnarray}{rCl}
+ \flowod(\ls{}) & = & p(\ob{\rt} | \ls{}) \nonumber \\
+ \Delta & := & \frac{\left. \nabla_{\ls{}} \flowod \right|_{\ls{}^*}}{\flowod(\ls{}^*)} \nonumber     ,
+ \end{IEEEeqnarray}
+%
+with the additional step that we assume $\tilde{\obsmat}=I$, we obtain,
+%
+\begin{IEEEeqnarray}{rCl}
+ \tilde{\flowod}(\ls{}) & := & \left| 2 \pi \tilde{\obscov} \right|^{-\frac{1}{2}} \exp\left\{ -\frac{1}{2} (\tilde{y} - \tilde{\obsmat} \ls{})^T \tilde{\obscov}^{-1} (\tilde{y} - \tilde{\obsmat} \ls{}) \right\} \nonumber \\
+ \tilde{\obsmat} & = & I \nonumber \\
+ \tilde{\obscov} & = & \tilde{\sigma}_L^2 I \nonumber \\
+ \tilde{\sigma}_L^2 & = & \frac{d_S}{\left|\Delta\right|^2} \lambert\left[ \frac{\left|\Delta\right|^2}{2 \pi d_S} \flowod(\ls{}^*)^{-\frac{2}{d_S}} \right] \nonumber \\
+ \tilde{y} & = & \ls{}^* + \tilde{\sigma}_L^2 \Delta     .
+\end{IEEEeqnarray}
+
+Other methods of matching for selecting an approximation are possible, for example simply moment matching a Gaussian to the prior density.
+
 
 
 \subsection{Step Size Control}

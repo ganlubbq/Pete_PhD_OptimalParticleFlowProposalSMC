@@ -37,7 +37,10 @@ end
 
 % Maximise OID
 h_of = @(x) log_oid_with_derivs(model, prior_mn, obs, x);
-options = optimset('GradObj','on','Display','notify-detailed');
+options = optimset('GradObj','on',...
+                   'Display','off',...
+                   'TolX', 0.1,...
+                   'MaxIter', 100);
 lin_x = fminunc(h_of,start_x,options);
 
 % % Plot track

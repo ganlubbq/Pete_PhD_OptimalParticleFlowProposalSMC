@@ -1,4 +1,4 @@
-function [ state, ppsl_prob, ll_count ] = sineha_smoothupdatebyparticle( display, algo, model, fh, prev_state, obs )
+function [ state, ppsl_prob, ll_count ] = sineha_modifiedsmoothupdatebyparticle( display, algo, model, fh, prev_state, obs )
 %ha_smoothupdate Apply a smooth update for the heartbeat alignment model
 %for a single particle (which means no intermediate resampling, but step
 %size control is easier.)
@@ -62,7 +62,9 @@ else
     zD = zeros(ds,1);
 end
 
-[Sigma, mu] = diff_prior(model, state, prior_mn, prior_vr);
+% mu = prior_mn;
+% Sigma = prior_vr;
+[Sigma, mu] = diff_prior(model, init_state, prior_mn, prior_vr);
 
 % Loop
 ll_count = 0;
@@ -88,49 +90,21 @@ while lam < 1
     
     % Linearise observation model around the current point
     H = sineha_obsjacobian(model, x0);
-    y = obs - obs_mn + H*x0;
+    ymhx = obs - obs_mn;
     R = model.R;
     
-    % State Update
-    S = H*Sigma*H'+R/(lam1-lam0);
-    Sigma_new = Sigma - Sigma*H'*(S\H)*Sigma;
-    mu_new = mu + Sigma*H'*(S\(y-H*mu));
-    sqrtSigmat = sqrtm(Sigma_new);
-    Gam = exp(-0.5*algo.Dscale*(lam1-lam0))*sqrtSigmat/sqrtm(Sigma);
-    x = mu_new + Gam*(x0-mu);
-    prob_ratio = det(Gam);
-    
-    % Flow
-    drift = Sigma_new*(H'/R)*( (y-H*mu_new)-0.5*H*(x-mu_new) );
-    
-    % New flow
-    H_new = sineha_obsjacobian(model, x);
-    y_new = obs - sineha_h(model, x) + H_new*x;
-    drift_new = Sigma_new*(H_new'/R)*( (y_new-H_new*mu_new)-0.5*H_new*(x-mu_new) );
+    % Analytical flow
+    [ x, mu, Sigma, prob_ratio, drift, diffuse] = modified_linear_flow_move( lam1, lam0, x0, mu, Sigma, ymhx, H, R, algo.Dscale, zD );
     
     % Error estimate
-    err_est = 0.5*(lam1-lam0)*(drift_new-drift);
-    err_crit = sqrt(err_est'*err_est);
+    H_new = sineha_obsjacobian(model, x);
+    ymhx_new = obs - sineha_h(model, x);
+    [drift_new, diffuse_new] = modified_linear_drift( lam1, x, mu, Sigma, ymhx_new, H_new, R, algo.Dscale );
 
-
-
-
-%     % Approximate prior
-%     [P, m] = diff_prior(model, x0, prior_mn, prior_vr);
-%     
-%     % Analytical flow
-%     [ x, prob_ratio, drift, diffuse] = linear_flow_move( lam1, lam0, x0, m, P, y, H, R, algo.Dscale, zD );
-%     
-%     % Error estimate
-%     [P_new, m_new] = diff_prior(model, x, prior_mn, prior_vr);
-%     H_new = sineha_obsjacobian(model, x);
-%     y_new = obs - sineha_h(model, x) + H_new*x;
-%     [drift_new, diffuse_new] = linear_drift( lam1, x, m_new, P_new, y_new, H_new, R, algo.Dscale );
-% 
-%     deter_err_est = 0.5*(lam1-lam0)*(drift_new-drift);
-%     stoch_err_est = 0.5*(diffuse_new-diffuse)*zD*sqrt(lam1-lam0);
-%     err_est = deter_err_est + stoch_err_est;
-%     err_crit = err_est'*err_est;
+    deter_err_est = 0.5*(lam1-lam0)*(drift_new-drift);
+    stoch_err_est = 0.5*(diffuse_new-diffuse)*zD*sqrt(lam1-lam0);
+    err_est = deter_err_est + stoch_err_est;
+    err_crit = err_est'*err_est;
     
     % Step size adjustment
     dl = min(dl_max, min(10*dl, dl_sf * (err_thresh/err_crit)^dl_pow * dl));
@@ -151,9 +125,6 @@ while lam < 1
         
         % Update state
         state = x;
-        
-        mu = mu_new;
-        Sigma = Sigma_new;
         
         % Sample perturbation
         if algo.Dscale > 0

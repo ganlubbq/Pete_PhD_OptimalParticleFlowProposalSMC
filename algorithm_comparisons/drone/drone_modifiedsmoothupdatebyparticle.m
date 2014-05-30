@@ -1,7 +1,9 @@
-function [ state, ppsl_prob, ll_count, loglhood, expectloglhoodest ] = drone_smoothupdatebyparticle( display, algo, model, fh, prev_state, obs )
+function [ state, ppsl_prob, ll_count, loglhood, expectloglhoodest ] = drone_modifiedsmoothupdatebyparticle( display, algo, model, fh, prev_state, obs )
 %drone_smoothupdatebyparticle Apply a smooth update for the drone model
 %for a single particle (which means no intermediate resampling, but step
 %size control is easier.)
+
+assert(isinf(model.dfx));
 
 dl_start = 1E-3;
 dl_min = 1E-8;
@@ -52,14 +54,14 @@ else
     zD = zeros(model.ds,1);
 end
 
-Sigma = P;
 mu = m;
+Sigma = P;
 
 % Loop
 ll_count = 0;
 while lam < 1
     
-    if ll_count > 50
+    if ll_count > 5000
         ppsl_prob = 1E10;
         break;
     end
@@ -79,68 +81,33 @@ while lam < 1
     
     % Linearise observation model around the current point
     H = drone_obsjacobian(model, x0);
-    y = obs - obs_mn + H*x0;
+    ymhx = obs - obs_mn;
     R = model.R;
     
     % Resolve bearing ambiguity
-    if y(1) > pi
-        y(1) = y(1) - 2*pi;
-    elseif y(1) < -pi
-        y(1) = y(1) + 2*pi;
+    if ymhx(1) > pi
+        ymhx(1) = ymhx(1) - 2*pi;
+    elseif ymhx(1) < -pi
+        ymhx(1) = ymhx(1) + 2*pi;
     end
     
-    % SMoN scaling.
-    if ~isinf(model.dfx)
-        xi = chi2rnd(model.dfx);
-        xi_ppsl_prob = 0;
-    else
-        xi = 1;
-        xi_ppsl_prob = 0;
-    end
-    Pxi = P / xi;
-    
-    % State Update
-    S = H*Sigma*H'+R/(lam1-lam0);
-    Sigma_new = Sigma - Sigma*H'*(S\H)*Sigma;
-    mu_new = mu + Sigma*H'*(S\(y-H*mu));
-    sqrtSigmat = sqrtm(Sigma_new);
-    Gam = exp(-0.5*algo.Dscale*(lam1-lam0))*sqrtSigmat/sqrtm(Sigma);
-    x = mu_new + Gam*(x0-mu);
-    prob_ratio = det(Gam);
-    
-    % Flow
-    drift = Sigma_new*(H'/R)*( (y-H*mu_new)-0.5*H*(x-mu_new) );
-    
-    % New flow
-    H_new = drone_obsjacobian(model, x);
-    y_new = obs - drone_h(model, x) + H_new*x;
-    drift_new = Sigma_new*(H_new'/R)*( (y_new-H_new*mu_new)-0.5*H_new*(x-mu_new) );
+    % Analytical flow
+    [ x, mu, Sigma, prob_ratio, drift, diffuse] = modified_linear_flow_move( lam1, lam0, x0, mu, Sigma, ymhx, H, R, algo.Dscale, zD );
     
     % Error estimate
-    err_est = 0.5*(lam1-lam0)*(drift_new-drift);
-    err_crit = sqrt(err_est'*err_est);
-    
-%     % Analytical flow
-%     [ x, prob_ratio, drift, diffuse] = linear_flow_move( lam1, lam0, x0, m, Pxi, y, H, R, algo.Dscale, zD );
-%     
-%     % Error estimate
-%     H_new = drone_obsjacobian(model, x);
-%     y_new = obs - drone_h(model, x) + H_new*x;
-%     [drift_new, diffuse_new] = linear_drift( lam1, x, m, Pxi, y_new, H_new, R, algo.Dscale );
+    H_new = drone_obsjacobian(model, x);
+    ymhx_new = obs - drone_h(model, x);
+    [drift_new, diffuse_new] = modified_linear_drift( lam1, x, mu, Sigma, ymhx_new, H_new, R, algo.Dscale );
     
 %     deter_err_est = 0.5*(lam1-lam0)*(drift_new-drift);
 %     stoch_err_est = 0.5*(diffuse_new-diffuse)*zD*sqrt(lam1-lam0);
 % %     stoch_err_est = 0.5*(diffuse_new-diffuse)*zD*(lam1-lam0);
-% %     stoch_err_est = 0.5*(diffuse_new-diffuse)*zD*sqrt(lam1-lam0)*exp(0.5*algo.Dscale*lam1);
-% %     stoch_err_est = sqrt(1-exp(-algo.Dscale*(lam1-lam0)))*(1+0.5*algo.Dscale*(lam1-lam0))/( sqrt(algo.Dscale) ) ...
-% %         *(diffuse_new-diffuse)*zD;
-% %     stoch_err_est = 0.5*(diffuse_new-diffuse)*zD*sqrt(lam1-lam0)*(1+0.5*algo.Dscale*(lam1-lam0));
-% %     stoch_err_est = zeros(size(deter_err_est));
+% %     stoch_err_est = 0.5*(diffuse_new-diffuse)*zD*sqrt(1-exp(-algo.Dscale*(lam1-lam0)));
 %     err_est = deter_err_est + stoch_err_est;
 %     err_crit = sqrt(err_est'*err_est);
 
-%     err_est = 0.5*(lam1-lam0)*( (drift_new-drift) + (diffuse_new-diffuse)*zD );
-%     err_crit = sqrt(err_est'*err_est);
+    err_est = 0.5*(lam1-lam0)*( (drift_new-drift) + (diffuse_new-diffuse)*zD );
+    err_crit = sqrt(err_est'*err_est);
     
 %     ldiff = (lam1-lam0);
 %     driftdiff = (drift_new-drift);
@@ -167,9 +134,6 @@ while lam < 1
         % Update state
         state = x;
         
-        mu = mu_new;
-        Sigma = Sigma_new;
-        
         % Sample perturbation
         if algo.Dscale > 0
             zD = mvnrnd(zeros(model.ds,1)',eye(model.ds))';
@@ -186,7 +150,7 @@ while lam < 1
         [~, lhood_prob] = feval(fh.observation, model, state, obs);
         
         % Update probabilities
-        post_prob = trans_prob + lam*lhood_prob + xi_ppsl_prob;
+        post_prob = trans_prob + lam*lhood_prob;
         ppsl_prob = ppsl_prob - log(prob_ratio);
         
         % Update evolution
@@ -205,15 +169,15 @@ while lam < 1
     
 end
 
-% R =model.R;
-% H = drone_obsjacobian(model, state);
-% h_x = drone_h(model, state);
-% x = state;
-% y = obs-h_x;
-% Sigma = inv(inv(P)+H'*(R\H));
-% mu = Sigma*(H'*(R\y)+P\(m-x));
-% loglhood = loggausspdf(obs, h_x, R);
-% expectloglhoodest = loggausspdf(y, H*mu, R) - 0.5*trace(Sigma*H'*(R\H));
+R =model.R;
+H = drone_obsjacobian(model, state);
+h_x = drone_h(model, state);
+x = state;
+y = obs-h_x;
+Sigma = inv(inv(P)+H'*(R\H));
+mu = Sigma*(H'*(R\y)+P\(m-x));
+loglhood = loggausspdf(obs, h_x, R);
+expectloglhoodest = loggausspdf(y, H*mu, R) - 0.5*trace(Sigma*H'*(R\H));
 
 % Plotting
 if display.plot_particle_paths
